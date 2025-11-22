@@ -74,7 +74,7 @@ export default function OrderDetailsModal({
     setLoading(true);
 
     try {
-      await api.patch(
+      await api.post(
         `/orders/${localData.id}/update-status?type=appointments`,
         {
           status: newStatus

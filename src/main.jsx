@@ -23,6 +23,10 @@ import AmbulanceOrders from "./pages/AmbulanceOrders.jsx";
 import PackageOrders from "./pages/PackageOrders.jsx";
 import LabOrders from "./pages/LabOrders.jsx";
 import HomecareOrders from "./pages/HomecareOrders.jsx";
+import DoctorQueue from "./pages/DoctorQueue.jsx";
+import DoctorQueueMonitor from "./pages/DoctorQueueMonitor.jsx";
+import DoctorActionPanel from "./pages/DoctorActionPanel.jsx";
+import TokenWidgetPage from "./pages/TokenWidgetPage.jsx";
 
 const qc = new QueryClient();
 const token = () => localStorage.getItem("token");
@@ -54,7 +58,19 @@ createRoot(document.getElementById("root")).render(
               <Route path="lab" element={<LabOrders />} />
               <Route path="homecare" element={<HomecareOrders />} />
             </Route>
-
+            <Route path="doctor-queue" element={<DoctorQueue />} />
+            <Route
+              path="doctor/queue-monitor/:doctorId"
+              element={<DoctorQueueMonitor />}
+            />
+            <Route
+              path="doctor/actions/:doctorId"
+              element={<DoctorActionPanel />}
+            />
+            <Route
+              path="widgets/token/:doctorId"
+              element={<TokenWidgetPage />}
+            />
             <Route path="doctors" element={<DoctorsPage />} />
             <Route path="doctors/:id" element={<DoctorDetail />} />
             <Route path="departments" element={<DepartmentsPage />} />

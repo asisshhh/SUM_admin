@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../api/client";
 
-// shared helpers / components (from earlier steps)
 import useDateRange from "../hooks/useDateRange";
 import DateRangeFilter from "../components/DateRangeFilter";
 import SearchBar from "../components/SearchBar";
@@ -10,23 +9,10 @@ import OrderDetailsModal from "../components/OrderDetailsModal";
 import { printReceipt } from "../components/ReceiptPrint";
 import io from "socket.io-client";
 
-/**
- * AppointmentOrders.jsx
- * Full featured appointments page:
- * - date range (with includeFuture)
- * - reset -> default to today
- * - department -> doctors interlinked
- * - search (debounced)
- * - status filter
- * - view details modal
- * - print receipt
- * - pagination
- */
-
 const DEFAULT_LIMIT = 20;
 
 export default function AppointmentOrders() {
-  // date range hook (default today)
+  // ---------------- Date Filters ----------------
   const {
     fromDate,
     toDate,
@@ -38,135 +24,43 @@ export default function AppointmentOrders() {
     resetDates
   } = useDateRange();
 
-  // filters
+  const today = new Date().toISOString().split("T")[0];
+
+  // ---------------- Filters ----------------
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [department, setDepartment] = useState("");
   const [doctor, setDoctor] = useState("");
 
-  // lists
+  // Dropdown Data
   const [departments, setDepartments] = useState([]);
   const [doctors, setDoctors] = useState([]);
-  const [socketInstance, setSocketInstance] = useState(null);
 
-  // data + paging
+  // Data Table
   const [rows, setRows] = useState([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(DEFAULT_LIMIT);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  // modal
+  // Modal
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Queue generation loading
   const [genLoading, setGenLoading] = useState(false);
 
-  const generateFullQueue = async () => {
-    if (!confirm("Generate full-day queue & tokens for all doctors?")) return;
+  // Sockets
+  const [socketInstance, setSocketInstance] = useState(null);
 
-    setGenLoading(true);
-
-    try {
-      await api.post("/appointment-queue/generate-day-queue", {
-        date: filters.date
-      });
-
-      await fetchOrders();
-      alert("Queue generated successfully!");
-    } catch (err) {
-      alert(err.response?.data?.error || "Failed to generate queue");
-    }
-
-    setGenLoading(false);
+  // --------------- Fetch Appointments ---------------
+  const fetchOrders = async () => {
+    return await load(page);
   };
 
-  // debounce refs
-  const searchRef = useRef(null);
-
-  // load departments (on mount)
-  useEffect(() => {
-    let mounted = true;
-    api
-      .get("/departments")
-      .then((res) => {
-        if (!mounted) return;
-        const list = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data?.data)
-          ? res.data.data
-          : [];
-        setDepartments(list);
-      })
-      .catch((err) => {
-        console.error("Failed to load departments:", err);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // load doctors when department changes (interlinked dropdown)
-  useEffect(() => {
-    let mounted = true;
-    if (!department) {
-      setDoctors([]);
-      setDoctor("");
-      return;
-    }
-    api
-      .get("/doctors", { params: { departmentId: department } })
-      .then((res) => {
-        if (!mounted) return;
-        const list = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data?.data)
-          ? res.data.data
-          : [];
-        setDoctors(list);
-      })
-      .catch((err) => {
-        console.error("Failed to load doctors:", err);
-        setDoctors([]);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [department]);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    const s = io(import.meta.env.VITE_SOCKET_URL, {
-      auth: { token }
-    });
-
-    setSocketInstance(s);
-
-    // Join all doctor rooms for real-time updates
-    doctors?.forEach((d) => {
-      const dateStr = filters.date || new Date().toISOString().split("T")[0];
-      s.emit("joinDoctorRoom", { doctorId: d.id, date: dateStr });
-    });
-
-    // When queue updates anywhere, refresh orders list
-    s.on("queueUpdated", () => {
-      fetchOrders();
-    });
-
-    return () => s.disconnect();
-  }, [doctors]);
-
-  const handleUpdated = async () => {
-    const fresh = await fetchOrders();
-    const updatedRow = fresh.find((x) => x.id === selectedOrder?.id);
-    if (updatedRow) setSelectedOrder(updatedRow);
-  };
-
-  // core loader
   const load = async (p = 1) => {
     setLoading(true);
-    setError("");
+
     try {
       const params = {
         type: "appointments",
@@ -181,7 +75,6 @@ export default function AppointmentOrders() {
 
       const res = await api.get("/orders", { params });
 
-      // support different response shapes: { data: [...], total, page } OR { success: true, data: {...} } OR pure array
       const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
       const totalCount =
         res.data?.total ??
@@ -192,11 +85,13 @@ export default function AppointmentOrders() {
       setRows(data);
       setTotal(totalCount);
       setPage(currentPage);
+
+      return data;
     } catch (err) {
-      console.error("Failed to load appointments:", err);
-      setError(err?.response?.data?.error || err.message || "Failed to load");
+      console.error("LOAD ERROR:", err);
       setRows([]);
       setTotal(0);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -205,147 +100,184 @@ export default function AppointmentOrders() {
   // initial load
   useEffect(() => {
     load(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // debounce search: trigger load when search changes after 500ms
+  // ---------------- Debounced Search ----------------
+  const searchRef = useRef(null);
   useEffect(() => {
     if (searchRef.current) clearTimeout(searchRef.current);
-    searchRef.current = setTimeout(() => {
-      load(1);
-    }, 500);
+    searchRef.current = setTimeout(() => load(1), 500);
 
-    return () => {
-      if (searchRef.current) clearTimeout(searchRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => clearTimeout(searchRef.current);
   }, [search]);
 
-  // optional: auto load when status or date range or department or doctor changed?
-  // We keep Apply Filters button as main trigger, but it's useful to auto-load when includeFuture toggled or dates changed:
+  // ---------------- Load Departments ----------------
   useEffect(() => {
-    // when includeFuture toggled or date changed, do NOT auto-fire if user is editing values actively.
-    // Keep it simple: auto reload when includeFuture toggles.
-    load(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeFuture]);
+    api
+      .get("/departments")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : res.data?.items || [];
+        setDepartments(list);
+      })
+      .catch((err) => console.error("DEPT LOAD ERROR:", err));
+  }, []);
 
-  // reset all filters to defaults (today)
+  // ---------------- Load Doctors on Department Change ----------------
+  useEffect(() => {
+    if (!department) {
+      setDoctors([]);
+      setDoctor("");
+      return;
+    }
+
+    api
+      .get("/doctors", { params: { departmentId: department } })
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : res.data?.items || [];
+        setDoctors(list);
+      })
+      .catch(() => setDoctors([]));
+  }, [department]);
+
+  // ---------------- Socket Connection ----------------
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    const s = io(import.meta.env.VITE_SOCKET_URL, {
+      auth: { token }
+    });
+
+    setSocketInstance(s);
+
+    // Listen from backend when any queue changes
+    s.on("queueUpdatedForAllDoctors", () => {
+      load(page);
+    });
+
+    // Listen for doctor-specific updates too
+    s.on("queueUpdated", () => {
+      load(page);
+    });
+
+    return () => s.disconnect();
+  }, []);
+
+  // ---------------- Handle Modal Update Refresh ----------------
+  const handleUpdated = async () => {
+    const fresh = await fetchOrders();
+    const updatedRow = fresh.find((x) => x.id === selectedOrder?.id);
+    if (updatedRow) setSelectedOrder(updatedRow);
+  };
+
+  // ---------------- Generate Full Queue ----------------
+  const generateFullQueue = async () => {
+    if (!confirm("Generate today’s queue for ALL doctors?")) return;
+
+    setGenLoading(true);
+
+    try {
+      await api.post("/appointment-queue/generate-day-queue", { date: today });
+      await fetchOrders();
+      alert("Queue generated successfully!");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to generate queue");
+    }
+
+    setGenLoading(false);
+  };
+
+  // ---------------- Reset All Filters ----------------
   const handleResetAll = () => {
     setSearch("");
     setStatus("");
     setDepartment("");
     setDoctor("");
-    resetDates(); // resets date filters to today + includeFuture=false
+    resetDates();
     load(1);
   };
 
-  // view details action
-  const handleView = (order) => {
-    setSelectedOrder(order);
-    setDetailsOpen(true);
-  };
-
-  // print action
-  const handlePrint = (order) => {
-    // optionally transform order into receipt-friendly object
-    printReceipt(order);
-  };
-
+  // ---------------- Render ----------------
   return (
     <div className="bg-white p-6 rounded-xl shadow space-y-6">
+      {/* HEADER */}
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-xl font-semibold">Appointments</h3>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage appointment bookings — search, filter, view details & print
-            receipts.
+          <p className="text-sm text-slate-500">
+            Manage appointments, view details, print receipts & manage queue.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Generate all tokens */}
           <button
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             onClick={generateFullQueue}
             disabled={genLoading}>
             {genLoading ? "Generating..." : "Generate Today's Queue"}
           </button>
 
+          {/* Missing tokens */}
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
             onClick={async () => {
-              if (!confirm("Generate missing tokens for the day?")) return;
-              await api.post("/admin/generate-missing-tokens", {
-                date: filters.date
+              if (!confirm("Generate missing tokens?")) return;
+              await api.post("/appointment-queue/generate-missing-tokens", {
+                date: today
               });
-              await fetchOrders();
-              alert("Missing tokens generated!");
+              load(1);
             }}>
-            Generate Missing Tokens
+            Missing Tokens
           </button>
+
+          {/* Reassign */}
           <button
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg shadow hover:bg-orange-700"
+            className="px-4 py-2 bg-orange-600 text-white rounded-lg"
             onClick={async () => {
               if (!confirm("Reassign queue for all doctors?")) return;
-              await api.post("/admin/reassign-queue", { date: filters.date });
-              await fetchOrders();
-              alert("Queue reassigned successfully!");
+              await api.post("/appointment-queue/reassign-queue", {
+                date: today
+              });
+              load(1);
             }}>
             Reassign Queue
           </button>
 
           <button
-            className="px-3 py-1 border rounded hover:bg-slate-50"
-            onClick={() => load(1)}
-            disabled={loading}>
+            className="px-3 py-1 border rounded"
+            onClick={() => load(page)}>
             Refresh
           </button>
 
           <button
-            className="px-3 py-1 bg-red-50 text-red-600 border rounded hover:bg-red-100"
+            className="px-3 py-1 bg-red-50 text-red-700 border rounded"
             onClick={handleResetAll}>
             Reset All
           </button>
         </div>
       </div>
 
-      {/* Filters Row: Search + Status + Date range */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="col-span-1">
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder="Search patient name / phone / order id"
-          />
-        </div>
-
-        <div className="col-span-1">
-          <StatusFilter value={status} onChange={setStatus} />
-        </div>
-
-        <div className="col-span-1">
-          <DateRangeFilter
-            fromDate={fromDate}
-            toDate={toDate}
-            includeFuture={includeFuture}
-            setFromDate={setFromDate}
-            setToDate={setToDate}
-            setIncludeFuture={setIncludeFuture}
-            onReset={() => {
-              resetDates();
-              // optionally reload immediately after resetting dates
-              // load(1);
-            }}
-          />
-        </div>
+      {/* FILTERS */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <SearchBar value={search} onChange={setSearch} />
+        <StatusFilter value={status} onChange={setStatus} />
+        <DateRangeFilter
+          fromDate={fromDate}
+          toDate={toDate}
+          includeFuture={includeFuture}
+          setFromDate={setFromDate}
+          setToDate={setToDate}
+          setIncludeFuture={setIncludeFuture}
+          onReset={resetDates}
+        />
       </div>
 
-      {/* Secondary Filters (Dept + Doctor + Apply) */}
+      {/* More Filters */}
       <div className="grid md:grid-cols-4 gap-4 items-end">
         <div>
-          <label className="text-sm text-slate-600">Department</label>
+          <label className="text-sm">Department</label>
           <select
-            className="w-full border p-2 rounded-lg"
+            className="w-full border p-2 rounded"
             value={department}
             onChange={(e) => setDepartment(e.target.value)}>
             <option value="">All</option>
@@ -358,48 +290,39 @@ export default function AppointmentOrders() {
         </div>
 
         <div>
-          <label className="text-sm text-slate-600">Doctor</label>
+          <label className="text-sm">Doctor</label>
           <select
-            className="w-full border p-2 rounded-lg"
+            className="w-full border p-2 rounded"
             value={doctor}
             onChange={(e) => setDoctor(e.target.value)}
             disabled={!department}>
             <option value="">All</option>
             {doctors.map((doc) => (
               <option key={doc.id} value={doc.id}>
-                {doc.user?.name || doc.id}
+                {doc.user?.name}
               </option>
             ))}
           </select>
         </div>
 
-        <div className="md:col-span-2 flex gap-3">
+        <div className="md:col-span-2 flex gap-3 items-end">
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-            onClick={() => load(1)}
-            disabled={loading}>
-            Apply Filters
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+            onClick={() => load(1)}>
+            Apply
           </button>
 
-          <button
-            className="px-4 py-2 border rounded-lg"
-            onClick={handleResetAll}>
-            Reset All Filters
+          <button className="px-4 py-2 border rounded" onClick={handleResetAll}>
+            Reset
           </button>
 
-          <div className="ml-auto text-sm text-slate-500 flex items-center gap-3">
-            {loading ? (
-              <span>Loading...</span>
-            ) : (
-              <span>
-                Showing {rows.length} of {total}
-              </span>
-            )}
+          <div className="ml-auto text-sm text-slate-500">
+            Showing {rows.length} of {total}
           </div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* TABLE */}
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -412,14 +335,15 @@ export default function AppointmentOrders() {
               <th className="p-3 text-sm">Date</th>
               <th className="p-3 text-sm">Slot</th>
               <th className="p-3 text-sm">Status</th>
+              <th className="p-3 text-sm">Queue Tools</th>
               <th className="p-3 text-sm">Actions</th>
             </tr>
           </thead>
 
           <tbody>
-            {!loading && rows.length === 0 && (
+            {rows.length === 0 && !loading && (
               <tr>
-                <td className="p-4" colSpan={9}>
+                <td colSpan={9} className="p-4 text-center">
                   No records found
                 </td>
               </tr>
@@ -428,32 +352,54 @@ export default function AppointmentOrders() {
             {rows.map((r, i) => (
               <tr key={r.id} className="border-b hover:bg-slate-50">
                 <td className="p-3 text-sm">{(page - 1) * limit + i + 1}</td>
-                <td className="p-3 text-sm">
-                  {r.patient?.name || r.user?.name || "-"}
-                </td>
-                <td className="p-3 text-sm">
-                  {r.patient?.phone || r.user?.phone || r.contactNumber || "-"}
-                </td>
-                <td className="p-3 text-sm">{r.doctor?.user?.name || "-"}</td>
-                <td className="p-3 text-sm">{r.department?.name || "-"}</td>
-                <td className="p-3 text-sm">
-                  {r.date ? r.date.split("T")[0] : "-"}
-                </td>
-                <td className="p-3 text-sm">
-                  {r.timeSlot || r.tokenNumber || "-"}
-                </td>
+                <td className="p-3 text-sm">{r.patient?.name}</td>
+                <td className="p-3 text-sm">{r.patient?.phone}</td>
+                <td className="p-3 text-sm">{r.doctor?.user?.name}</td>
+                <td className="p-3 text-sm">{r.department?.name}</td>
+                <td className="p-3 text-sm">{r.date?.split("T")[0]}</td>
+                <td className="p-3 text-sm">{r.timeSlot}</td>
                 <td className="p-3 text-sm">{r.status}</td>
                 <td className="p-3 text-sm">
-                  <div className="flex gap-3 items-center">
+                  {r.doctorId && (
+                    <div className="flex gap-2">
+                      <a
+                        href={`/doctor/queue-monitor/${r.doctorId}`}
+                        target="_blank"
+                        className="text-purple-600 underline">
+                        Monitor
+                      </a>
+
+                      <a
+                        href={`/doctor/actions/${r.doctorId}`}
+                        target="_blank"
+                        className="text-blue-600 underline">
+                        Actions
+                      </a>
+
+                      <a
+                        href={`/widgets/token/${r.doctorId}`}
+                        target="_blank"
+                        className="text-green-600 underline">
+                        Token
+                      </a>
+                    </div>
+                  )}
+                </td>
+
+                <td className="p-3 text-sm">
+                  <div className="flex gap-3">
                     <button
                       className="text-blue-600 underline"
-                      onClick={() => handleView(r)}>
+                      onClick={() => {
+                        setSelectedOrder(r);
+                        setDetailsOpen(true);
+                      }}>
                       View
                     </button>
 
                     <button
                       className="text-green-600 underline"
-                      onClick={() => handlePrint(r)}>
+                      onClick={() => printReceipt(r)}>
                       Print
                     </button>
                   </div>
@@ -463,7 +409,7 @@ export default function AppointmentOrders() {
 
             {loading && (
               <tr>
-                <td className="p-4" colSpan={9}>
+                <td colSpan={9} className="p-4 text-center">
                   Loading...
                 </td>
               </tr>
@@ -473,35 +419,31 @@ export default function AppointmentOrders() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-4">
-        <div className="text-sm text-slate-600">Total: {total}</div>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between">
+        <div>Total: {total}</div>
+        <div className="flex gap-2">
           <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
-            onClick={() => {
-              if (page > 1) load(page - 1);
-            }}
-            disabled={page <= 1}>
+            className="px-3 py-1 border rounded"
+            disabled={page <= 1}
+            onClick={() => load(page - 1)}>
             Prev
           </button>
 
-          <div className="px-3 py-1 border rounded">{page}</div>
+          <span className="px-3 py-1 border rounded">{page}</span>
 
           <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
-            onClick={() => {
-              if (page * limit < total) load(page + 1);
-            }}
-            disabled={page * limit >= total}>
+            className="px-3 py-1 border rounded"
+            disabled={page * limit >= total}
+            onClick={() => load(page + 1)}>
             Next
           </button>
         </div>
       </div>
 
-      {/* Details Modal */}
+      {/* Modal */}
       <OrderDetailsModal
-        open={!!selectedOrder}
-        onClose={() => setSelectedOrder(null)}
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
         data={selectedOrder}
         socket={socketInstance}
         onUpdated={handleUpdated}

@@ -51,10 +51,12 @@ export default function DoctorQueueMonitor() {
     Socket.emit("joinDoctorRoom", roomPayload);
 
     const off1 = Socket.on("queueUpdated", ({ date }) => {
+      console.log("Received queueUpdated event");
       if (date === today) loadQueue();
     });
 
     const off2 = Socket.on("queueUpdatedForAllDoctors", ({ date }) => {
+      console.log("Received queueUpdatedForAllDoctors event");
       if (date === today) loadQueue();
     });
 

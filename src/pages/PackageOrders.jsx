@@ -136,14 +136,13 @@ export default function PackageOrders() {
 
                 {/* ✅ Action */}
                 <td className="p-3">
-                  {r.paymentOption === "PAY_AT_HOSPITAL" &&
-                    r.paymentStatus !== "SUCCESS" && (
-                      <button
-                        className="px-3 py-1 bg-emerald-600 text-white rounded"
-                        onClick={() => markPaid(r)}>
-                        Mark Paid
-                      </button>
-                    )}
+                  {r.paymentStatus !== "SUCCESS" && (
+                    <button
+                      className="px-3 py-1 bg-emerald-600 text-white rounded"
+                      onClick={() => markPaid(r)}>
+                      Mark Paid
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

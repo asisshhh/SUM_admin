@@ -19,23 +19,51 @@ export default function PackageOrders() {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const load = async (p = 1) => {
-    const res = await api.get("/orders", {
-      params: {
-        type: "packages",
-        page: p,
-        limit,
-        ...buildDateParams()
-      }
-    });
-
-    setRows(res.data.data || []);
-    setTotal(res.data.total || 0);
-    setPage(res.data.page || p);
+    setLoading(true);
+    try {
+      const res = await api.get("/orders", {
+        params: {
+          type: "packages",
+          page: p,
+          limit,
+          ...buildDateParams()
+        }
+      });
+      setRows(res.data.data || []);
+      setTotal(res.data.total || 0);
+      setPage(res.data.page || p);
+    } catch (e) {
+      console.error("Failed to load package orders", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => load(1), []);
+  useEffect(() => {
+    load(1);
+  }, []);
+
+  // ✅ ADMIN: mark pay-at-hospital payment
+  const markPaid = async (row) => {
+    if (!window.confirm("Mark payment as PAID?")) return;
+
+    try {
+      await api.post("/payments/mark-paid", {
+        orderType: "HEALTH_PACKAGE",
+        orderId: row.id,
+        amount: row.totalAmount,
+        method: "CASH"
+      });
+
+      alert("Payment marked as PAID");
+      load(page);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to mark payment");
+    }
+  };
 
   return (
     <div className="bg-white p-6 rounded-xl shadow space-y-6">
@@ -48,7 +76,10 @@ export default function PackageOrders() {
         setFromDate={setFromDate}
         setToDate={setToDate}
         setIncludeFuture={setIncludeFuture}
-        onReset={resetDates}
+        onReset={() => {
+          resetDates();
+          load(1);
+        }}
       />
 
       <button
@@ -56,6 +87,8 @@ export default function PackageOrders() {
         onClick={() => load(1)}>
         Apply Filters
       </button>
+
+      {loading && <div>Loading...</div>}
 
       <div className="overflow-x-auto mt-4">
         <table className="w-full text-left">
@@ -65,14 +98,16 @@ export default function PackageOrders() {
               <th className="p-3">User</th>
               <th className="p-3">Package</th>
               <th className="p-3">Amount</th>
+              <th className="p-3">Payment</th>
               <th className="p-3">Status</th>
+              <th className="p-3">Action</th>
             </tr>
           </thead>
 
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td className="p-4" colSpan={5}>
+                <td className="p-4 text-center" colSpan={7}>
                   No records found
                 </td>
               </tr>
@@ -83,12 +118,58 @@ export default function PackageOrders() {
                 <td className="p-3">{(page - 1) * limit + i + 1}</td>
                 <td className="p-3">{r.user?.name}</td>
                 <td className="p-3">{r.package?.name}</td>
-                <td className="p-3">₹{r.totalAmount}</td>
+                <td className="p-3">₹ {r.totalAmount}</td>
+
+                {/* ✅ Payment Status */}
+                <td className="p-3">
+                  <span
+                    className={`font-semibold ${
+                      r.paymentStatus === "SUCCESS"
+                        ? "text-green-600"
+                        : "text-yellow-600"
+                    }`}>
+                    {r.paymentStatus || "PENDING"}
+                  </span>
+                </td>
+
                 <td className="p-3">{r.status}</td>
+
+                {/* ✅ Action */}
+                <td className="p-3">
+                  {r.paymentStatus !== "SUCCESS" && (
+                    <button
+                      className="px-3 py-1 bg-emerald-600 text-white rounded"
+                      onClick={() => markPaid(r)}>
+                      Mark Paid
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between mt-4">
+        <div>Total: {total}</div>
+        <div className="flex gap-2">
+          <button
+            disabled={page <= 1}
+            className="border px-3 py-1 rounded"
+            onClick={() => load(page - 1)}>
+            Prev
+          </button>
+
+          <div className="px-3 py-1 border rounded">{page}</div>
+
+          <button
+            disabled={page * limit >= total}
+            className="border px-3 py-1 rounded"
+            onClick={() => load(page + 1)}>
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

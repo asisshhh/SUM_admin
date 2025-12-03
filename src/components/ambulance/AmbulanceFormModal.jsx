@@ -10,7 +10,7 @@ export default function AmbulanceFormModal({ data, onClose }) {
     vehicleNumber: data?.vehicleNumber || "",
     model: data?.model || "",
     registrationNumber: data?.registrationNumber || "",
-    type: data?.type || "EMERGENCY",
+    type: data?.type || "ALS",
     baseFare: data?.baseFare || "",
     perKmFare: data?.perKmFare || "",
     insuranceExpiry: data?.insuranceExpiry
@@ -93,11 +93,8 @@ export default function AmbulanceFormModal({ data, onClose }) {
               className="select"
               value={form.type}
               onChange={(e) => update("type", e.target.value)}>
-              <option value="EMERGENCY">Emergency</option>
-              <option value="NON_EMERGENCY">Non-Emergency</option>
-              <option value="Type 1">Type 1</option>
-              <option value="Type 2">Type 2</option>
-              <option value="Type 3">Type 3</option>
+              <option value="BLS">Basic Life Support</option>
+              <option value="ALS">Advanced Life Support With Paramedic</option>
             </select>
           </div>
 

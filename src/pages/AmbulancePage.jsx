@@ -71,12 +71,9 @@ export default function AmbulancePage() {
             name="type"
             value={filters.type}
             onChange={onChange}>
-            <option value="">All</option>
-            <option value="EMERGENCY">Emergency</option>
-            <option value="NON_EMERGENCY">Non-Emergency</option>
-            <option value="Type 1">Type 1</option>
-            <option value="Type 2">Type 2</option>
-            <option value="Type 3">Type 3</option>
+            <option value="">Select Type</option>
+            <option value="BLS">Basic Life Support</option>
+            <option value="ALS">Advanced Life Support With Paramedic</option>
           </select>
         </div>
 

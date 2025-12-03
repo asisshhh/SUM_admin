@@ -12,6 +12,7 @@ import {
   LogOut,
   ListChecks
 } from "lucide-react";
+import logo from "../assets/logo.webp";
 
 const NavItem = ({ to, icon: Icon, label }) => (
   <NavLink
@@ -45,8 +46,15 @@ export default function AppLayout() {
       {/* ---------------- SIDEBAR ---------------- */}
       <aside className="w-[260px] bg-white border-r border-slate-200 flex flex-col">
         {/* Branding */}
-        <div className="px-5 py-6 text-2xl font-bold tracking-tight text-slate-800">
-          🏥 Hospital Admin
+        <div className="px-5 py-6 flex items-center gap-3 border-b border-slate-200">
+          <img
+            src={logo}
+            alt="Hospital Logo"
+            className="h-10 w-auto object-contain"
+          />
+          <span className="text-lg font-bold tracking-tight text-slate-800">
+            App Admin
+          </span>
         </div>
 
         {/* NAV MENU */}

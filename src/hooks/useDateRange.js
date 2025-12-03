@@ -1,32 +1,28 @@
 import { useState } from "react";
 
 export default function useDateRange() {
-  const today = new Date().toISOString().split("T")[0];
-
-  const [fromDate, setFromDate] = useState(today);
-  const [toDate, setToDate] = useState(today);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [includeFuture, setIncludeFuture] = useState(false);
 
+  const buildDateParams = () => ({
+    from: fromDate || undefined,
+    to: toDate || undefined,
+    includeFuture: includeFuture || undefined
+  });
+
   const resetDates = () => {
-    setFromDate(today);
-    setToDate(today);
+    setFromDate("");
+    setToDate("");
     setIncludeFuture(false);
   };
 
-  const buildDateParams = () => {
-    if (includeFuture) {
-      return { from: fromDate };
-    }
-    return { from: fromDate, to: toDate };
-  };
-
   return {
-    today,
     fromDate,
-    setFromDate,
     toDate,
-    setToDate,
     includeFuture,
+    setFromDate,
+    setToDate,
     setIncludeFuture,
     buildDateParams,
     resetDates

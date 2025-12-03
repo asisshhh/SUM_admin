@@ -66,6 +66,12 @@ function EditDoctorModal({ doc, departments, onClose }) {
   });
 
   const updateField = (k, v) => setForm({ ...form, [k]: v });
+  const deleteDoctor = async (id) => {
+    if (!window.confirm("Permanently delete this doctor?")) return;
+
+    await api.delete(`/doctors/${id}`);
+    query.refetch(); // reload list
+  };
 
   return (
     <div className="fixed inset-0 bg-black/30 grid place-items-center">
@@ -262,7 +268,7 @@ export default function DoctorsPage() {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex items-end gap-3 flex-wrap">
-        <div className="grow max-w-sm">
+        {/* <div className="grow max-w-sm">
           <label className="text-sm">Search</label>
           <input
             className="input"
@@ -271,7 +277,7 @@ export default function DoctorsPage() {
             onChange={onChange}
             placeholder="Name / Specialization"
           />
-        </div>
+        </div> */}
 
         <div>
           <label className="text-sm">Department</label>
@@ -386,7 +392,7 @@ export default function DoctorsPage() {
                   <button className="btn" onClick={() => setEditing(d)}>
                     Edit
                   </button>
-                  <button className="btn" onClick={() => del.mutate(d.id)}>
+                  <button className="btn" onClick={() => deleteDoctor(d.id)}>
                     Delete
                   </button>
                 </td>

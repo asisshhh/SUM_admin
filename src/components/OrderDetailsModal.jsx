@@ -24,11 +24,25 @@ export default function OrderDetailsModal({
   const [localData, setLocalData] = useState(data);
   const [loading, setLoading] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  // payment state (ADMIN – Pay at hospital)
+  const [paymentStatus, setPaymentStatus] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentAmount, setPaymentAmount] = useState("");
 
   // Sync modal data when a new order is opened
   useEffect(() => {
     setLocalData(data);
   }, [data]);
+  const effectivePaymentStatus =
+    localData?.paymentStatus === "PAID"
+      ? "SUCCESS"
+      : localData?.paymentStatus || localData?.billing?.status || "PENDING";
+  const effectiveAmount =
+    localData.paymentAmount ??
+    localData.payments?.[0]?.amount ??
+    localData.billing?.amount ??
+    localData.doctor?.consultationFee ??
+    "-";
 
   const formatDate = (dt) => (dt ? new Date(dt).toLocaleString() : "-");
 
@@ -180,6 +194,32 @@ export default function OrderDetailsModal({
 
     setLoading(false);
   };
+  const markPaid = async () => {
+    if (!confirm("Confirm payment received at hospital?")) return;
+
+    setLoading(true);
+    try {
+      await api.post("/payments/mark-paid", {
+        orderType: "APPOINTMENT",
+        orderId: localData.id,
+        amount: effectiveAmount,
+        method: "CASH",
+        status: "SUCCESS"
+      });
+
+      // ✅ Update local payment state
+      setLocalData((prev) => ({
+        ...prev,
+        paymentStatus: "SUCCESS"
+      }));
+
+      await onUpdated?.();
+      alert("Payment marked as PAID");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to mark payment");
+    }
+    setLoading(false);
+  };
 
   const statusOptions = [
     "PENDING",
@@ -277,9 +317,50 @@ export default function OrderDetailsModal({
             </div>
           </InfoCard>
         )}
+        {/* PAYMENT INFO */}
+        {localData.paymentOption === "PAY_AT_HOSPITAL" &&
+          effectivePaymentStatus !== "SUCCESS" && (
+            <div className="mt-6 p-4 rounded-xl border border-slate-200 bg-slate-50">
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                Payment Details
+              </h3>
+
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-slate-500">Mode</span>
+                <span className="font-medium">{localData.paymentOption}</span>
+              </div>
+
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-slate-500">Amount</span>
+                <span className="font-medium">₹ {effectiveAmount}</span>
+              </div>
+
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-slate-500">Status</span>
+                <span
+                  className={`font-semibold ${
+                    effectivePaymentStatus === "SUCCESS"
+                      ? "text-green-600"
+                      : "text-yellow-600"
+                  }`}>
+                  {effectivePaymentStatus}
+                </span>
+              </div>
+
+              {localData.paymentOption === "PAY_AT_HOSPITAL" &&
+                effectivePaymentStatus !== "SUCCESS" && (
+                  <button
+                    onClick={markPaid}
+                    disabled={loading}
+                    className="w-full mt-4 py-3 bg-emerald-600 text-white rounded-xl shadow hover:bg-emerald-700">
+                    Mark Payment as PAID
+                  </button>
+                )}
+            </div>
+          )}
 
         {/* Actions */}
-        <div className="mt-8 space-y-3">
+        {/* <div className="mt-8 space-y-3">
           {localData.tokenNumber == null && (
             <button
               onClick={checkIn}
@@ -303,7 +384,7 @@ export default function OrderDetailsModal({
             className="w-full py-3 bg-slate-800 text-white rounded-xl shadow hover:bg-slate-700">
             Close
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
+// AppointmentOrders.jsx — Premium Filters & Header UI (Soft Modern Clinic)
 import React, { useEffect, useState, useRef } from "react";
 import api from "../api/client";
-
 import useDateRange from "../hooks/useDateRange";
 import DateRangeFilter from "../components/DateRangeFilter";
 import SearchBar from "../components/SearchBar";
@@ -12,7 +12,7 @@ import io from "socket.io-client";
 const DEFAULT_LIMIT = 20;
 
 export default function AppointmentOrders() {
-  // ---------------- Date Filters ----------------
+  // date range hook
   const {
     fromDate,
     toDate,
@@ -26,41 +26,38 @@ export default function AppointmentOrders() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // ---------------- Filters ----------------
+  // filters
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [department, setDepartment] = useState("");
   const [doctor, setDoctor] = useState("");
 
-  // Dropdown Data
+  // dropdown data
   const [departments, setDepartments] = useState([]);
   const [doctors, setDoctors] = useState([]);
 
-  // Data Table
+  // table data + pagination
   const [rows, setRows] = useState([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(DEFAULT_LIMIT);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Modal
+  // modal
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Queue generation loading
+  // generate queue loading
   const [genLoading, setGenLoading] = useState(false);
 
-  // Sockets
+  // socket instance
   const [socketInstance, setSocketInstance] = useState(null);
 
-  // --------------- Fetch Appointments ---------------
-  const fetchOrders = async () => {
-    return await load(page);
-  };
+  // fetch loader
+  const fetchOrders = async () => load(page);
 
   const load = async (p = 1) => {
     setLoading(true);
-
     try {
       const params = {
         type: "appointments",
@@ -72,9 +69,7 @@ export default function AppointmentOrders() {
         departmentId: department || undefined,
         ...buildDateParams()
       };
-
       const res = await api.get("/orders", { params });
-
       const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
       const totalCount =
         res.data?.total ??
@@ -100,18 +95,19 @@ export default function AppointmentOrders() {
   // initial load
   useEffect(() => {
     load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---------------- Debounced Search ----------------
+  // debounced search + run when filter changes
   const searchRef = useRef(null);
   useEffect(() => {
     if (searchRef.current) clearTimeout(searchRef.current);
-    searchRef.current = setTimeout(() => load(1), 500);
-
+    searchRef.current = setTimeout(() => load(1), 420);
     return () => clearTimeout(searchRef.current);
-  }, [search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, status, department, doctor, fromDate, toDate, includeFuture]);
 
-  // ---------------- Load Departments ----------------
+  // load departments
   useEffect(() => {
     api
       .get("/departments")
@@ -122,14 +118,13 @@ export default function AppointmentOrders() {
       .catch((err) => console.error("DEPT LOAD ERROR:", err));
   }, []);
 
-  // ---------------- Load Doctors on Department Change ----------------
+  // load doctors for a department
   useEffect(() => {
     if (!department) {
       setDoctors([]);
       setDoctor("");
       return;
     }
-
     api
       .get("/doctors", { params: { departmentId: department } })
       .then((res) => {
@@ -139,42 +134,31 @@ export default function AppointmentOrders() {
       .catch(() => setDoctors([]));
   }, [department]);
 
-  // ---------------- Socket Connection ----------------
+  // socket connection (keeps parent table in sync)
   useEffect(() => {
     const token = localStorage.getItem("token");
-
-    const s = io(import.meta.env.VITE_SOCKET_URL, {
-      auth: { token }
-    });
-
+    const s = io(import.meta.env.VITE_SOCKET_URL, { auth: { token } });
     setSocketInstance(s);
 
-    // Listen from backend when any queue changes
-    s.on("queueUpdatedForAllDoctors", () => {
-      load(page);
-    });
-
-    // Listen for doctor-specific updates too
-    s.on("queueUpdated", () => {
-      load(page);
-    });
+    const refresh = () => load(1);
+    s.on("queueUpdatedForAllDoctors", refresh);
+    s.on("queueUpdated", refresh);
 
     return () => s.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---------------- Handle Modal Update Refresh ----------------
+  // handle modal update: refresh table + keep selected order updated
   const handleUpdated = async () => {
     const fresh = await fetchOrders();
     const updatedRow = fresh.find((x) => x.id === selectedOrder?.id);
     if (updatedRow) setSelectedOrder(updatedRow);
   };
 
-  // ---------------- Generate Full Queue ----------------
+  // generate full queue
   const generateFullQueue = async () => {
     if (!confirm("Generate today’s queue for ALL doctors?")) return;
-
     setGenLoading(true);
-
     try {
       await api.post("/appointment-queue/generate-day-queue", { date: today });
       await fetchOrders();
@@ -182,11 +166,10 @@ export default function AppointmentOrders() {
     } catch (err) {
       alert(err.response?.data?.error || "Failed to generate queue");
     }
-
     setGenLoading(false);
   };
 
-  // ---------------- Reset All Filters ----------------
+  // reset filters
   const handleResetAll = () => {
     setSearch("");
     setStatus("");
@@ -196,30 +179,105 @@ export default function AppointmentOrders() {
     load(1);
   };
 
-  // ---------------- Render ----------------
+  // compact helper for table rows render
+  const renderRows = () =>
+    rows.map((r, i) => (
+      <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+        <td className="p-3 text-sm">{(page - 1) * limit + i + 1}</td>
+        <td className="p-3 text-sm font-medium">{r.patient?.name}</td>
+        <td className="p-3 text-sm">{r.patient?.phone}</td>
+        <td className="p-3 text-sm">{r.doctor?.user?.name}</td>
+        <td className="p-3 text-sm">{r.department?.name}</td>
+        <td className="p-3 text-sm">{r.date?.split("T")[0]}</td>
+        <td className="p-3 text-sm">{r.timeSlot}</td>
+        <td className="p-3 text-sm">{r.status}</td>
+        <td className="p-3 text-sm font-medium">
+          <span
+            className={`px-2 py-1 rounded-md text-xs font-semibold
+      ${
+        r.paymentStatus === "SUCCESS"
+          ? "bg-green-100 text-green-700"
+          : "bg-yellow-100 text-yellow-700"
+      }`}>
+            ₹{" "}
+            {r.paymentAmount ??
+              r.payments?.[0]?.amount ??
+              r.billing?.amount ??
+              r.doctor?.consultationFee ??
+              "-"}
+          </span>
+        </td>
+
+        <td className="p-3 text-sm">
+          {r.doctorId ? (
+            <div className="flex gap-2">
+              <a
+                href={`/doctor/queue-monitor/${r.doctorId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-purple-600 underline">
+                Monitor
+              </a>
+              <a
+                href={`/doctor/actions/${r.doctorId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 underline">
+                Actions
+              </a>
+              {/* <a
+                href={`/widgets/token/${r.doctorId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-green-600 underline">
+                Token
+              </a> */}
+            </div>
+          ) : (
+            "-"
+          )}
+        </td>
+        <td className="p-3 text-sm">
+          <div className="flex gap-3">
+            <button
+              className="text-blue-600 underline"
+              onClick={() => {
+                setSelectedOrder(r);
+                setDetailsOpen(true);
+              }}>
+              View
+            </button>
+            <button
+              className="text-green-600 underline"
+              onClick={() => printReceipt(r)}>
+              Print
+            </button>
+          </div>
+        </td>
+      </tr>
+    ));
+
   return (
-    <div className="bg-white p-6 rounded-xl shadow space-y-6">
-      {/* HEADER */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-xl font-semibold">Appointments</h3>
-          <p className="text-sm text-slate-500">
+    <div className="bg-white p-6 rounded-2xl shadow-lg space-y-6">
+      {/* HEADER + big CTAs */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div className="flex-1">
+          <h3 className="text-2xl font-semibold">Appointments</h3>
+          <p className="text-sm text-slate-500 mt-1">
             Manage appointments, view details, print receipts & manage queue.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Generate all tokens */}
+        <div className="flex flex-wrap gap-3 items-center">
           <button
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            className="px-6 py-3 bg-purple-600 text-white rounded-xl shadow hover:bg-purple-700 transition"
             onClick={generateFullQueue}
             disabled={genLoading}>
             {genLoading ? "Generating..." : "Generate Today's Queue"}
           </button>
 
-          {/* Missing tokens */}
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+          {/* <button
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
             onClick={async () => {
               if (!confirm("Generate missing tokens?")) return;
               await api.post("/appointment-queue/generate-missing-tokens", {
@@ -228,11 +286,10 @@ export default function AppointmentOrders() {
               load(1);
             }}>
             Missing Tokens
-          </button>
+          </button> */}
 
-          {/* Reassign */}
-          <button
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg"
+          {/* <button
+            className="px-6 py-3 bg-orange-600 text-white rounded-xl shadow hover:bg-orange-700 transition"
             onClick={async () => {
               if (!confirm("Reassign queue for all doctors?")) return;
               await api.post("/appointment-queue/reassign-queue", {
@@ -241,45 +298,112 @@ export default function AppointmentOrders() {
               load(1);
             }}>
             Reassign Queue
-          </button>
+          </button> */}
 
           <button
-            className="px-3 py-1 border rounded"
+            className="px-4 py-2 border rounded-lg hover:bg-slate-50"
             onClick={() => load(page)}>
             Refresh
           </button>
-
           <button
-            className="px-3 py-1 bg-red-50 text-red-700 border rounded"
+            className="px-4 py-2 bg-red-50 text-red-700 border rounded-lg hover:bg-red-100"
             onClick={handleResetAll}>
             Reset All
           </button>
         </div>
       </div>
 
-      {/* FILTERS */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <SearchBar value={search} onChange={setSearch} />
-        <StatusFilter value={status} onChange={setStatus} />
-        <DateRangeFilter
-          fromDate={fromDate}
-          toDate={toDate}
-          includeFuture={includeFuture}
-          setFromDate={setFromDate}
-          setToDate={setToDate}
-          setIncludeFuture={setIncludeFuture}
-          onReset={resetDates}
-        />
+      {/* PREMIUM FILTER BAR */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        {/* Search */}
+        <div className="xl:col-span-5">
+          <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-sm h-full flex items-center">
+            <div className="w-full">
+              <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="Search patient, phone or appointment id..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Status */}
+        <div className="xl:col-span-3">
+          <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-sm h-full">
+            <label className="block text-sm text-slate-600 mb-2 font-medium">
+              Status
+            </label>
+            <StatusFilter value={status} onChange={(v) => setStatus(v)} />
+          </div>
+        </div>
+
+        {/* Date Filter */}
+        <div className="xl:col-span-4">
+          <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-sm h-full">
+            <label className="block text-sm text-slate-600 font-medium mb-3">
+              Date Range
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-500">From</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full mt-1 border rounded-lg p-2"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-500">To</label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full mt-1 border rounded-lg p-2"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-3">
+              <input
+                type="checkbox"
+                checked={includeFuture}
+                onChange={(e) => setIncludeFuture(e.target.checked)}
+              />
+              <span className="text-sm text-slate-600">
+                Include future dates
+              </span>
+            </div>
+
+            <button
+              className="mt-4 px-4 py-2 border rounded-lg text-sm hover:bg-slate-50"
+              onClick={() => {
+                resetDates();
+                load(1);
+              }}>
+              Reset Date Filter
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* More Filters */}
-      <div className="grid md:grid-cols-4 gap-4 items-end">
+      {/* SECOND ROW: Department / Doctor / Actions */}
+      <div className="mt-6 grid md:grid-cols-4 gap-4 items-end">
+        {/* Department */}
         <div>
-          <label className="text-sm">Department</label>
+          <label className="text-sm text-slate-700 font-medium">
+            Department
+          </label>
           <select
-            className="w-full border p-2 rounded"
+            className="w-full border p-3 rounded-xl mt-2 bg-white"
             value={department}
-            onChange={(e) => setDepartment(e.target.value)}>
+            onChange={(e) => {
+              setDepartment(e.target.value);
+              setDoctor("");
+            }}>
             <option value="">All</option>
             {departments.map((d) => (
               <option key={d.id} value={d.id}>
@@ -289,13 +413,14 @@ export default function AppointmentOrders() {
           </select>
         </div>
 
+        {/* Doctor */}
         <div>
-          <label className="text-sm">Doctor</label>
+          <label className="text-sm text-slate-700 font-medium">Doctor</label>
           <select
-            className="w-full border p-2 rounded"
+            className="w-full border p-3 rounded-xl mt-2 bg-white"
             value={doctor}
-            onChange={(e) => setDoctor(e.target.value)}
-            disabled={!department}>
+            disabled={!department}
+            onChange={(e) => setDoctor(e.target.value)}>
             <option value="">All</option>
             {doctors.map((doc) => (
               <option key={doc.id} value={doc.id}>
@@ -305,28 +430,31 @@ export default function AppointmentOrders() {
           </select>
         </div>
 
-        <div className="md:col-span-2 flex gap-3 items-end">
+        {/* Apply / Reset */}
+        <div className="md:col-span-2 flex gap-3 items-center">
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
             onClick={() => load(1)}>
             Apply
           </button>
 
-          <button className="px-4 py-2 border rounded" onClick={handleResetAll}>
+          <button
+            className="px-5 py-3 border rounded-xl hover:bg-slate-50"
+            onClick={handleResetAll}>
             Reset
           </button>
 
           <div className="ml-auto text-sm text-slate-500">
-            Showing {rows.length} of {total}
+            Showing <strong>{rows.length}</strong> of <strong>{total}</strong>
           </div>
         </div>
       </div>
 
       {/* TABLE */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50">
+      <div className="overflow-x-auto rounded-lg border border-slate-100">
+        <table className="w-full text-left divide-y">
+          <thead className="bg-slate-50">
+            <tr>
               <th className="p-3 text-sm">#</th>
               <th className="p-3 text-sm">Patient</th>
               <th className="p-3 text-sm">Phone</th>
@@ -335,81 +463,26 @@ export default function AppointmentOrders() {
               <th className="p-3 text-sm">Date</th>
               <th className="p-3 text-sm">Slot</th>
               <th className="p-3 text-sm">Status</th>
-              <th className="p-3 text-sm">Queue Tools</th>
+              <th className="p-3 text-sm">Amount</th>
+              <th className="p-3 text-sm">Queue</th>
               <th className="p-3 text-sm">Actions</th>
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="bg-white">
             {rows.length === 0 && !loading && (
               <tr>
-                <td colSpan={9} className="p-4 text-center">
+                <td colSpan={10} className="p-6 text-center text-slate-500">
                   No records found
                 </td>
               </tr>
             )}
 
-            {rows.map((r, i) => (
-              <tr key={r.id} className="border-b hover:bg-slate-50">
-                <td className="p-3 text-sm">{(page - 1) * limit + i + 1}</td>
-                <td className="p-3 text-sm">{r.patient?.name}</td>
-                <td className="p-3 text-sm">{r.patient?.phone}</td>
-                <td className="p-3 text-sm">{r.doctor?.user?.name}</td>
-                <td className="p-3 text-sm">{r.department?.name}</td>
-                <td className="p-3 text-sm">{r.date?.split("T")[0]}</td>
-                <td className="p-3 text-sm">{r.timeSlot}</td>
-                <td className="p-3 text-sm">{r.status}</td>
-                <td className="p-3 text-sm">
-                  {r.doctorId && (
-                    <div className="flex gap-2">
-                      <a
-                        href={`/doctor/queue-monitor/${r.doctorId}`}
-                        target="_blank"
-                        className="text-purple-600 underline">
-                        Monitor
-                      </a>
-
-                      <a
-                        href={`/doctor/actions/${r.doctorId}`}
-                        target="_blank"
-                        className="text-blue-600 underline">
-                        Actions
-                      </a>
-
-                      <a
-                        href={`/widgets/token/${r.doctorId}`}
-                        target="_blank"
-                        className="text-green-600 underline">
-                        Token
-                      </a>
-                    </div>
-                  )}
-                </td>
-
-                <td className="p-3 text-sm">
-                  <div className="flex gap-3">
-                    <button
-                      className="text-blue-600 underline"
-                      onClick={() => {
-                        setSelectedOrder(r);
-                        setDetailsOpen(true);
-                      }}>
-                      View
-                    </button>
-
-                    <button
-                      className="text-green-600 underline"
-                      onClick={() => printReceipt(r)}>
-                      Print
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {renderRows()}
 
             {loading && (
               <tr>
-                <td colSpan={9} className="p-4 text-center">
+                <td colSpan={10} className="p-6 text-center text-slate-500">
                   Loading...
                 </td>
               </tr>
@@ -420,19 +493,19 @@ export default function AppointmentOrders() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <div>Total: {total}</div>
-        <div className="flex gap-2">
+        <div className="text-sm text-slate-600">
+          Total: <strong>{total}</strong>
+        </div>
+        <div className="flex gap-2 items-center">
           <button
-            className="px-3 py-1 border rounded"
+            className="px-3 py-1 border rounded-lg"
             disabled={page <= 1}
             onClick={() => load(page - 1)}>
             Prev
           </button>
-
-          <span className="px-3 py-1 border rounded">{page}</span>
-
+          <span className="px-3 py-1 border rounded-lg">{page}</span>
           <button
-            className="px-3 py-1 border rounded"
+            className="px-3 py-1 border rounded-lg"
             disabled={page * limit >= total}
             onClick={() => load(page + 1)}>
             Next

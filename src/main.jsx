@@ -55,8 +55,8 @@ createRoot(document.getElementById("root")).render(
               <Route path="appointments" element={<AppointmentOrders />} />
               <Route path="ambulance" element={<AmbulanceOrders />} />
               <Route path="packages" element={<PackageOrders />} />
-              <Route path="lab" element={<LabOrders />} />
-              <Route path="homecare" element={<HomecareOrders />} />
+              {/* <Route path="lab" element={<LabOrders />} />
+              <Route path="homecare" element={<HomecareOrders />} /> */}
             </Route>
             <Route path="doctor-queue" element={<DoctorQueue />} />
             <Route

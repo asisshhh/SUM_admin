@@ -35,15 +35,39 @@ function Pager({ page, pageSize, total, onPage }) {
 }
 
 /***************************************************************
- * TEST SELECTOR COMPONENT
+ * TEST SELECTOR COMPONENT - With internal data fetching
  ***************************************************************/
-function TestSelector({ selectedIds, onChange, availableTests }) {
-  const [searchTerm, setSearchTerm] = useState("");
+function TestSelector({ selectedIds, onChange, existingTests }) {
+  const [searchInput, setSearchInput] = useState("");
+  const [showSelected, setShowSelected] = useState(true);
 
-  const filteredTests = availableTests.filter(t =>
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Debounce search
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  // Fetch tests with search
+  const { data: testsData, isLoading } = useQuery({
+    queryKey: ["lab-tests-selector", debouncedSearch],
+    queryFn: async () => {
+      const params = { pageSize: 100, active: "true" };
+      if (debouncedSearch) params.search = debouncedSearch;
+      return (await api.get("/lab-tests", { params })).data;
+    }
+  });
+
+  const availableTests = testsData?.items || [];
+
+  // Build a map of all tests (available + existing selected)
+  const testMap = new Map();
+  availableTests.forEach(t => testMap.set(t.id, t));
+  existingTests?.forEach(t => {
+    const id = t.testId || t.id;
+    if (!testMap.has(id)) {
+      testMap.set(id, { id, name: t.test?.name || t.name || `Test #${id}`, code: t.test?.code || t.code || '', price: t.test?.price || t.price || 0 });
+    }
+  });
+
+  // Get selected test details
+  const selectedTests = selectedIds.map(id => testMap.get(id)).filter(Boolean);
 
   const toggleTest = (testId) => {
     if (selectedIds.includes(testId)) {
@@ -53,46 +77,108 @@ function TestSelector({ selectedIds, onChange, availableTests }) {
     }
   };
 
+  const removeTest = (testId) => {
+    onChange(selectedIds.filter(id => id !== testId));
+  };
+
   return (
-    <div className="border rounded-xl overflow-hidden">
-      <div className="p-3 bg-slate-50 border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input
-            className="input pl-9 text-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search tests..."
-          />
-        </div>
-      </div>
-      <div className="max-h-48 overflow-y-auto">
-        {filteredTests.length === 0 ? (
-          <div className="p-4 text-center text-slate-400 text-sm">No tests found</div>
-        ) : (
-          filteredTests.map(test => (
-            <label
-              key={test.id}
-              className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer border-b last:border-b-0">
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(test.id)}
-                onChange={() => toggleTest(test.id)}
-                className="w-4 h-4 accent-blue-600"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate">{test.name}</div>
-                <div className="text-xs text-slate-500">{test.code} • ₹{test.price}</div>
-              </div>
-            </label>
-          ))
-        )}
-      </div>
+    <div className="space-y-3">
+      {/* Selected Tests Display */}
       {selectedIds.length > 0 && (
-        <div className="p-2 bg-blue-50 text-blue-700 text-xs font-medium text-center">
-          {selectedIds.length} test(s) selected
+        <div className="border rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowSelected(!showSelected)}
+            className="w-full flex items-center justify-between p-3 bg-emerald-50 border-b text-left">
+            <span className="text-sm font-medium text-emerald-800">
+              ✓ {selectedIds.length} Test(s) Included
+            </span>
+            <span className="text-xs text-emerald-600">{showSelected ? "Hide" : "Show"}</span>
+          </button>
+          {showSelected && (
+            <div className="max-h-40 overflow-y-auto divide-y">
+              {selectedTests.map(test => (
+                <div key={test.id} className="flex items-center justify-between px-4 py-2 bg-white">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{test.name}</div>
+                    <div className="text-xs text-slate-500">{test.code} {test.price ? `• ₹${test.price}` : ''}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeTest(test.id)}
+                    className="p-1 hover:bg-red-50 rounded text-red-500">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Add Tests Section */}
+      <div className="border rounded-xl overflow-hidden">
+        <div className="p-3 bg-slate-50 border-b">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              className="input pl-9 pr-8 text-sm"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search tests by name or code..."
+            />
+            {searchInput !== debouncedSearch && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="h-64 overflow-y-auto">
+          {isLoading ? (
+            <div className="p-4 text-center text-slate-400 text-sm">
+              <div className="w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-2" />
+              Loading tests...
+            </div>
+          ) : availableTests.length === 0 ? (
+            <div className="p-4 text-center text-slate-400 text-sm">
+              {debouncedSearch ? "No tests match your search" : "No lab tests available. Create lab tests first."}
+            </div>
+          ) : (
+            availableTests.map(test => (
+              <label
+                key={test.id}
+                className={`flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b last:border-b-0 transition ${
+                  selectedIds.includes(test.id) ? 'bg-blue-50' : ''
+                }`}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(test.id)}
+                  onChange={() => toggleTest(test.id)}
+                  className="w-4 h-4 accent-blue-600 flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">{test.name}</div>
+                  <div className="text-xs text-slate-500">
+                    <span className="font-mono">{test.code}</span>
+                    {test.price && <span> • ₹{test.price.toLocaleString()}</span>}
+                    {test.category?.name && <span> • {test.category.name}</span>}
+                  </div>
+                </div>
+                {selectedIds.includes(test.id) && (
+                  <Check size={16} className="text-blue-600 flex-shrink-0" />
+                )}
+              </label>
+            ))
+          )}
+        </div>
+        <div className="px-3 py-2 bg-slate-50 border-t text-xs text-slate-500 flex justify-between">
+          <span>Showing {availableTests.length} tests</span>
+          {selectedIds.length > 0 && (
+            <span className="text-blue-600 font-medium">{selectedIds.length} selected</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -100,7 +186,7 @@ function TestSelector({ selectedIds, onChange, availableTests }) {
 /***************************************************************
  * PACKAGE FORM MODAL
  ***************************************************************/
-function PackageFormModal({ pkg, availableTests, onClose }) {
+function PackageFormModal({ pkg, onClose }) {
   const qc = useQueryClient();
   const isNew = !pkg?.id;
 
@@ -328,7 +414,7 @@ function PackageFormModal({ pkg, availableTests, onClose }) {
             <TestSelector
               selectedIds={form.testIds}
               onChange={(ids) => updateField("testIds", ids)}
-              availableTests={availableTests}
+              existingTests={pkg?.tests}
             />
           </div>
 
@@ -466,13 +552,6 @@ export default function HealthPackagesPage() {
   useEffect(() => {
     setFilters((f) => ({ ...f, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
-
-  // Fetch all tests for selector
-  const { data: testsData } = useQuery({
-    queryKey: ["lab-tests-all"],
-    queryFn: async () => (await api.get("/lab-tests", { params: { pageSize: 500, active: "true" } })).data
-  });
-  const availableTests = testsData?.items || [];
 
   // Fetch packages
   const { data, isLoading } = useQuery({
@@ -684,7 +763,6 @@ export default function HealthPackagesPage() {
       {editing && (
         <PackageFormModal
           pkg={editing}
-          availableTests={availableTests}
           onClose={() => setEditing(null)}
         />
       )}

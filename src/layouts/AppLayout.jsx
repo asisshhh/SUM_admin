@@ -10,7 +10,10 @@ import {
   Image,
   BarChart2,
   LogOut,
-  ListChecks
+  ListChecks,
+  FlaskConical,
+  FolderTree,
+  Gift
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -69,7 +72,16 @@ export default function AppLayout() {
           />
           <NavItem to="/departments" icon={Building2} label="Departments" />
           <NavItem to="/ambulance" icon={Ambulance} label="Ambulance" />
-          <NavItem to="/packages" icon={Package} label="Health Packages" />
+
+          {/* Lab & Packages Section */}
+          <div className="mt-4 mb-2 px-4">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lab & Packages</span>
+          </div>
+          <NavItem to="/test-categories" icon={FolderTree} label="Test Categories" />
+          <NavItem to="/lab-tests" icon={FlaskConical} label="Lab Tests" />
+          <NavItem to="/health-packages" icon={Gift} label="Health Packages" />
+          <NavItem to="/packages" icon={Package} label="Old Packages" />
+
           <NavItem to="/feedback" icon={MessageSquare} label="Feedback" />
           <NavItem to="/banners" icon={Image} label="Banners" />
           <NavItem to="/reports" icon={BarChart2} label="Reports" />

@@ -28,6 +28,10 @@ import DoctorQueue from "./pages/DoctorQueue.jsx";
 import DoctorQueueMonitor from "./pages/DoctorQueueMonitor.jsx";
 import DoctorActionPanel from "./pages/DoctorActionPanel.jsx";
 import TokenWidgetPage from "./pages/TokenWidgetPage.jsx";
+// Lab Tests & Packages Management
+import LabTestsPage from "./pages/LabTestsPage.jsx";
+import TestCategoriesPage from "./pages/TestCategoriesPage.jsx";
+import HealthPackagesPage from "./pages/HealthPackagesPage.jsx";
 
 const qc = new QueryClient();
 const token = () => localStorage.getItem("token");
@@ -57,8 +61,8 @@ createRoot(document.getElementById("root")).render(
               <Route path="appointments" element={<AppointmentOrders />} />
               <Route path="ambulance" element={<AmbulanceOrders />} />
               <Route path="packages" element={<PackageOrders />} />
-              {/* <Route path="lab" element={<LabOrders />} />
-              <Route path="homecare" element={<HomecareOrders />} /> */}
+              <Route path="lab" element={<LabOrders />} />
+              {/* <Route path="homecare" element={<HomecareOrders />} /> */}
             </Route>
             <Route path="doctor-queue" element={<DoctorQueue />} />
             <Route
@@ -79,6 +83,10 @@ createRoot(document.getElementById("root")).render(
             <Route path="departments/:id" element={<DepartmentDetail />} />
             <Route path="ambulance" element={<AmbulancePage />} />
             <Route path="packages" element={<PackagesPage />} />
+            {/* Lab Tests & Packages Management */}
+            <Route path="lab-tests" element={<LabTestsPage />} />
+            <Route path="test-categories" element={<TestCategoriesPage />} />
+            <Route path="health-packages" element={<HealthPackagesPage />} />
             <Route path="feedback" element={<FeedbackPage />} />
             <Route path="banners" element={<BannersPage />} />
             <Route path="reports" element={<ReportsPage />} />

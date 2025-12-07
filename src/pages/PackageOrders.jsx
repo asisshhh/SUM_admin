@@ -1,12 +1,44 @@
-import React, { useEffect, useState, useCallback, useRef, memo } from "react";
+// PackageOrders.jsx — Premium Health Package Orders UI
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useConfirm } from "../contexts/ConfirmContext";
 import api from "../api/client";
 import useDateRange from "../hooks/useDateRange";
-import DateRangeFilter from "../components/DateRangeFilter";
+import {
+  Package,
+  Calendar,
+  Clock,
+  Eye,
+  CreditCard,
+  CheckCircle2,
+  RefreshCw
+} from "lucide-react";
+
+// Import shared components
+import {
+  OrderStatusBadge,
+  PaymentBadge,
+  OrderFilterCard,
+  OrderPagination,
+  OrderPageHeader
+} from "../components/orders";
+
+const DEFAULT_LIMIT = 20;
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All Status" },
+  { value: "PENDING", label: "Pending" },
+  { value: "CONFIRMED", label: "Confirmed" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" }
+];
 
 export default function PackageOrders() {
+  // ═══════════════════════════════════════════════════════════════════
+  // HOOKS & STATE
+  // ═══════════════════════════════════════════════════════════════════
+
   const {
     fromDate,
     toDate,
@@ -15,20 +47,28 @@ export default function PackageOrders() {
     setToDate,
     setIncludeFuture,
     buildDateParams,
-    resetDates
+    resetDates,
+    clearDates,
+    today
   } = useDateRange();
 
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
   const [rows, setRows] = useState([]);
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit] = useState(DEFAULT_LIMIT);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  // track in-flight requests so we can cancel stale ones
+
   const currentController = useRef(null);
+  const confirm = useConfirm();
+
+  // ═══════════════════════════════════════════════════════════════════
+  // DATA FETCHING
+  // ═══════════════════════════════════════════════════════════════════
 
   const load = useCallback(
     async (p = 1) => {
-      // cancel previous request if any
       if (currentController.current) {
         try {
           currentController.current.abort();
@@ -44,9 +84,9 @@ export default function PackageOrders() {
           type: "packages",
           page: p,
           limit,
-          from: fromDate || undefined,
-          to: toDate || undefined,
-          includeFuture: includeFuture || undefined
+          search: search || undefined,
+          status: status || undefined,
+          ...buildDateParams()
         };
 
         const res = await api.get("/orders", {
@@ -54,69 +94,41 @@ export default function PackageOrders() {
           signal: controller.signal
         });
 
-        // Ensure the response is from the latest request
         if (controller.signal.aborted) return;
 
         setRows(res.data.data || []);
         setTotal(res.data.total || 0);
         setPage(res.data.page || p);
       } catch (e) {
-        if (e.name === "CanceledError" || e.name === "AbortError") {
-          // request was cancelled; ignore
-        } else {
+        if (e.name !== "CanceledError" && e.name !== "AbortError") {
           console.error("Failed to load package orders", e);
         }
       } finally {
-        // only clear loading if this controller is still current
         if (currentController.current === controller) {
           setLoading(false);
           currentController.current = null;
         }
       }
     },
-    [limit, fromDate, toDate, includeFuture]
+    [limit, search, status, buildDateParams]
   );
+
+  // ═══════════════════════════════════════════════════════════════════
+  // EFFECTS
+  // ═══════════════════════════════════════════════════════════════════
 
   useEffect(() => {
     load(1);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ✅ ADMIN: mark pay-at-hospital payment
-  const markPaid = useCallback(
-    async (row) => {
-      try {
-        await api.post("/payments/mark-paid", {
-          orderType: "HEALTH_PACKAGE",
-          orderId: row.id,
-          amount: row.totalAmount,
-          method: "CASH"
-        });
+  // Debounced filter changes
+  const searchRef = useRef(null);
+  useEffect(() => {
+    if (searchRef.current) clearTimeout(searchRef.current);
+    searchRef.current = setTimeout(() => load(1), 420);
+    return () => clearTimeout(searchRef.current);
+  }, [search, status, fromDate, toDate, includeFuture]); // eslint-disable-line react-hooks/exhaustive-deps
 
-        toast.success("Payment marked as PAID");
-        // reload current page
-        load(page);
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to mark payment");
-      }
-    },
-    [load, page]
-  );
-
-  const confirm = useConfirm();
-
-  const onMarkPaidClick = useCallback(
-    async (row) => {
-      const ok = await confirm({
-        title: "Confirm action",
-        message: `Mark payment for ${row.user?.name || "this user"} as PAID?`
-      });
-      if (!ok) return;
-      await markPaid(row);
-    },
-    [confirm, markPaid]
-  );
-
-  // cleanup on unmount: cancel any pending request
   useEffect(() => {
     return () => {
       if (currentController.current) {
@@ -127,129 +139,276 @@ export default function PackageOrders() {
     };
   }, []);
 
-  // memoized Row to avoid re-renders when unrelated state changes
-  const Row = memo(function Row({ r, index, page, limit, onMarkPaid }) {
-    return (
-      <tr className="border-b hover:bg-slate-50">
-        <td className="p-3">{(page - 1) * limit + index + 1}</td>
-        <td className="p-3">{r.user?.name}</td>
-        <td className="p-3">{r.package?.name}</td>
-        <td className="p-3">₹ {r.totalAmount}</td>
+  // ═══════════════════════════════════════════════════════════════════
+  // HANDLERS
+  // ═══════════════════════════════════════════════════════════════════
 
-        <td className="p-3">
-          <span
-            className={`font-semibold ${
-              r.paymentStatus === "SUCCESS"
-                ? "text-green-600"
-                : "text-yellow-600"
-            }`}>
-            {r.paymentStatus || "PENDING"}
-          </span>
-        </td>
+  const markPaid = useCallback(
+    async (row) => {
+      try {
+        await api.post("/payments/mark-paid", {
+          orderType: "HEALTH_PACKAGE",
+          orderId: row.id,
+          amount: row.totalAmount,
+          method: "CASH"
+        });
+        toast.success("Payment marked as PAID");
+        load(page);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to mark payment");
+      }
+    },
+    [load, page]
+  );
 
-        <td className="p-3">{r.status}</td>
+  const onMarkPaidClick = useCallback(
+    async (row) => {
+      const ok = await confirm({
+        title: "Confirm Payment",
+        message: `Mark payment for ${row.user?.name || "this user"} as PAID?`
+      });
+      if (!ok) return;
+      await markPaid(row);
+    },
+    [confirm, markPaid]
+  );
 
-        <td className="p-3">
-          {r.paymentStatus !== "SUCCESS" && (
-            <button
-              className="px-3 py-1 bg-emerald-600 text-white rounded"
-              onClick={() => onMarkPaid(r)}>
-              Mark Paid
-            </button>
-          )}
-        </td>
-      </tr>
-    );
-  });
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatus("");
+    resetDates();
+    load(1);
+  };
+
+  const handleAllTime = () => {
+    clearDates();
+    setTimeout(() => load(1), 100);
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // COMPUTED
+  // ═══════════════════════════════════════════════════════════════════
+
+  const isShowingToday = fromDate === today && toDate === today;
+  const isAllTime = !fromDate && !toDate;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow space-y-6">
-      <h3 className="text-xl font-semibold">Health Package Orders</h3>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
+      <div className="max-w-[1600px] mx-auto p-6 space-y-6">
+        {/* Header */}
+        <OrderPageHeader
+          icon={Package}
+          iconColor="emerald"
+          title="Health Package Orders"
+          subtitle="Manage health package bookings and payments"
+          isShowingToday={isShowingToday}
+          today={today}
+          onRefresh={() => load(page)}
+          loading={loading}
+        />
 
-      <DateRangeFilter
-        fromDate={fromDate}
-        toDate={toDate}
-        includeFuture={includeFuture}
-        setFromDate={setFromDate}
-        setToDate={setToDate}
-        setIncludeFuture={setIncludeFuture}
-        onReset={() => {
-          resetDates();
-          load(1);
-        }}
-      />
+        {/* Filters */}
+        <OrderFilterCard
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search by name, phone, or order number..."
+          status={status}
+          onStatusChange={setStatus}
+          statusOptions={STATUS_OPTIONS}
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromDateChange={setFromDate}
+          onToDateChange={setToDate}
+          includeFuture={includeFuture}
+          onIncludeFutureChange={setIncludeFuture}
+          onAllTime={handleAllTime}
+          onToday={handleResetFilters}
+          isShowingToday={isShowingToday}
+          isAllTime={isAllTime}
+          rowCount={rows.length}
+          total={total}
+        />
 
-      <button
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-        onClick={() => load(1)}>
-        Apply Filters
-      </button>
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-slate-700">Package Orders</h3>
+              {loading && (
+                <div className="flex items-center gap-2 text-sm text-emerald-600">
+                  <RefreshCw size={14} className="animate-spin" />
+                  Loading...
+                </div>
+              )}
+            </div>
+          </div>
 
-      {loading && <div>Loading...</div>}
-
-      <div className="overflow-x-auto mt-4">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50">
-              <th className="p-3">#</th>
-              <th className="p-3">User</th>
-              <th className="p-3">Package</th>
-              <th className="p-3">Amount</th>
-              <th className="p-3">Payment</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td className="p-4 text-center" colSpan={7}>
-                  No records found
-                </td>
-              </tr>
-            )}
-
-            {rows.map((r, i) => (
-              <Row
-                key={r.id}
-                r={r}
-                index={i}
-                page={page}
-                limit={limit}
-                onMarkPaid={onMarkPaidClick}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Toasts */}
-      <ToastContainer position="top-right" />
-
-      {/* Confirm handled by ConfirmProvider via useConfirm() */}
-
-      {/* Pagination */}
-      <div className="flex justify-between mt-4">
-        <div>Total: {total}</div>
-        <div className="flex gap-2">
-          <button
-            disabled={page <= 1}
-            className="border px-3 py-1 rounded"
-            onClick={() => load(page - 1)}>
-            Prev
-          </button>
-
-          <div className="px-3 py-1 border rounded">{page}</div>
-
-          <button
-            disabled={page * limit >= total}
-            className="border px-3 py-1 rounded"
-            onClick={() => load(page + 1)}>
-            Next
-          </button>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50/50">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    #
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Package
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Schedule
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Payment
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                          <Package size={28} className="text-slate-400" />
+                        </div>
+                        <p className="text-slate-500 font-medium">
+                          No package orders found
+                        </p>
+                        <p className="text-sm text-slate-400">
+                          Try adjusting your filters or date range
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {rows.map((r, i) => (
+                  <PackageOrderRow
+                    key={r.id}
+                    order={r}
+                    index={(page - 1) * limit + i + 1}
+                    onMarkPaid={() => onMarkPaidClick(r)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        {/* Pagination */}
+        {rows.length > 0 && (
+          <OrderPagination
+            page={page}
+            limit={limit}
+            total={total}
+            onPageChange={load}
+          />
+        )}
       </div>
+
+      <ToastContainer position="top-right" />
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ROW COMPONENT
+// ═══════════════════════════════════════════════════════════════════
+
+function PackageOrderRow({ order, index, onMarkPaid }) {
+  const r = order;
+
+  return (
+    <tr className="hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-transparent transition-all duration-200 border-b border-slate-100 last:border-0">
+      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">#{index}</td>
+
+      {/* Customer */}
+      <td className="px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+            {r.user?.name?.[0] || "?"}
+          </div>
+          <div>
+            <p className="font-medium text-slate-800">{r.user?.name || "-"}</p>
+            <p className="text-xs text-slate-500">{r.user?.phone || "-"}</p>
+          </div>
+        </div>
+      </td>
+
+      {/* Package */}
+      <td className="px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <Package size={16} className="text-emerald-500" />
+          <div>
+            <p className="font-medium text-slate-700 text-sm">
+              {r.package?.name || r.packageName || "-"}
+            </p>
+            <p className="text-xs text-slate-500">
+              {r.orderNumber || `Order #${r.id}`}
+            </p>
+          </div>
+        </div>
+      </td>
+
+      {/* Schedule */}
+      <td className="px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <Calendar size={14} className="text-slate-400" />
+          <span className="text-sm text-slate-700">
+            {r.scheduledDate?.split("T")[0] || r.createdAt?.split("T")[0] || "-"}
+          </span>
+        </div>
+        {r.scheduledTime && (
+          <div className="flex items-center gap-2 mt-0.5">
+            <Clock size={14} className="text-slate-400" />
+            <span className="text-xs text-slate-500">{r.scheduledTime}</span>
+          </div>
+        )}
+      </td>
+
+      {/* Status */}
+      <td className="px-4 py-3.5">
+        <OrderStatusBadge status={r.status} />
+      </td>
+
+      {/* Payment */}
+      <td className="px-4 py-3.5">
+        <PaymentBadge status={r.paymentStatus} amount={r.totalAmount} />
+      </td>
+
+      {/* Actions */}
+      <td className="px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <button
+            className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
+            title="View Details">
+            <Eye size={16} />
+          </button>
+          {r.paymentStatus !== "SUCCESS" && (
+            <button
+              className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+              onClick={onMarkPaid}
+              title="Mark as Paid">
+              <CreditCard size={16} />
+            </button>
+          )}
+          {r.paymentStatus === "SUCCESS" && (
+            <span className="p-2">
+              <CheckCircle2 size={16} className="text-emerald-500" />
+            </span>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }

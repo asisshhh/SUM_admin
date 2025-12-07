@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import api from "../api/client";
+import { useConfirm } from "../contexts/ConfirmContext";
 
 /***************************************************************
  ✅ Pager
@@ -66,12 +67,6 @@ function EditDoctorModal({ doc, departments, onClose }) {
   });
 
   const updateField = (k, v) => setForm({ ...form, [k]: v });
-  const deleteDoctor = async (id) => {
-    if (!window.confirm("Permanently delete this doctor?")) return;
-
-    await api.delete(`/doctors/${id}`);
-    query.refetch(); // reload list
-  };
 
   return (
     <div className="fixed inset-0 bg-black/30 grid place-items-center">
@@ -208,6 +203,7 @@ function EditDoctorModal({ doc, departments, onClose }) {
 ***************************************************************/
 export default function DoctorsPage() {
   const qc = useQueryClient();
+  const confirm = useConfirm();
   const [selected, setSelected] = useState([]);
   const [editing, setEditing] = useState(null);
 
@@ -392,7 +388,16 @@ export default function DoctorsPage() {
                   <button className="btn" onClick={() => setEditing(d)}>
                     Edit
                   </button>
-                  <button className="btn" onClick={() => deleteDoctor(d.id)}>
+                  <button
+                    className="btn"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: "Confirm delete",
+                        message: `Permanently delete ${d.user.name}?`
+                      });
+                      if (!ok) return;
+                      del.mutate(d.id);
+                    }}>
                     Delete
                   </button>
                 </td>
@@ -416,6 +421,7 @@ export default function DoctorsPage() {
           departments={departments?.items ?? []}
         />
       )}
+      {/* Confirm handled via useConfirm() from ConfirmProvider */}
     </div>
   );
 }

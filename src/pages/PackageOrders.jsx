@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef, memo } from "react";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { useConfirm } from "../contexts/ConfirmContext";
 import api from "../api/client";
 import useDateRange from "../hooks/useDateRange";
 import DateRangeFilter from "../components/DateRangeFilter";
@@ -20,50 +23,144 @@ export default function PackageOrders() {
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  // track in-flight requests so we can cancel stale ones
+  const currentController = useRef(null);
 
-  const load = async (p = 1) => {
-    setLoading(true);
-    try {
-      const res = await api.get("/orders", {
-        params: {
+  const load = useCallback(
+    async (p = 1) => {
+      // cancel previous request if any
+      if (currentController.current) {
+        try {
+          currentController.current.abort();
+        } catch (_) {}
+      }
+
+      const controller = new AbortController();
+      currentController.current = controller;
+
+      setLoading(true);
+      try {
+        const params = {
           type: "packages",
           page: p,
           limit,
-          ...buildDateParams()
+          from: fromDate || undefined,
+          to: toDate || undefined,
+          includeFuture: includeFuture || undefined
+        };
+
+        const res = await api.get("/orders", {
+          params,
+          signal: controller.signal
+        });
+
+        // Ensure the response is from the latest request
+        if (controller.signal.aborted) return;
+
+        setRows(res.data.data || []);
+        setTotal(res.data.total || 0);
+        setPage(res.data.page || p);
+      } catch (e) {
+        if (e.name === "CanceledError" || e.name === "AbortError") {
+          // request was cancelled; ignore
+        } else {
+          console.error("Failed to load package orders", e);
         }
-      });
-      setRows(res.data.data || []);
-      setTotal(res.data.total || 0);
-      setPage(res.data.page || p);
-    } catch (e) {
-      console.error("Failed to load package orders", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+      } finally {
+        // only clear loading if this controller is still current
+        if (currentController.current === controller) {
+          setLoading(false);
+          currentController.current = null;
+        }
+      }
+    },
+    [limit, fromDate, toDate, includeFuture]
+  );
 
   useEffect(() => {
     load(1);
   }, []);
 
   // ✅ ADMIN: mark pay-at-hospital payment
-  const markPaid = async (row) => {
-    if (!window.confirm("Mark payment as PAID?")) return;
+  const markPaid = useCallback(
+    async (row) => {
+      try {
+        await api.post("/payments/mark-paid", {
+          orderType: "HEALTH_PACKAGE",
+          orderId: row.id,
+          amount: row.totalAmount,
+          method: "CASH"
+        });
 
-    try {
-      await api.post("/payments/mark-paid", {
-        orderType: "HEALTH_PACKAGE",
-        orderId: row.id,
-        amount: row.totalAmount,
-        method: "CASH"
+        toast.success("Payment marked as PAID");
+        // reload current page
+        load(page);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to mark payment");
+      }
+    },
+    [load, page]
+  );
+
+  const confirm = useConfirm();
+
+  const onMarkPaidClick = useCallback(
+    async (row) => {
+      const ok = await confirm({
+        title: "Confirm action",
+        message: `Mark payment for ${row.user?.name || "this user"} as PAID?`
       });
+      if (!ok) return;
+      await markPaid(row);
+    },
+    [confirm, markPaid]
+  );
 
-      alert("Payment marked as PAID");
-      load(page);
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to mark payment");
-    }
-  };
+  // cleanup on unmount: cancel any pending request
+  useEffect(() => {
+    return () => {
+      if (currentController.current) {
+        try {
+          currentController.current.abort();
+        } catch (_) {}
+      }
+    };
+  }, []);
+
+  // memoized Row to avoid re-renders when unrelated state changes
+  const Row = memo(function Row({ r, index, page, limit, onMarkPaid }) {
+    return (
+      <tr className="border-b hover:bg-slate-50">
+        <td className="p-3">{(page - 1) * limit + index + 1}</td>
+        <td className="p-3">{r.user?.name}</td>
+        <td className="p-3">{r.package?.name}</td>
+        <td className="p-3">₹ {r.totalAmount}</td>
+
+        <td className="p-3">
+          <span
+            className={`font-semibold ${
+              r.paymentStatus === "SUCCESS"
+                ? "text-green-600"
+                : "text-yellow-600"
+            }`}>
+            {r.paymentStatus || "PENDING"}
+          </span>
+        </td>
+
+        <td className="p-3">{r.status}</td>
+
+        <td className="p-3">
+          {r.paymentStatus !== "SUCCESS" && (
+            <button
+              className="px-3 py-1 bg-emerald-600 text-white rounded"
+              onClick={() => onMarkPaid(r)}>
+              Mark Paid
+            </button>
+          )}
+        </td>
+      </tr>
+    );
+  });
 
   return (
     <div className="bg-white p-6 rounded-xl shadow space-y-6">
@@ -114,41 +211,23 @@ export default function PackageOrders() {
             )}
 
             {rows.map((r, i) => (
-              <tr key={r.id} className="border-b hover:bg-slate-50">
-                <td className="p-3">{(page - 1) * limit + i + 1}</td>
-                <td className="p-3">{r.user?.name}</td>
-                <td className="p-3">{r.package?.name}</td>
-                <td className="p-3">₹ {r.totalAmount}</td>
-
-                {/* ✅ Payment Status */}
-                <td className="p-3">
-                  <span
-                    className={`font-semibold ${
-                      r.paymentStatus === "SUCCESS"
-                        ? "text-green-600"
-                        : "text-yellow-600"
-                    }`}>
-                    {r.paymentStatus || "PENDING"}
-                  </span>
-                </td>
-
-                <td className="p-3">{r.status}</td>
-
-                {/* ✅ Action */}
-                <td className="p-3">
-                  {r.paymentStatus !== "SUCCESS" && (
-                    <button
-                      className="px-3 py-1 bg-emerald-600 text-white rounded"
-                      onClick={() => markPaid(r)}>
-                      Mark Paid
-                    </button>
-                  )}
-                </td>
-              </tr>
+              <Row
+                key={r.id}
+                r={r}
+                index={i}
+                page={page}
+                limit={limit}
+                onMarkPaid={onMarkPaidClick}
+              />
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Toasts */}
+      <ToastContainer position="top-right" />
+
+      {/* Confirm handled by ConfirmProvider via useConfirm() */}
 
       {/* Pagination */}
       <div className="flex justify-between mt-4">

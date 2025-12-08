@@ -31,13 +31,118 @@ function useDebounce(value, delay = 400) {
 
 // Calculate Final Price Modal
 function CalculateFinalModal({ booking, onClose, onSuccess }) {
-  const [form, setForm] = useState({
-    paramedicCharges: "",
-    attendantCharges: "",
-    extraKmCharges: "",
-    totalDistance: booking?.totalDistance?.toString() || ""
-  });
+  // Initialize with charges selected at booking time (excluding base fare)
+  const getInitialSelectedCharges = () => {
+    const bookingCharges = booking?.selectedChargeIds || [];
+    const baseFareId = booking?.ambulanceType?.charges?.find(
+      (c) => c.chargeType === "BASE_FARE_UPTO_30KM"
+    )?.id;
+    return bookingCharges.filter((id) => id !== baseFareId);
+  };
+
+  const [totalDistance, setTotalDistance] = useState(booking?.totalDistance?.toString() || "");
+  const [selectedChargeIds, setSelectedChargeIds] = useState(getInitialSelectedCharges);
   const [loading, setLoading] = useState(false);
+  const [autoSelectedCharges, setAutoSelectedCharges] = useState([]);
+
+  // Get available charges from ambulance type
+  const availableCharges = booking?.ambulanceType?.charges || [];
+  const paramedicCharges = availableCharges.filter((c) =>
+    c.chargeType?.startsWith("PARAMEDIC")
+  );
+  const attendantCharges = availableCharges.filter((c) =>
+    c.chargeType?.startsWith("ATTENDANT")
+  );
+  const perKmCharge = availableCharges.find(
+    (c) => c.chargeType === "PER_KM_ABOVE_30KM"
+  );
+
+  // Base km limit (typically 30 km)
+  const baseKm = 30;
+
+  // Auto-select charges based on distance
+  useEffect(() => {
+    if (!totalDistance) {
+      setAutoSelectedCharges([]);
+      return;
+    }
+
+    const distance = Number(totalDistance);
+    if (distance <= baseKm) {
+      // Clear auto-selected charges when distance is within base km
+      setAutoSelectedCharges([]);
+      // Optionally, you can clear charges that don't have distance range when distance is <= baseKm
+      // But we'll keep manually selected ones for now
+      return;
+    }
+
+    // Find charges that match the distance range
+    const matchingCharges = [];
+    const allExtraCharges = [...paramedicCharges, ...attendantCharges];
+
+    allExtraCharges.forEach((charge) => {
+      const from = charge.distanceFrom;
+      const to = charge.distanceTo;
+
+      // Check if distance falls within the charge's range
+      if (from !== null && to !== null) {
+        // Range: from-to km
+        if (distance >= from && distance <= to) {
+          matchingCharges.push(charge.id);
+        }
+      } else if (from !== null && to === null) {
+        // Range: above from km
+        if (distance >= from) {
+          matchingCharges.push(charge.id);
+        }
+      }
+      // If both from and to are null, charge doesn't have distance-based selection
+    });
+
+    setAutoSelectedCharges(matchingCharges);
+
+    // Auto-select matching charges (add them if not already selected)
+    setSelectedChargeIds((prev) => {
+      // Add matching charges that aren't already selected
+      const newCharges = matchingCharges.filter((id) => !prev.includes(id));
+      if (newCharges.length > 0) {
+        return [...prev, ...newCharges];
+      }
+      return prev; // No changes needed
+    });
+  }, [totalDistance, paramedicCharges, attendantCharges, baseKm]);
+
+  // Calculate charges dynamically
+  const selectedCharges = availableCharges.filter((c) =>
+    selectedChargeIds.includes(c.id)
+  );
+  const selectedChargesAmount = selectedCharges.reduce(
+    (sum, c) => sum + (c.amount || 0),
+    0
+  );
+
+  // Calculate extra km charges
+  const extraKmAmount = useMemo(() => {
+    if (!totalDistance || !perKmCharge) return 0;
+    const distance = Number(totalDistance);
+    if (distance > 30 && perKmCharge.amount) {
+      const extraKms = distance - 30;
+      return extraKms * perKmCharge.amount;
+    }
+    return 0;
+  }, [totalDistance, perKmCharge]);
+
+  const initialAmount = booking?.initialAmount || 0;
+  const extraAmount = selectedChargesAmount + extraKmAmount;
+  const totalAmount = initialAmount + extraAmount;
+
+  const toggleCharge = (chargeId) => {
+    setSelectedChargeIds((prev) =>
+      prev.includes(chargeId)
+        ? prev.filter((id) => id !== chargeId)
+        : [...prev, chargeId]
+    );
+  };
 
   const calculateMutation = useMutation({
     mutationFn: async (data) => {
@@ -55,20 +160,45 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!totalDistance) {
+      toast.error("Please enter total distance");
+      return;
+    }
     setLoading(true);
     calculateMutation.mutate({
-      paramedicCharges: Number(form.paramedicCharges) || 0,
-      attendantCharges: Number(form.attendantCharges) || 0,
-      extraKmCharges: Number(form.extraKmCharges) || 0,
-      totalDistance: form.totalDistance ? Number(form.totalDistance) : undefined
+      selectedChargeIds,
+      totalDistance: Number(totalDistance)
     });
     setLoading(false);
   };
 
+  if (!booking?.ambulanceType) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full">
+          <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+              <Calculator className="text-blue-600" size={24} />
+              Calculate Final Charges
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
+              <XCircle size={20} />
+            </button>
+          </div>
+          <div className="p-6">
+            <p className="text-red-600">Ambulance type information not available for this booking.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full">
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Calculator className="text-blue-600" size={24} />
             Calculate Final Charges
@@ -81,88 +211,212 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Initial Amount */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="text-sm text-blue-800">
-              <div className="font-semibold mb-2">Initial Amount:</div>
-              <div className="text-2xl font-bold">₹{booking?.initialAmount || 0}</div>
+              <div className="font-semibold mb-2">Initial Amount (from booking):</div>
+              <div className="text-2xl font-bold">₹{initialAmount.toFixed(2)}</div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Paramedic Charges (₹)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.paramedicCharges}
-                onChange={(e) => setForm({ ...form, paramedicCharges: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-              />
-            </div>
+          {/* Total Distance Input */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Total Distance (km) *
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={totalDistance}
+              onChange={(e) => setTotalDistance(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter total distance"
+              required
+            />
+            {totalDistance && (
+              <div className="mt-2 space-y-1">
+                {Number(totalDistance) > baseKm && perKmCharge && (
+                  <p className="text-xs text-green-600">
+                    Extra km charges: {(Number(totalDistance) - baseKm).toFixed(1)} km × ₹{perKmCharge.amount} = ₹{extraKmAmount.toFixed(2)}
+                  </p>
+                )}
+                {autoSelectedCharges.length > 0 && (
+                  <p className="text-xs text-blue-600 font-medium">
+                    ✓ {autoSelectedCharges.length} charge{autoSelectedCharges.length > 1 ? 's' : ''} automatically selected based on distance
+                  </p>
+                )}
+                {Number(totalDistance) <= baseKm && Number(totalDistance) > 0 && (
+                  <p className="text-xs text-slate-500">
+                    Distance is within base fare limit ({baseKm} km). No extra charges applicable.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Attendant Charges (₹)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.attendantCharges}
-                onChange={(e) => setForm({ ...form, attendantCharges: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-              />
+          {/* Extra Charges Section */}
+          {(paramedicCharges.length > 0 || attendantCharges.length > 0) && (
+            <div className="border border-slate-300 rounded-lg p-4 bg-gradient-to-br from-slate-50 to-white">
+              <div className="flex items-center gap-2 mb-4">
+                <input
+                  type="checkbox"
+                  checked={selectedChargeIds.length > 0}
+                  onChange={(e) => {
+                    if (!e.target.checked) {
+                      // Uncheck all extra charges
+                      setSelectedChargeIds([]);
+                    } else {
+                      // Check first available charge if none selected
+                      if (selectedChargeIds.length === 0 && paramedicCharges.length > 0) {
+                        setSelectedChargeIds([paramedicCharges[0].id]);
+                      } else if (selectedChargeIds.length === 0 && attendantCharges.length > 0) {
+                        setSelectedChargeIds([attendantCharges[0].id]);
+                      }
+                    }
+                  }}
+                  className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                />
+                <label className="text-base font-semibold text-slate-800 cursor-pointer">
+                  Extra Charges Applicable
+                </label>
+              </div>
+
+              {/* Paramedic Charges Selection */}
+              {paramedicCharges.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2 ml-7">
+                    Paramedic Staff Charges
+                  </label>
+                  <div className="space-y-2 ml-7">
+                    {paramedicCharges.map((charge) => {
+                      const isSelected = selectedChargeIds.includes(charge.id);
+                      const isAutoSelected = autoSelectedCharges.includes(charge.id);
+                      const distanceRange =
+                        charge.distanceFrom !== null && charge.distanceTo !== null
+                          ? `${charge.distanceFrom}-${charge.distanceTo} km`
+                          : charge.distanceFrom !== null
+                          ? `Above ${charge.distanceFrom} km`
+                          : "";
+                      return (
+                        <label
+                          key={charge.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition ${
+                            isSelected
+                              ? isAutoSelected
+                                ? "border-green-500 bg-green-50"
+                                : "border-blue-500 bg-blue-50"
+                              : "border-slate-200 bg-white hover:border-slate-300"
+                          }`}>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleCharge(charge.id)}
+                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium text-slate-800 text-sm">{charge.name}</div>
+                                {isAutoSelected && (
+                                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
+                                    Auto
+                                  </span>
+                                )}
+                              </div>
+                              {distanceRange && (
+                                <div className="text-xs text-slate-500 mt-0.5">{distanceRange}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="font-semibold text-slate-800">₹{charge.amount}</div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Attendant Charges Selection */}
+              {attendantCharges.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2 ml-7">
+                    Attendant Support Charges
+                  </label>
+                  <div className="space-y-2 ml-7">
+                    {attendantCharges.map((charge) => {
+                      const isSelected = selectedChargeIds.includes(charge.id);
+                      const isAutoSelected = autoSelectedCharges.includes(charge.id);
+                      const distanceRange =
+                        charge.distanceFrom !== null && charge.distanceTo !== null
+                          ? `${charge.distanceFrom}-${charge.distanceTo} km`
+                          : charge.distanceFrom !== null
+                          ? `Above ${charge.distanceFrom} km`
+                          : "";
+                      return (
+                        <label
+                          key={charge.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition ${
+                            isSelected
+                              ? isAutoSelected
+                                ? "border-green-500 bg-green-50"
+                                : "border-blue-500 bg-blue-50"
+                              : "border-slate-200 bg-white hover:border-slate-300"
+                          }`}>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleCharge(charge.id)}
+                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium text-slate-800 text-sm">{charge.name}</div>
+                                {isAutoSelected && (
+                                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
+                                    Auto
+                                  </span>
+                                )}
+                              </div>
+                              {distanceRange && (
+                                <div className="text-xs text-slate-500 mt-0.5">{distanceRange}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="font-semibold text-slate-800">₹{charge.amount}</div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Charge Summary */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Selected Charges:</span>
+              <span className="font-medium">₹{selectedChargesAmount.toFixed(2)}</span>
+            </div>
+            {extraKmAmount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Extra KM Charges:</span>
+                <span className="font-medium">₹{extraKmAmount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm pt-2 border-t border-slate-200">
+              <span className="text-slate-600">Extra Amount:</span>
+              <span className="font-semibold">₹{extraAmount.toFixed(2)}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Extra KM Charges (₹)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.extraKmCharges}
-                onChange={(e) => setForm({ ...form, extraKmCharges: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Total Distance (km)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                value={form.totalDistance}
-                onChange={(e) => setForm({ ...form, totalDistance: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.0"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Extra km charges will be auto-calculated if distance &gt; 30km
-              </p>
-            </div>
-          </div>
-
+          {/* Total Amount */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="text-sm text-green-800">
-              <div className="font-semibold mb-2">Estimated Total Amount:</div>
-              <div className="text-2xl font-bold">
-                ₹
-                {(
-                  (booking?.initialAmount || 0) +
-                  (Number(form.paramedicCharges) || 0) +
-                  (Number(form.attendantCharges) || 0) +
-                  (Number(form.extraKmCharges) || 0)
-                ).toFixed(2)}
-              </div>
+              <div className="font-semibold mb-2">Final Total Amount:</div>
+              <div className="text-2xl font-bold">₹{totalAmount.toFixed(2)}</div>
             </div>
           </div>
 
@@ -325,7 +579,8 @@ export default function AmbulanceOrders() {
     search: "",
     status: "",
     approved: "",
-    emergency: "all"
+    emergency: "all",
+    ambulanceTypeId: ""
   });
 
   useEffect(() => {
@@ -335,6 +590,18 @@ export default function AmbulanceOrders() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showCalculateModal, setShowCalculateModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [viewingBooking, setViewingBooking] = useState(null);
+
+  // Fetch ambulance types for filter
+  const { data: ambulanceTypesData } = useQuery({
+    queryKey: ["ambulance-types-all"],
+    queryFn: async () => {
+      return (await api.get("/ambulance-types", { params: { pageSize: 100, active: "true" } })).data;
+    },
+    staleTime: 5 * 60 * 1000
+  });
+
+  const ambulanceTypes = useMemo(() => ambulanceTypesData?.items || [], [ambulanceTypesData]);
 
   // Fetch ambulance orders
   const { data, isLoading, refetch } = useQuery({
@@ -421,6 +688,16 @@ export default function AmbulanceOrders() {
     setShowPaymentModal(true);
   }, []);
 
+  const handleView = useCallback(async (booking) => {
+    try {
+      // Fetch full booking details with logs
+      const response = await api.get(`/ambulance-orders/${booking.id}`);
+      setViewingBooking(response.data);
+    } catch (err) {
+      toast.error("Failed to fetch booking details");
+    }
+  }, []);
+
   const getApprovalBadge = (approved) => {
     if (approved === null) {
       return (
@@ -479,7 +756,7 @@ export default function AmbulanceOrders() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -491,6 +768,18 @@ export default function AmbulanceOrders() {
             />
           </div>
           <select
+            name="ambulanceTypeId"
+            value={filters.ambulanceTypeId}
+            onChange={handleFilterChange}
+            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">All Ambulance Types</option>
+            {ambulanceTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name} ({type.code})
+              </option>
+            ))}
+          </select>
+          <select
             name="status"
             value={filters.status}
             onChange={handleFilterChange}
@@ -500,6 +789,8 @@ export default function AmbulanceOrders() {
             <option value="CONFIRMED">Confirmed</option>
             <option value="ASSIGNED">Assigned</option>
             <option value="DISPATCHED">Dispatched</option>
+            <option value="ARRIVED">Arrived</option>
+            <option value="IN_PROGRESS">In Progress</option>
             <option value="COMPLETED">Completed</option>
             <option value="CANCELLED">Cancelled</option>
           </select>
@@ -523,11 +814,11 @@ export default function AmbulanceOrders() {
             <option value="false">Non-Emergency</option>
           </select>
           <div className="flex gap-2">
-            <button
+      <button
               onClick={() => resetDates()}
               className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition">
               Reset Dates
-            </button>
+      </button>
           </div>
         </div>
       </div>
@@ -540,7 +831,7 @@ export default function AmbulanceOrders() {
           <div className="p-12 text-center text-slate-500">No ambulance orders found</div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+      <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
@@ -549,6 +840,9 @@ export default function AmbulanceOrders() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
                       User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Ambulance Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
                       Route
@@ -565,8 +859,8 @@ export default function AmbulanceOrders() {
                     <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
                       Actions
                     </th>
-                  </tr>
-                </thead>
+            </tr>
+          </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
@@ -575,12 +869,22 @@ export default function AmbulanceOrders() {
                         {item.emergency && (
                           <span className="text-xs text-red-600 font-semibold">Emergency</span>
                         )}
-                      </td>
+                </td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-slate-800">{item.user?.name || "-"}</div>
                         <div className="text-xs text-slate-500">{item.user?.phone || "-"}</div>
                         {item.patientName && (
                           <div className="text-xs text-slate-500">Patient: {item.patientName}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {item.ambulanceType ? (
+                          <div>
+                            <div className="font-medium text-slate-800">{item.ambulanceType.name || "-"}</div>
+                            <div className="text-xs text-slate-500">{item.ambulanceType.code || ""}</div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-sm">-</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -594,7 +898,7 @@ export default function AmbulanceOrders() {
                             <span className="text-slate-600">{item.destination}</span>
                           </div>
                         </div>
-                      </td>
+                </td>
                       <td className="px-6 py-4">
                         <div className="text-sm space-y-1">
                           <div>
@@ -611,7 +915,7 @@ export default function AmbulanceOrders() {
                             <span className="text-slate-500">Total: </span>
                             <span className="font-bold text-green-600">
                               ₹{item.totalAmount || item.initialAmount || 0}
-                            </span>
+                  </span>
                           </div>
                         </div>
                       </td>
@@ -619,6 +923,12 @@ export default function AmbulanceOrders() {
                       <td className="px-6 py-4 text-center">{getStatusBadge(item.status)}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => handleView(item)}
+                            className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition"
+                            title="View Details">
+                            <Eye size={16} />
+                          </button>
                           {item.approved === null && (
                             <>
                               <button
@@ -646,22 +956,22 @@ export default function AmbulanceOrders() {
                                 </button>
                               )}
                               {item.totalAmount && (
-                                <button
+                      <button
                                   onClick={() => handlePaymentComplete(item)}
                                   className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
                                   title="Update Payment & Complete">
                                   <DollarSign size={16} />
-                                </button>
-                              )}
+                      </button>
+                    )}
                             </>
                           )}
                         </div>
                       </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
             {total > filters.pageSize && (
               <div className="border-t border-slate-200 p-4">
                 <Pagination
@@ -669,7 +979,7 @@ export default function AmbulanceOrders() {
                   totalPages={Math.ceil(total / filters.pageSize)}
                   onPageChange={handlePageChange}
                 />
-              </div>
+        </div>
             )}
           </>
         )}
@@ -705,6 +1015,383 @@ export default function AmbulanceOrders() {
           }}
         />
       )}
+
+      {/* View Order Modal with Logs */}
+      {viewingBooking && (
+        <OrderViewModal
+          booking={viewingBooking}
+          onClose={() => setViewingBooking(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Order View Modal Component
+function OrderViewModal({ booking, onClose }) {
+  const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+  };
+
+  // Helper to get charge name from ID
+  const getChargeName = (chargeId) => {
+    if (!booking?.ambulanceType?.charges) return `Charge #${chargeId}`;
+    const charge = booking.ambulanceType.charges.find((c) => c.id === chargeId);
+    return charge ? charge.name : `Charge #${chargeId}`;
+  };
+
+  // Helper to format selected charge IDs with names
+  const formatSelectedCharges = (chargeIds) => {
+    if (!Array.isArray(chargeIds) || chargeIds.length === 0) return [];
+    const charges = booking?.ambulanceType?.charges || [];
+    return chargeIds.map((id) => {
+      const charge = charges.find((c) => c.id === id);
+      if (charge) {
+        return {
+          id,
+          name: charge.name,
+          amount: charge.amount,
+          chargeType: charge.chargeType
+        };
+      }
+      return { id, name: `Charge #${id}`, amount: null, chargeType: null };
+    });
+  };
+
+  const getActionIcon = (action) => {
+    const icons = {
+      BOOKING_CREATED: "📝",
+      APPROVED: "✅",
+      DECLINED: "❌",
+      STATUS_CHANGED: "🔄",
+      PAYMENT_RECEIVED: "💰",
+      FINAL_CALCULATED: "🧮",
+      DRIVER_ASSIGNED: "👤"
+    };
+    return icons[action] || "📋";
+  };
+
+  const getActionColor = (action) => {
+    const colors = {
+      BOOKING_CREATED: "bg-blue-100 text-blue-700",
+      APPROVED: "bg-green-100 text-green-700",
+      DECLINED: "bg-red-100 text-red-700",
+      STATUS_CHANGED: "bg-purple-100 text-purple-700",
+      PAYMENT_RECEIVED: "bg-yellow-100 text-yellow-700",
+      FINAL_CALCULATED: "bg-indigo-100 text-indigo-700",
+      DRIVER_ASSIGNED: "bg-cyan-100 text-cyan-700"
+    };
+    return colors[action] || "bg-slate-100 text-slate-700";
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Ambulance className="text-blue-600" size={24} />
+            Order Details #{booking.id}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
+            <XCircle size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Order Information */}
+          <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-slate-800 mb-3">Order Information</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-slate-500">Patient:</span>
+                <span className="ml-2 font-medium">{booking.patientName || booking.user?.name || "-"}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Contact:</span>
+                <span className="ml-2 font-medium">{booking.contactNumber || booking.user?.phone || "-"}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Status:</span>
+                <span className="ml-2 font-medium">{booking.status}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Approval:</span>
+                <span className="ml-2 font-medium">
+                  {booking.approved === null ? "Pending" : booking.approved ? "Approved" : "Declined"}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500">Initial Amount:</span>
+                <span className="ml-2 font-medium">₹{booking.initialAmount || 0}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Extra Amount:</span>
+                <span className="ml-2 font-medium">₹{booking.extraAmount || 0}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Total Amount:</span>
+                <span className="ml-2 font-bold text-green-600">₹{booking.totalAmount || booking.initialAmount || 0}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Distance:</span>
+                <span className="ml-2 font-medium">{booking.totalDistance ? `${booking.totalDistance} km` : "-"}</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-200">
+              <div className="text-sm">
+                <div className="flex items-start gap-2 mb-2">
+                  <MapPin className="text-green-600 mt-0.5" size={16} />
+                  <div>
+                    <div className="text-slate-500">Pickup:</div>
+                    <div className="font-medium">{booking.pickupAddress}</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="text-red-600 mt-0.5" size={16} />
+                  <div>
+                    <div className="text-slate-500">Destination:</div>
+                    <div className="font-medium">{booking.destination}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Logs */}
+          <div className="bg-slate-50 rounded-lg p-4">
+            <h3 className="font-semibold text-slate-800 mb-4">Order Logs</h3>
+            {booking.logs && booking.logs.length > 0 ? (
+              <div className="space-y-3">
+                {booking.logs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{getActionIcon(log.action)}</span>
+                        <div>
+                          <div className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActionColor(log.action)}`}>
+                            {log.action.replace(/_/g, " ")}
+                          </div>
+                          {log.user && (
+                            <div className="text-xs text-slate-500 mt-1">
+                              By: {log.user.name || log.user.email}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {formatDate(log.createdAt)}
+                      </div>
+                    </div>
+                    {log.description && (
+                      <div className="text-sm text-slate-700 mb-2">{log.description}</div>
+                    )}
+                    {log.changes && (
+                      <div className="mt-3 pt-3 border-t border-slate-200">
+                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                          Changes Made
+                        </div>
+                        <div className="space-y-2">
+                          {Object.entries(log.changes).map(([key, value]) => {
+                            // Format key for display
+                            const displayKey = key
+                              .replace(/([A-Z])/g, " $1")
+                              .replace(/^./, (str) => str.toUpperCase())
+                              .trim();
+
+                            // Format value based on type
+                            let displayValue = value;
+                            if (value === null || value === undefined) {
+                              displayValue = "N/A";
+                            } else if (typeof value === "boolean") {
+                              displayValue = value ? "Yes" : "No";
+                            } else if (value instanceof Date || (typeof value === "string" && value.includes("T") && value.includes("Z"))) {
+                              displayValue = new Date(value).toLocaleString("en-IN", {
+                                dateStyle: "medium",
+                                timeStyle: "short"
+                              });
+                            } else if (typeof value === "number") {
+                              // Check if it's a currency field
+                              if (key.toLowerCase().includes("amount") || key.toLowerCase().includes("price") || key.toLowerCase().includes("charge")) {
+                                displayValue = `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                              } else if (key.toLowerCase().includes("distance")) {
+                                displayValue = `${value} km`;
+                              } else {
+                                displayValue = value.toLocaleString("en-IN");
+                              }
+                            } else if (Array.isArray(value)) {
+                              // Special handling for selectedChargeIds
+                              if (key === "selectedChargeIds") {
+                                const charges = formatSelectedCharges(value);
+                                return (
+                                  <div key={key} className="w-full">
+                                    <div className="text-xs font-medium text-slate-600 mb-2">
+                                      {displayKey}:
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      {charges.map((charge) => (
+                                        <div
+                                          key={charge.id}
+                                          className="flex items-center justify-between py-2 px-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-blue-700">
+                                              {charge.name}
+                                            </span>
+                                            <span className="text-xs text-blue-500">
+                                              (#{charge.id})
+                                            </span>
+                                          </div>
+                                          {charge.amount !== null && (
+                                            <span className="text-xs font-bold text-indigo-700">
+                                              ₹{charge.amount.toLocaleString("en-IN", {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2
+                                              })}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              displayValue = value.length > 0 ? value.join(", ") : "None";
+                            } else if (typeof value === "object") {
+                              displayValue = JSON.stringify(value, null, 2);
+                            }
+
+                            // Skip rendering if it's selectedChargeIds (already rendered above)
+                            if (key === "selectedChargeIds") {
+                              return null;
+                            }
+
+                            return (
+                              <div
+                                key={key}
+                                className="flex items-start justify-between py-2 px-3 bg-gradient-to-r from-slate-50 to-white rounded-lg border border-slate-100 hover:border-slate-200 transition">
+                                <span className="text-xs font-medium text-slate-600 min-w-[120px]">
+                                  {displayKey}:
+                                </span>
+                                <span className="text-xs font-semibold text-slate-800 text-right flex-1 ml-4">
+                                  {displayValue}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {log.previousData && Object.keys(log.previousData).length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-200">
+                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                          Previous Values
+                        </div>
+                        <div className="space-y-2">
+                          {Object.entries(log.previousData).map(([key, value]) => {
+                            const displayKey = key
+                              .replace(/([A-Z])/g, " $1")
+                              .replace(/^./, (str) => str.toUpperCase())
+                              .trim();
+
+                            let displayValue = value;
+                            if (value === null || value === undefined) {
+                              displayValue = "N/A";
+                            } else if (typeof value === "boolean") {
+                              displayValue = value ? "Yes" : "No";
+                            } else if (value instanceof Date || (typeof value === "string" && value.includes("T") && value.includes("Z"))) {
+                              displayValue = new Date(value).toLocaleString("en-IN", {
+                                dateStyle: "medium",
+                                timeStyle: "short"
+                              });
+                            } else if (typeof value === "number") {
+                              if (key.toLowerCase().includes("amount") || key.toLowerCase().includes("price") || key.toLowerCase().includes("charge")) {
+                                displayValue = `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                              } else if (key.toLowerCase().includes("distance")) {
+                                displayValue = `${value} km`;
+                              } else {
+                                displayValue = value.toLocaleString("en-IN");
+                              }
+                            } else if (Array.isArray(value)) {
+                              // Special handling for selectedChargeIds in previous data
+                              if (key === "selectedChargeIds") {
+                                const charges = formatSelectedCharges(value);
+                                return (
+                                  <div key={key} className="w-full">
+                                    <div className="text-xs text-slate-500 mb-2">
+                                      {displayKey}:
+                                    </div>
+                                    <div className="space-y-1">
+                                      {charges.map((charge) => (
+                                        <div
+                                          key={charge.id}
+                                          className="flex items-center justify-between py-1.5 px-2 bg-slate-50 rounded border border-slate-100">
+                                          <span className="text-xs text-slate-600">
+                                            {charge.name} (#{charge.id})
+                                          </span>
+                                          {charge.amount !== null && (
+                                            <span className="text-xs text-slate-500">
+                                              ₹{charge.amount}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              displayValue = value.length > 0 ? value.join(", ") : "None";
+                            }
+
+                            // Skip rendering if it's selectedChargeIds (already rendered above)
+                            if (key === "selectedChargeIds") {
+                              return null;
+                            }
+
+                            return (
+                              <div
+                                key={key}
+                                className="flex items-start justify-between py-1.5 px-3 bg-slate-50/50 rounded border border-slate-100">
+                                <span className="text-xs text-slate-500 min-w-[120px]">
+                                  {displayKey}:
+                                </span>
+                                <span className="text-xs text-slate-600 text-right flex-1 ml-4">
+                                  {displayValue}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {log.notes && (
+                      <div className="mt-3 pt-3 border-t border-slate-200">
+                        <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                          <div className="text-blue-600 mt-0.5">💡</div>
+                          <div className="flex-1">
+                            <div className="text-xs font-semibold text-blue-700 mb-1">Note</div>
+                            <div className="text-xs text-blue-600">{log.notes}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                No logs available for this order
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

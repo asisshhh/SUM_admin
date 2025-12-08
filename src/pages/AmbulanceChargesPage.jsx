@@ -184,55 +184,59 @@ export default function AmbulanceChargesPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Charge Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Distance Range</th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Unit</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Status</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[140px]">Type</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[180px]">Charge Type</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase min-w-[200px]">Name</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[120px]">Distance</th>
+                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 uppercase w-[100px]">Amount</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[80px]">Unit</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[90px]">Status</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[100px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-slate-800">{item.ambulanceType?.name || "-"}</div>
+                      <td className="px-3 py-3">
+                        <div className="font-medium text-slate-800 text-xs">{item.ambulanceType?.name || "-"}</div>
                         <div className="text-xs text-slate-500">{item.ambulanceType?.code || ""}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-slate-600">{item.chargeType}</span>
+                      <td className="px-3 py-3">
+                        <span className="text-xs text-slate-600 truncate block max-w-[160px]" title={item.chargeType}>
+                          {item.chargeType}
+                        </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-slate-800">{item.name}</div>
+                      <td className="px-3 py-3">
+                        <div className="font-medium text-slate-800 text-sm">{item.name}</div>
                         {item.description && (
-                          <div className="text-xs text-slate-500 mt-1 max-w-md truncate">{item.description}</div>
+                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1 max-w-[180px]" title={item.description}>
+                            {item.description}
+                          </div>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-slate-600">
+                      <td className="px-3 py-3">
+                        <div className="text-xs text-slate-600">
                           {item.distanceFrom !== null && item.distanceTo !== null
-                            ? `${item.distanceFrom} - ${item.distanceTo} km`
+                            ? `${item.distanceFrom}-${item.distanceTo} km`
                             : item.distanceFrom !== null
-                            ? `Above ${item.distanceFrom} km`
+                            ? `>${item.distanceFrom} km`
                             : "N/A"}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-3 py-3 text-right">
                         <span className="font-semibold text-slate-800">₹{item.amount}</span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                      <td className="px-3 py-3 text-center">
+                        <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
                           {item.unit}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-3 py-3 text-center">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded ${
                             item.active
                               ? "bg-green-100 text-green-700"
                               : "bg-red-100 text-red-700"
@@ -240,17 +244,19 @@ export default function AmbulanceChargesPage() {
                           {item.active ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => handleEdit(item)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
-                            <Edit size={16} />
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                            title="Edit">
+                            <Edit size={14} />
                           </button>
                           <button
                             onClick={() => handleDelete(item)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
-                            <Trash2 size={16} />
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                            title="Delete">
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>

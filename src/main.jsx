@@ -31,6 +31,11 @@ import TokenWidgetPage from "./pages/TokenWidgetPage.jsx";
 import LabTestsPage from "./pages/LabTestsPage.jsx";
 import TestCategoriesPage from "./pages/TestCategoriesPage.jsx";
 import HealthPackagesPage from "./pages/HealthPackagesPage.jsx";
+// Ambulance Management
+import AmbulanceTypesPage from "./pages/AmbulanceTypesPage.jsx";
+import AmbulanceChargesPage from "./pages/AmbulanceChargesPage.jsx";
+import DriversPage from "./pages/DriversPage.jsx";
+import AmbulanceLogsPage from "./pages/AmbulanceLogsPage.jsx";
 
 const qc = new QueryClient();
 const token = () => localStorage.getItem("token");
@@ -81,6 +86,11 @@ createRoot(document.getElementById("root")).render(
             <Route path="departments" element={<DepartmentsPage />} />
             <Route path="departments/:id" element={<DepartmentDetail />} />
             <Route path="ambulance" element={<AmbulancePage />} />
+            {/* Ambulance Management */}
+            <Route path="ambulance-types" element={<AmbulanceTypesPage />} />
+            <Route path="ambulance-charges" element={<AmbulanceChargesPage />} />
+            <Route path="drivers" element={<DriversPage />} />
+            <Route path="ambulance-logs" element={<AmbulanceLogsPage />} />
             {/* Lab Tests & Packages Management */}
             <Route path="lab-tests" element={<LabTestsPage />} />
             <Route path="test-categories" element={<TestCategoriesPage />} />

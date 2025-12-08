@@ -70,7 +70,16 @@ export default function AppLayout() {
             label="Doctor Calendar"
           />
           <NavItem to="/departments" icon={Building2} label="Departments" />
-          <NavItem to="/ambulance" icon={Ambulance} label="Ambulance" />
+
+          {/* Ambulance Section */}
+          <div className="mt-4 mb-2 px-4">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ambulance</span>
+          </div>
+          <NavItem to="/ambulance" icon={Ambulance} label="Ambulances" />
+          <NavItem to="/ambulance-types" icon={Ambulance} label="Ambulance Types" />
+          <NavItem to="/ambulance-charges" icon={Ambulance} label="Charges" />
+          <NavItem to="/drivers" icon={Ambulance} label="Drivers" />
+          <NavItem to="/ambulance-logs" icon={Ambulance} label="Logs" />
 
           {/* Lab & Packages Section */}
           <div className="mt-4 mb-2 px-4">

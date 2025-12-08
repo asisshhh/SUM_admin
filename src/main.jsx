@@ -10,7 +10,6 @@ import DoctorsPage from "./pages/DoctorsPage.jsx";
 import DepartmentsPage from "./pages/DepartmentsPage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import AmbulancePage from "./pages/AmbulancePage.jsx";
-import PackagesPage from "./pages/PackagesPage.jsx";
 import FeedbackPage from "./pages/FeedbackPage.jsx";
 import BannersPage from "./pages/BannersPage.jsx";
 import ReportsPage from "./pages/ReportsPage.jsx";
@@ -82,7 +81,6 @@ createRoot(document.getElementById("root")).render(
             <Route path="departments" element={<DepartmentsPage />} />
             <Route path="departments/:id" element={<DepartmentDetail />} />
             <Route path="ambulance" element={<AmbulancePage />} />
-            <Route path="packages" element={<PackagesPage />} />
             {/* Lab Tests & Packages Management */}
             <Route path="lab-tests" element={<LabTestsPage />} />
             <Route path="test-categories" element={<TestCategoriesPage />} />

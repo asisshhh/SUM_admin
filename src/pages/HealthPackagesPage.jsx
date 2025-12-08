@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
-import { Package, Search, Plus, Edit2, Trash2, X, Check, AlertCircle, Star, Sparkles, FlaskConical } from "lucide-react";
+import { Package, Search, Plus, Edit2, Trash2, X, Check, AlertCircle, Star, Sparkles, FlaskConical, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -19,17 +19,34 @@ function useDebounce(value, delay = 400) {
  ***************************************************************/
 function Pager({ page, pageSize, total, onPage }) {
   const pages = Math.max(1, Math.ceil((total || 0) / (pageSize || 20)));
+  const start = Math.min((page - 1) * pageSize + 1, total || 0);
+  const end = Math.min(page * pageSize, total || 0);
+
+  if (total === 0) return null;
+
   return (
-    <div className="flex items-center justify-end gap-4 mt-4">
-      <button className="btn" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        Prev
-      </button>
-      <span className="text-sm text-slate-700">
-        Page {page} / {pages}
-      </span>
-      <button className="btn" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-        Next
-      </button>
+    <div className="flex items-center justify-between">
+      <p className="text-sm text-slate-600">
+        Showing <span className="font-medium">{start}</span> to <span className="font-medium">{end}</span> of{" "}
+        <span className="font-medium">{total}</span> results
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          className="p-2 rounded-lg border hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}>
+          <ChevronLeft size={18} />
+        </button>
+        <span className="px-3 py-1 text-sm font-medium bg-slate-100 rounded-lg">
+          {page} / {pages}
+        </span>
+        <button
+          className="p-2 rounded-lg border hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          disabled={page >= pages}
+          onClick={() => onPage(page + 1)}>
+          <ChevronRight size={18} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -214,20 +231,77 @@ function PackageFormModal({ pkg, onClose }) {
 
   const validate = () => {
     const errs = {};
-    if (!form.name?.trim()) errs.name = "Package name is required";
-    if (!form.price || parseFloat(form.price) <= 0) errs.price = "Valid price is required";
-    if (form.discountPrice && parseFloat(form.discountPrice) > parseFloat(form.price)) {
-      errs.discountPrice = "Discount price cannot be greater than price";
+
+    // Name validation (required, 2-200 chars)
+    if (!form.name?.trim()) {
+      errs.name = "Package name is required";
+    } else if (form.name.trim().length < 2) {
+      errs.name = "Name must be at least 2 characters";
+    } else if (form.name.trim().length > 200) {
+      errs.name = "Name cannot exceed 200 characters";
     }
+
+    // Price validation (required, > 0)
+    if (!form.price || form.price === "") {
+      errs.price = "Price is required";
+    } else if (parseFloat(form.price) <= 0) {
+      errs.price = "Price must be greater than 0";
+    }
+
+    // Discount price validation (optional, must be <= price)
+    if (form.discountPrice && form.discountPrice !== "") {
+      if (parseFloat(form.discountPrice) <= 0) {
+        errs.discountPrice = "Discount price must be greater than 0";
+      } else if (parseFloat(form.discountPrice) > parseFloat(form.price || 0)) {
+        errs.discountPrice = "Discount price cannot be greater than price";
+      }
+    }
+
+    // MRP validation (optional, must be >= 0)
+    if (form.mrp && form.mrp !== "" && parseFloat(form.mrp) < 0) {
+      errs.mrp = "MRP cannot be negative";
+    }
+
+    // Validity days validation (optional, must be >= 1)
+    if (form.validityDays && form.validityDays !== "") {
+      const days = parseInt(form.validityDays);
+      if (isNaN(days) || days < 1) {
+        errs.validityDays = "Validity must be at least 1 day";
+      }
+    }
+
+    // Image URL validation (optional, must be valid URL)
+    if (form.imageUrl && form.imageUrl.trim()) {
+      try {
+        new URL(form.imageUrl);
+      } catch {
+        errs.imageUrl = "Please enter a valid URL";
+      }
+    }
+
+    // Short description validation (optional, max 300 chars)
+    if (form.shortDesc && form.shortDesc.length > 300) {
+      errs.shortDesc = "Short description cannot exceed 300 characters";
+    }
+
+    // Description validation (optional, max 2000 chars)
+    if (form.description && form.description.length > 2000) {
+      errs.description = "Description cannot exceed 2000 characters";
+    }
+
+    setErrors(errs);
     return errs;
+  };
+
+  const handleBlur = (field) => {
+    setTouched((t) => ({ ...t, [field]: true }));
+    validate();
   };
 
   const updateField = (field, value) => {
     setForm((f) => ({ ...f, [field]: value }));
     if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
   };
-
-  const handleBlur = (field) => setTouched((t) => ({ ...t, [field]: true }));
 
   const save = useMutation({
     mutationFn: async (data) => {
@@ -243,20 +317,33 @@ function PackageFormModal({ pkg, onClose }) {
   });
 
   const handleSubmit = () => {
+    // Mark all fields as touched
+    const allTouched = {};
+    Object.keys(form).forEach((key) => (allTouched[key] = true));
+    setTouched(allTouched);
+
     const errs = validate();
-    setTouched({ name: true, price: true });
     if (Object.keys(errs).length > 0) {
-      setErrors(errs);
       return;
     }
 
     const payload = {
-      ...form,
+      name: form.name.trim(),
+      description: form.description?.trim() || null,
+      shortDesc: form.shortDesc?.trim() || null,
       price: parseFloat(form.price),
       discountPrice: form.discountPrice ? parseFloat(form.discountPrice) : null,
       mrp: form.mrp ? parseFloat(form.mrp) : null,
       validityDays: form.validityDays ? parseInt(form.validityDays) : null,
-      displayOrder: parseInt(form.displayOrder) || 0
+      imageUrl: form.imageUrl?.trim() || null,
+      preparation: form.preparation?.trim() || null,
+      reportTime: form.reportTime?.trim() || null,
+      sampleType: form.sampleType?.trim() || null,
+      popular: form.popular,
+      featured: form.featured,
+      displayOrder: parseInt(form.displayOrder) || 0,
+      active: form.active,
+      testIds: form.testIds
     };
 
     save.mutate(payload);
@@ -314,22 +401,30 @@ function PackageFormModal({ pkg, onClose }) {
             <div className="space-y-1 md:col-span-2">
               <label className="text-sm font-medium">Short Description</label>
               <input
-                className="input"
+                className={inputClass("shortDesc")}
                 value={form.shortDesc}
                 onChange={(e) => updateField("shortDesc", e.target.value)}
+                onBlur={() => handleBlur("shortDesc")}
                 placeholder="Brief tagline for the package"
+                maxLength={300}
               />
+              {touched.shortDesc && errors.shortDesc && <p className="text-xs text-red-500">{errors.shortDesc}</p>}
+              <p className="text-xs text-slate-400">{form.shortDesc?.length || 0}/300</p>
             </div>
 
             <div className="space-y-1 md:col-span-2">
               <label className="text-sm font-medium">Full Description</label>
               <textarea
-                className="input resize-none"
+                className={inputClass("description")}
                 rows={3}
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
+                onBlur={() => handleBlur("description")}
                 placeholder="Detailed package description..."
+                maxLength={2000}
               />
+              {touched.description && errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
+              <p className="text-xs text-slate-400">{form.description?.length || 0}/2000</p>
             </div>
           </div>
 
@@ -363,6 +458,7 @@ function PackageFormModal({ pkg, onClose }) {
                   className={inputClass("discountPrice")}
                   value={form.discountPrice}
                   onChange={(e) => updateField("discountPrice", e.target.value)}
+                  onBlur={() => handleBlur("discountPrice")}
                   placeholder="1999"
                   min="0"
                   step="0.01"
@@ -376,25 +472,29 @@ function PackageFormModal({ pkg, onClose }) {
                 <label className="text-sm font-medium">MRP (₹)</label>
                 <input
                   type="number"
-                  className="input"
+                  className={inputClass("mrp")}
                   value={form.mrp}
                   onChange={(e) => updateField("mrp", e.target.value)}
+                  onBlur={() => handleBlur("mrp")}
                   placeholder="3999"
                   min="0"
                   step="0.01"
                 />
+                {touched.mrp && errors.mrp && <p className="text-xs text-red-500">{errors.mrp}</p>}
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Validity (Days)</label>
                 <input
                   type="number"
-                  className="input"
+                  className={inputClass("validityDays")}
                   value={form.validityDays}
                   onChange={(e) => updateField("validityDays", e.target.value)}
+                  onBlur={() => handleBlur("validityDays")}
                   placeholder="30"
                   min="1"
                 />
+                {touched.validityDays && errors.validityDays && <p className="text-xs text-red-500">{errors.validityDays}</p>}
               </div>
             </div>
 
@@ -468,11 +568,13 @@ function PackageFormModal({ pkg, onClose }) {
           <div className="space-y-1">
             <label className="text-sm font-medium">Image URL</label>
             <input
-              className="input"
+              className={inputClass("imageUrl")}
               value={form.imageUrl}
               onChange={(e) => updateField("imageUrl", e.target.value)}
+              onBlur={() => handleBlur("imageUrl")}
               placeholder="https://..."
             />
+            {touched.imageUrl && errors.imageUrl && <p className="text-xs text-red-500">{errors.imageUrl}</p>}
           </div>
 
           {/* Toggles */}

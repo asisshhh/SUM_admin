@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
-import { FlaskConical, Search, Plus, Edit2, Trash2, Home, Star, X, Check, AlertCircle } from "lucide-react";
+import { FlaskConical, Search, Plus, Edit2, Trash2, Home, Star, X, Check, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -19,17 +19,34 @@ function useDebounce(value, delay = 400) {
  ***************************************************************/
 function Pager({ page, pageSize, total, onPage }) {
   const pages = Math.max(1, Math.ceil((total || 0) / (pageSize || 20)));
+  const start = Math.min((page - 1) * pageSize + 1, total || 0);
+  const end = Math.min(page * pageSize, total || 0);
+
+  if (total === 0) return null;
+
   return (
-    <div className="flex items-center justify-end gap-4 mt-4">
-      <button className="btn" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        Prev
-      </button>
-      <span className="text-sm text-slate-700">
-        Page {page} / {pages}
-      </span>
-      <button className="btn" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-        Next
-      </button>
+    <div className="flex items-center justify-between">
+      <p className="text-sm text-slate-600">
+        Showing <span className="font-medium">{start}</span> to <span className="font-medium">{end}</span> of{" "}
+        <span className="font-medium">{total}</span> results
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          className="p-2 rounded-lg border hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}>
+          <ChevronLeft size={18} />
+        </button>
+        <span className="px-3 py-1 text-sm font-medium bg-slate-100 rounded-lg">
+          {page} / {pages}
+        </span>
+        <button
+          className="p-2 rounded-lg border hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          disabled={page >= pages}
+          onClick={() => onPage(page + 1)}>
+          <ChevronRight size={18} />
+        </button>
+      </div>
     </div>
   );
 }

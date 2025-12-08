@@ -5,7 +5,6 @@ import {
   Stethoscope,
   Building2,
   Ambulance,
-  Package,
   MessageSquare,
   Image,
   BarChart2,
@@ -80,7 +79,6 @@ export default function AppLayout() {
           <NavItem to="/test-categories" icon={FolderTree} label="Test Categories" />
           <NavItem to="/lab-tests" icon={FlaskConical} label="Lab Tests" />
           <NavItem to="/health-packages" icon={Gift} label="Health Packages" />
-          <NavItem to="/packages" icon={Package} label="Old Packages" />
 
           <NavItem to="/feedback" icon={MessageSquare} label="Feedback" />
           <NavItem to="/banners" icon={Image} label="Banners" />

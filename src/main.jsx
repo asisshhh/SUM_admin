@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ConfirmProvider } from "./contexts/ConfirmContext";
 import "./styles.css";
 import LoginPage from "./pages/LoginPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
@@ -9,7 +10,6 @@ import DoctorsPage from "./pages/DoctorsPage.jsx";
 import DepartmentsPage from "./pages/DepartmentsPage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import AmbulancePage from "./pages/AmbulancePage.jsx";
-import PackagesPage from "./pages/PackagesPage.jsx";
 import FeedbackPage from "./pages/FeedbackPage.jsx";
 import BannersPage from "./pages/BannersPage.jsx";
 import ReportsPage from "./pages/ReportsPage.jsx";
@@ -27,6 +27,10 @@ import DoctorQueue from "./pages/DoctorQueue.jsx";
 import DoctorQueueMonitor from "./pages/DoctorQueueMonitor.jsx";
 import DoctorActionPanel from "./pages/DoctorActionPanel.jsx";
 import TokenWidgetPage from "./pages/TokenWidgetPage.jsx";
+// Lab Tests & Packages Management
+import LabTestsPage from "./pages/LabTestsPage.jsx";
+import TestCategoriesPage from "./pages/TestCategoriesPage.jsx";
+import HealthPackagesPage from "./pages/HealthPackagesPage.jsx";
 
 const qc = new QueryClient();
 const token = () => localStorage.getItem("token");
@@ -38,7 +42,8 @@ function PrivateRoute({ children }) {
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={qc}>
-      <BrowserRouter>
+      <ConfirmProvider>
+        <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -55,8 +60,8 @@ createRoot(document.getElementById("root")).render(
               <Route path="appointments" element={<AppointmentOrders />} />
               <Route path="ambulance" element={<AmbulanceOrders />} />
               <Route path="packages" element={<PackageOrders />} />
-              {/* <Route path="lab" element={<LabOrders />} />
-              <Route path="homecare" element={<HomecareOrders />} /> */}
+              <Route path="lab" element={<LabOrders />} />
+              {/* <Route path="homecare" element={<HomecareOrders />} /> */}
             </Route>
             <Route path="doctor-queue" element={<DoctorQueue />} />
             <Route
@@ -76,14 +81,18 @@ createRoot(document.getElementById("root")).render(
             <Route path="departments" element={<DepartmentsPage />} />
             <Route path="departments/:id" element={<DepartmentDetail />} />
             <Route path="ambulance" element={<AmbulancePage />} />
-            <Route path="packages" element={<PackagesPage />} />
+            {/* Lab Tests & Packages Management */}
+            <Route path="lab-tests" element={<LabTestsPage />} />
+            <Route path="test-categories" element={<TestCategoriesPage />} />
+            <Route path="health-packages" element={<HealthPackagesPage />} />
             <Route path="feedback" element={<FeedbackPage />} />
             <Route path="banners" element={<BannersPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="doctor-calendar" element={<DoctorCalendarPage />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+        </BrowserRouter>
+      </ConfirmProvider>
     </QueryClientProvider>
   </React.StrictMode>
 );

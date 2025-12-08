@@ -1,215 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import api from "../api/client";
+import { useConfirm } from "../contexts/ConfirmContext";
+import { Stethoscope, Search, Plus, Trash2 } from "lucide-react";
 
-/***************************************************************
- ✅ Pager
-***************************************************************/
-function Pager({ page, total, pageSize, onPage }) {
-  const pages = Math.max(1, Math.ceil((total || 0) / (pageSize || 20)));
-  return (
-    <div className="flex items-center gap-3 justify-end mt-4">
-      <button
-        className="btn"
-        disabled={page <= 1}
-        onClick={() => onPage(page - 1)}>
-        Prev
-      </button>
-      <span className="text-sm">
-        Page {page} / {pages}
-      </span>
-      <button
-        className="btn"
-        disabled={page >= pages}
-        onClick={() => onPage(page + 1)}>
-        Next
-      </button>
-    </div>
-  );
+// Components
+import { Pagination } from "../components/shared";
+import { DoctorFormModal, DoctorTableRow } from "../components/doctors";
+
+// Custom hook for debounced value
+function useDebounce(value, delay = 300) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
-/***************************************************************
- ✅ Full EDIT MODAL
-***************************************************************/
-function EditDoctorModal({ doc, departments, onClose }) {
-  const qc = useQueryClient();
+// Table header columns config
+const TABLE_COLUMNS = [
+  { key: "name", label: "Doctor" },
+  { key: "specialization", label: "Specialization" },
+  { key: "department", label: "Department" },
+  { key: "experience", label: "Experience" },
+  { key: "consultationFee", label: "Fee" },
+  { key: "available", label: "Status" }
+];
 
-  const [form, setForm] = useState({
-    name: doc.user.name,
-    phone: doc.user.phone,
-    email: doc.user.email,
-    specialization: doc.specialization || "",
-    registrationNumber: doc.registrationNumber || "",
-    departmentId: doc.department?.id || "",
-    gender: doc.gender || "",
-    dateOfBirth: doc.dateOfBirth ? doc.dateOfBirth.split("T")[0] : "",
-    address: doc.address || "",
-    experience: doc.experience || 0,
-    consultationFee: doc.consultationFee || 0,
-    description: doc.description || "",
-    available: doc.available ?? true
-  });
-
-  const save = useMutation({
-    mutationFn: async () =>
-      (
-        await api.put(`/doctors/${doc.id}`, {
-          ...form,
-          departmentId: Number(form.departmentId)
-        })
-      ).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["doctors"] });
-      onClose();
-    }
-  });
-
-  const updateField = (k, v) => setForm({ ...form, [k]: v });
-  const deleteDoctor = async (id) => {
-    if (!window.confirm("Permanently delete this doctor?")) return;
-
-    await api.delete(`/doctors/${id}`);
-    query.refetch(); // reload list
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/30 grid place-items-center">
-      <div className="card p-6 w-full max-w-2xl space-y-3 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold">Edit Doctor</h2>
-
-        <div className="grid md:grid-cols-2 gap-3">
-          <label className="text-sm">Name</label>
-          <input
-            className="input"
-            value={form.name}
-            onChange={(e) => updateField("name", e.target.value)}
-          />
-
-          <label className="text-sm">Phone</label>
-          <input
-            className="input"
-            value={form.phone}
-            onChange={(e) => updateField("phone", e.target.value)}
-          />
-
-          <label className="text-sm">Email</label>
-          <input
-            className="input"
-            value={form.email}
-            onChange={(e) => updateField("email", e.target.value)}
-          />
-
-          <label className="text-sm">Registration No.</label>
-          <input
-            className="input"
-            value={form.registrationNumber}
-            onChange={(e) => updateField("registrationNumber", e.target.value)}
-          />
-
-          <label className="text-sm">Specialization</label>
-          <input
-            className="input"
-            value={form.specialization}
-            onChange={(e) => updateField("specialization", e.target.value)}
-          />
-
-          <label className="text-sm">Department</label>
-          <select
-            className="select"
-            value={form.departmentId}
-            onChange={(e) => updateField("departmentId", e.target.value)}>
-            <option value="">Select</option>
-            {(departments?.items ?? []).map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-
-          <label className="text-sm">Gender</label>
-          <select
-            className="select"
-            value={form.gender}
-            onChange={(e) => updateField("gender", e.target.value)}>
-            <option value="">Select</option>
-            <option>MALE</option>
-            <option>FEMALE</option>
-            <option>OTHER</option>
-          </select>
-
-          <label className="text-sm">Birthdate</label>
-          <input
-            type="date"
-            className="input"
-            value={form.dateOfBirth}
-            onChange={(e) => updateField("dateOfBirth", e.target.value)}
-          />
-
-          <label className="text-sm">Address</label>
-          <input
-            className="input"
-            value={form.address}
-            onChange={(e) => updateField("address", e.target.value)}
-          />
-
-          <label className="text-sm">Experience (years)</label>
-          <input
-            className="input"
-            value={form.experience}
-            onChange={(e) => updateField("experience", Number(e.target.value))}
-          />
-
-          <label className="text-sm">Consultation Fee</label>
-          <input
-            className="input"
-            value={form.consultationFee}
-            onChange={(e) =>
-              updateField("consultationFee", Number(e.target.value))
-            }
-          />
-
-          <label className="text-sm">Available</label>
-          <select
-            className="select"
-            value={String(form.available)}
-            onChange={(e) =>
-              updateField("available", e.target.value === "true")
-            }>
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </div>
-
-        <label className="text-sm">Description</label>
-        <textarea
-          className="input min-h-[80px]"
-          value={form.description}
-          onChange={(e) => updateField("description", e.target.value)}
-        />
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button className="btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="btn bg-slate-900 text-white"
-            onClick={() => save.mutate()}>
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/***************************************************************
- ✅ MAIN PAGE
-***************************************************************/
 export default function DoctorsPage() {
   const qc = useQueryClient();
+  const confirm = useConfirm();
+
+  // State
   const [selected, setSelected] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 400);
 
   const [filters, setFilters] = useState({
     page: 1,
@@ -221,23 +50,36 @@ export default function DoctorsPage() {
     sortOrder: "asc"
   });
 
+  // Update search filter when debounced value changes
+  useEffect(() => {
+    setFilters((f) => ({ ...f, search: debouncedSearch, page: 1 }));
+  }, [debouncedSearch]);
+
+  // Queries
   const { data: departments } = useQuery({
     queryKey: ["departments"],
-    queryFn: async () => (await api.get("/departments")).data
+    queryFn: async () => (await api.get("/departments")).data,
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
   });
 
-  const query = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["doctors", filters],
-    queryFn: async () => (await api.get("/doctors", { params: filters })).data
+    queryFn: async () => {
+      const params = Object.fromEntries(
+        Object.entries(filters).filter(([_, v]) => v !== "")
+      );
+      return (await api.get("/doctors", { params })).data;
+    }
   });
 
-  const del = useMutation({
-    mutationFn: async (id) => (await api.delete(`/doctors/${id}`)).data,
+  // Mutations
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.delete(`/doctors/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["doctors"] })
   });
 
-  const bulkDelete = useMutation({
-    mutationFn: async (ids) =>
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids) =>
       Promise.all(ids.map((id) => api.delete(`/doctors/${id}`))),
     onSuccess: () => {
       setSelected([]);
@@ -245,175 +87,244 @@ export default function DoctorsPage() {
     }
   });
 
-  const items = query.data?.items || [];
-  const total = query.data?.total || 0;
+  // Derived state
+  const items = data?.items || [];
+  const total = data?.total || 0;
 
-  const onChange = (e) =>
-    setFilters((f) => ({ ...f, [e.target.name]: e.target.value }));
+  // Handlers
+  const handleFilterChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFilters((f) => ({ ...f, [name]: value, page: 1 }));
+  }, []);
 
-  const toggleSelect = (rowId) =>
+  const handlePageChange = useCallback((page) => {
+    setFilters((f) => ({ ...f, page }));
+  }, []);
+
+  const toggleSelect = useCallback((id) => {
     setSelected((arr) =>
-      arr.includes(rowId) ? arr.filter((x) => x !== rowId) : [...arr, rowId]
+      arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]
     );
+  }, []);
 
-  const toggleSort = (field) => {
+  const toggleSelectAll = useCallback(
+    (checked) => {
+      setSelected(checked ? items.map((d) => d.id) : []);
+    },
+    [items]
+  );
+
+  const toggleSort = useCallback((field) => {
     setFilters((f) => ({
       ...f,
       sortBy: field,
-      sortOrder: f.sortOrder === "asc" ? "desc" : "asc"
+      sortOrder: f.sortBy === field && f.sortOrder === "asc" ? "desc" : "asc"
     }));
-  };
+  }, []);
+
+  const handleDelete = useCallback(
+    async (doctor) => {
+      const ok = await confirm({
+        title: "Confirm delete",
+        message: `Permanently delete ${doctor.user?.name}? This action cannot be undone.`,
+        danger: true
+      });
+      if (ok) deleteMutation.mutate(doctor.id);
+    },
+    [confirm, deleteMutation]
+  );
+
+  const handleBulkDelete = useCallback(async () => {
+    const ok = await confirm({
+      title: "Confirm Bulk Delete",
+      message: `Delete ${selected.length} selected doctor(s)?`,
+      danger: true
+    });
+    if (ok) bulkDeleteMutation.mutate(selected);
+  }, [confirm, selected, bulkDeleteMutation]);
+
+  // Memoized department options
+  const departmentOptions = useMemo(
+    () => departments?.items ?? [],
+    [departments]
+  );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-xl">
+            <Stethoscope className="text-blue-600" size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">
+              Doctors Management
+            </h1>
+            <p className="text-sm text-slate-500">
+              Manage doctors, schedules, and availability
+            </p>
+          </div>
+        </div>
+        <button
+          className="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+          onClick={() => setEditing({})}>
+          <Plus size={18} />
+          Add Doctor
+        </button>
+      </div>
+
       {/* Filters */}
-      <div className="flex items-end gap-3 flex-wrap">
-        {/* <div className="grow max-w-sm">
-          <label className="text-sm">Search</label>
-          <input
-            className="input"
-            name="search"
-            value={filters.search}
-            onChange={onChange}
-            placeholder="Name / Specialization"
-          />
-        </div> */}
+      <div className="bg-white rounded-xl border p-4 shadow-sm">
+        <div className="flex flex-wrap items-end gap-4">
+          {/* Search */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-sm text-slate-600 mb-1 block">Search</label>
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
+              <input
+                className="input pl-10 pr-8"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Name, specialization, registration..."
+              />
+              {searchInput !== debouncedSearch && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+          </div>
 
-        <div>
-          <label className="text-sm">Department</label>
-          <select
-            className="select"
-            name="departmentId"
-            value={filters.departmentId}
-            onChange={onChange}>
-            <option value="">All</option>
-            {(departments?.items ?? []).map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+          {/* Department */}
+          <div className="min-w-[160px]">
+            <label className="text-sm text-slate-600 mb-1 block">
+              Department
+            </label>
+            <select
+              className="select"
+              name="departmentId"
+              value={filters.departmentId}
+              onChange={handleFilterChange}>
+              <option value="">All Departments</option>
+              {departmentOptions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Availability */}
+          <div className="min-w-[140px]">
+            <label className="text-sm text-slate-600 mb-1 block">
+              Availability
+            </label>
+            <select
+              className="select"
+              name="available"
+              value={filters.available}
+              onChange={handleFilterChange}>
+              <option value="">All</option>
+              <option value="true">Available</option>
+              <option value="false">Unavailable</option>
+            </select>
+          </div>
+
+          {/* Bulk Delete */}
+          {selected.length > 0 && (
+            <button
+              className="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
+              onClick={handleBulkDelete}>
+              <Trash2 size={16} />
+              Delete ({selected.length})
+            </button>
+          )}
         </div>
+      </div>
 
-        <div>
-          <label className="text-sm">Available</label>
-          <select
-            className="select"
-            name="available"
-            value={filters.available}
-            onChange={onChange}>
-            <option value="">All</option>
-            <option value="true">Available</option>
-            <option value="false">Unavailable</option>
-          </select>
-        </div>
-
-        {selected.length > 0 && (
-          <button
-            className="btn bg-red-600 text-white"
-            onClick={() => bulkDelete.mutate(selected)}>
-            Delete Selected ({selected.length})
-          </button>
+      {/* Table */}
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center text-slate-500">
+            <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-2" />
+            Loading doctors...
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">
+            <Stethoscope className="mx-auto mb-2 text-slate-300" size={40} />
+            <p>No doctors found</p>
+            <p className="text-sm mt-1">
+              {filters.search || filters.departmentId || filters.available
+                ? "Try adjusting your filters."
+                : "Add a new doctor to get started."}
+            </p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                <th className="p-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-blue-600"
+                    checked={
+                      selected.length === items.length && items.length > 0
+                    }
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
+                </th>
+                {TABLE_COLUMNS.map(({ key, label }) => (
+                  <th
+                    key={key}
+                    className="p-3 text-left font-semibold cursor-pointer select-none hover:bg-slate-100 transition"
+                    onClick={() => toggleSort(key)}>
+                    <div className="flex items-center gap-1">
+                      {label}
+                      {filters.sortBy === key && (
+                        <span className="text-blue-600">
+                          {filters.sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                ))}
+                <th className="p-3 text-center font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((doctor) => (
+                <DoctorTableRow
+                  key={doctor.id}
+                  doctor={doctor}
+                  isSelected={selected.includes(doctor.id)}
+                  onSelect={() => toggleSelect(doctor.id)}
+                  onEdit={() => setEditing(doctor)}
+                  onDelete={() => handleDelete(doctor)}
+                />
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
-      {/* TABLE */}
-      <div className="card overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="p-3">
-                <input
-                  type="checkbox"
-                  onChange={(e) =>
-                    setSelected(e.target.checked ? items.map((d) => d.id) : [])
-                  }
-                />
-              </th>
-
-              {[
-                ["name", "Name"],
-                ["specialization", "Specialization"],
-                ["department", "Department"],
-                ["experience", "Exp"],
-                ["consultationFee", "Fee"],
-                ["available", "Available"]
-              ].map(([key, label]) => (
-                <th
-                  key={key}
-                  className="p-3 text-left cursor-pointer select-none"
-                  onClick={() => toggleSort(key)}>
-                  {label}{" "}
-                  {filters.sortBy === key &&
-                    (filters.sortOrder === "asc" ? "▲" : "▼")}
-                </th>
-              ))}
-
-              <th className="p-3 text-left">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {items.map((d) => (
-              <tr key={d.id} className="border-t">
-                <td className="p-3">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(d.id)}
-                    onChange={() => toggleSelect(d.id)}
-                  />
-                </td>
-
-                <td className="p-3">
-                  <Link
-                    className="text-blue-600 hover:underline"
-                    to={`/doctors/${d.id}`}>
-                    {d.user.name}
-                  </Link>
-                </td>
-
-                <td className="p-3">{d.specialization}</td>
-                <td className="p-3">{d.department?.name}</td>
-                <td className="p-3">{d.experience ?? "—"} yrs</td>
-                <td className="p-3">₹{d.consultationFee ?? "—"}</td>
-
-                <td className="p-3">
-                  <span
-                    className={`badge ${
-                      d.available
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}>
-                    {d.available ? "Yes" : "No"}
-                  </span>
-                </td>
-
-                <td className="p-3 flex gap-2">
-                  <button className="btn" onClick={() => setEditing(d)}>
-                    Edit
-                  </button>
-                  <button className="btn" onClick={() => deleteDoctor(d.id)}>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <Pager
-        page={query.data?.page}
+      {/* Pagination */}
+      <Pagination
+        page={data?.page || 1}
         total={total}
-        pageSize={query.data?.pageSize}
-        onPage={(p) => setFilters((f) => ({ ...f, page: p }))}
+        pageSize={data?.pageSize || 10}
+        onPage={handlePageChange}
       />
 
-      {editing && (
-        <EditDoctorModal
-          doc={editing}
+      {/* Modal */}
+      {editing !== null && (
+        <DoctorFormModal
+          doc={editing.id ? editing : null}
+          departments={departments}
           onClose={() => setEditing(null)}
-          departments={departments?.items ?? []}
         />
       )}
     </div>

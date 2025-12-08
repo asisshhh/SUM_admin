@@ -2,72 +2,73 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
-import { Building2, Search, Plus } from "lucide-react";
+import { Package, Search, Plus } from "lucide-react";
 
 // Components
 import { Pagination } from "../components/shared";
-import { DepartmentFormModal, DepartmentTableRow } from "../components/departments";
+import { PackageFormModal, PackageTableRow, PackageViewModal } from "../components/packages";
 
-// Custom hook for debounced value
-function useDebounce(value, delay = 300) {
+// Debounce hook
+function useDebounce(value, delay = 400) {
   const [debouncedValue, setDebouncedValue] = useState(value);
-
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedValue(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay]);
-
   return debouncedValue;
 }
 
-// Table columns config
+// Table columns
 const TABLE_COLUMNS = [
-  { key: "name", label: "Department" },
-  { key: "description", label: "Description" },
-  { key: "doctorCount", label: "Doctors", center: true },
-  { key: "active", label: "Status", center: true },
-  { key: "actions", label: "Actions", center: true }
+  { key: "name", label: "Package" },
+  { key: "price", label: "Price", align: "right" },
+  { key: "discountPrice", label: "Discount", align: "right" },
+  { key: "tests", label: "Tests", align: "center" },
+  { key: "validity", label: "Validity", align: "center" },
+  { key: "status", label: "Status", align: "center" },
+  { key: "actions", label: "Actions", align: "center" }
 ];
 
-export default function DepartmentsPage() {
+export default function HealthPackagesPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const [editing, setEditing] = useState(null);
+  const [viewing, setViewing] = useState(null);
 
-  // State
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 400);
-  const [showForm, setShowForm] = useState(null);
 
   const [filters, setFilters] = useState({
     page: 1,
-    pageSize: 10,
+    pageSize: 15,
     search: "",
-    active: ""
+    active: "all",
+    popular: "all",
+    featured: "all",
+    sortBy: "displayOrder",
+    sortOrder: "asc"
   });
 
-  // Update search filter when debounced value changes
   useEffect(() => {
     setFilters((f) => ({ ...f, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
 
-  // Queries
+  // Fetch packages
   const { data, isLoading } = useQuery({
-    queryKey: ["departments", filters],
+    queryKey: ["health-packages", filters],
     queryFn: async () => {
       const params = Object.fromEntries(
-        Object.entries(filters).filter(([_, v]) => v !== "")
+        Object.entries(filters).filter(([_, v]) => v !== "" && v !== "all")
       );
-      return (await api.get("/departments", { params })).data;
+      return (await api.get("/health-packages", { params })).data;
     }
   });
 
-  // Mutations
   const deleteMutation = useMutation({
-    mutationFn: (id) => api.delete(`/departments/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["departments"] })
+    mutationFn: (id) => api.delete(`/health-packages/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["health-packages"] })
   });
 
-  // Derived state
   const items = data?.items || [];
   const total = data?.total || 0;
 
@@ -81,25 +82,29 @@ export default function DepartmentsPage() {
     setFilters((f) => ({ ...f, page }));
   }, []);
 
-  const handleDelete = useCallback(async (department) => {
+  const handleDelete = useCallback(async (pkg) => {
     const ok = await confirm({
-      title: "Confirm delete",
-      message: `Delete department "${department.name}"? ${
-        department.doctorCount > 0
-          ? `This department has ${department.doctorCount} doctor(s). They will need to be reassigned.`
-          : ""
-      }`,
+      title: "Delete Package",
+      message: `Are you sure you want to delete "${pkg.name}"?`,
       danger: true
     });
-    if (ok) deleteMutation.mutate(department.id);
+    if (ok) deleteMutation.mutate(pkg.id);
   }, [confirm, deleteMutation]);
 
-  const handleEdit = useCallback((department) => {
-    setShowForm(department);
+  const handleView = useCallback((pkg) => {
+    setViewing(pkg);
+  }, []);
+
+  const handleCloseView = useCallback(() => {
+    setViewing(null);
+  }, []);
+
+  const handleEdit = useCallback((pkg) => {
+    setEditing(pkg);
   }, []);
 
   const handleCloseForm = useCallback(() => {
-    setShowForm(null);
+    setEditing(null);
   }, []);
 
   return (
@@ -107,19 +112,19 @@ export default function DepartmentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-100 rounded-xl">
-            <Building2 className="text-indigo-600" size={24} />
+          <div className="p-2 bg-blue-100 rounded-xl">
+            <Package className="text-blue-600" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Departments Management</h1>
-            <p className="text-sm text-slate-500">Organize hospital departments and specializations</p>
+            <h1 className="text-2xl font-bold text-slate-800">Health Packages</h1>
+            <p className="text-sm text-slate-500">Manage health checkup packages and pricing</p>
           </div>
         </div>
         <button
-          className="btn bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
-          onClick={() => setShowForm({})}>
+          className="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+          onClick={() => setEditing({})}>
           <Plus size={18} />
-          Add Department
+          Create Package
         </button>
       </div>
 
@@ -135,7 +140,7 @@ export default function DepartmentsPage() {
                 className="input pl-10 pr-8"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search departments..."
+                placeholder="Package name..."
               />
               {searchInput !== debouncedSearch && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -146,16 +151,32 @@ export default function DepartmentsPage() {
           </div>
 
           {/* Status */}
-          <div className="min-w-[140px]">
+          <div className="min-w-[120px]">
             <label className="text-sm text-slate-600 mb-1 block">Status</label>
-            <select
-              className="select"
-              name="active"
-              value={filters.active}
-              onChange={handleFilterChange}>
-              <option value="">All</option>
+            <select name="active" className="select" value={filters.active} onChange={handleFilterChange}>
+              <option value="all">All</option>
               <option value="true">Active</option>
               <option value="false">Inactive</option>
+            </select>
+          </div>
+
+          {/* Popular */}
+          <div className="min-w-[120px]">
+            <label className="text-sm text-slate-600 mb-1 block">Popular</label>
+            <select name="popular" className="select" value={filters.popular} onChange={handleFilterChange}>
+              <option value="all">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+
+          {/* Featured */}
+          <div className="min-w-[120px]">
+            <label className="text-sm text-slate-600 mb-1 block">Featured</label>
+            <select name="featured" className="select" value={filters.featured} onChange={handleFilterChange}>
+              <option value="all">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
             </select>
           </div>
         </div>
@@ -166,38 +187,37 @@ export default function DepartmentsPage() {
         {isLoading ? (
           <div className="p-8 text-center text-slate-500">
             <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-2" />
-            Loading departments...
+            Loading packages...
           </div>
         ) : items.length === 0 ? (
           <div className="p-8 text-center text-slate-500">
-            <Building2 className="mx-auto mb-2 text-slate-300" size={40} />
-            <p>No departments found</p>
+            <Package className="mx-auto mb-2 text-slate-300" size={40} />
+            <p>No packages found</p>
             <p className="text-sm mt-1">
-              {filters.search || filters.active
+              {filters.search || filters.active !== "all" || filters.popular !== "all"
                 ? "Try adjusting your filters."
-                : "Add a new department to get started."}
+                : "Create a new package to get started."}
             </p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b">
               <tr>
-                {TABLE_COLUMNS.map(({ key, label, center }) => (
-                  <th
-                    key={key}
-                    className={`p-3 font-semibold ${center ? "text-center" : "text-left"}`}>
+                {TABLE_COLUMNS.map(({ key, label, align }) => (
+                  <th key={key} className={`p-3 font-semibold text-${align || "left"}`}>
                     {label}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {items.map((department) => (
-                <DepartmentTableRow
-                  key={department.id}
-                  department={department}
-                  onEdit={() => handleEdit(department)}
-                  onDelete={() => handleDelete(department)}
+              {items.map((pkg) => (
+                <PackageTableRow
+                  key={pkg.id}
+                  pkg={pkg}
+                  onView={() => handleView(pkg)}
+                  onEdit={() => handleEdit(pkg)}
+                  onDelete={() => handleDelete(pkg)}
                 />
               ))}
             </tbody>
@@ -209,14 +229,22 @@ export default function DepartmentsPage() {
       <Pagination
         page={data?.page || 1}
         total={total}
-        pageSize={data?.pageSize || 10}
+        pageSize={data?.pageSize || 15}
         onPage={handlePageChange}
       />
 
-      {/* Modal */}
-      {showForm !== null && (
-        <DepartmentFormModal
-          initial={showForm.id ? showForm : null}
+      {/* View Modal */}
+      {viewing && (
+        <PackageViewModal
+          pkg={viewing}
+          onClose={handleCloseView}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editing !== null && (
+        <PackageFormModal
+          pkg={editing.id ? editing : null}
           onClose={handleCloseForm}
         />
       )}

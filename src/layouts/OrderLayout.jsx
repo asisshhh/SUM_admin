@@ -34,8 +34,8 @@ export default function OrderLayout() {
         <SubTab to="appointments" icon={CalendarCheck} label="Appointments" />
         <SubTab to="ambulance" icon={Ambulance} label="Ambulance" />
         <SubTab to="packages" icon={Package} label="Health Packages" />
-        {/* <SubTab to="lab" icon={FlaskConical} label="Lab / Investigation" />
-        <SubTab to="homecare" icon={Home} label="Home Healthcare" /> */}
+        <SubTab to="lab" icon={FlaskConical} label="Lab / Investigation" />
+        {/* <SubTab to="homecare" icon={Home} label="Home Healthcare" /> */}
       </div>
 
       <div>

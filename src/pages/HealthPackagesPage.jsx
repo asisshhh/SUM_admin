@@ -6,7 +6,7 @@ import { Package, Search, Plus } from "lucide-react";
 
 // Components
 import { Pagination } from "../components/shared";
-import { PackageFormModal, PackageTableRow } from "../components/packages";
+import { PackageFormModal, PackageTableRow, PackageViewModal } from "../components/packages";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -33,6 +33,7 @@ export default function HealthPackagesPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [editing, setEditing] = useState(null);
+  const [viewing, setViewing] = useState(null);
 
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 400);
@@ -89,6 +90,14 @@ export default function HealthPackagesPage() {
     });
     if (ok) deleteMutation.mutate(pkg.id);
   }, [confirm, deleteMutation]);
+
+  const handleView = useCallback((pkg) => {
+    setViewing(pkg);
+  }, []);
+
+  const handleCloseView = useCallback(() => {
+    setViewing(null);
+  }, []);
 
   const handleEdit = useCallback((pkg) => {
     setEditing(pkg);
@@ -206,6 +215,7 @@ export default function HealthPackagesPage() {
                 <PackageTableRow
                   key={pkg.id}
                   pkg={pkg}
+                  onView={() => handleView(pkg)}
                   onEdit={() => handleEdit(pkg)}
                   onDelete={() => handleDelete(pkg)}
                 />
@@ -223,7 +233,15 @@ export default function HealthPackagesPage() {
         onPage={handlePageChange}
       />
 
-      {/* Modal */}
+      {/* View Modal */}
+      {viewing && (
+        <PackageViewModal
+          pkg={viewing}
+          onClose={handleCloseView}
+        />
+      )}
+
+      {/* Edit Modal */}
       {editing !== null && (
         <PackageFormModal
           pkg={editing.id ? editing : null}

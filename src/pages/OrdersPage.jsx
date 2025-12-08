@@ -7,6 +7,8 @@ import { useConfirm } from "../contexts/ConfirmContext";
 import api from "../api/client";
 import useDateRange from "../hooks/useDateRange";
 import OrderDetailsModal from "../components/OrderDetailsModal";
+import LabOrderViewModal from "../components/orders/LabOrderViewModal";
+import PackageOrderViewModal from "../components/orders/PackageOrderViewModal";
 import { printReceipt } from "../components/ReceiptPrint";
 import io from "socket.io-client";
 import {
@@ -172,6 +174,10 @@ export default function OrdersPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [genLoading, setGenLoading] = useState(false);
+
+  // View modals for lab and package orders
+  const [viewingLabOrder, setViewingLabOrder] = useState(null);
+  const [viewingPackageOrder, setViewingPackageOrder] = useState(null);
 
   const [socketInstance, setSocketInstance] = useState(null);
   const searchRef = useRef(null);
@@ -736,7 +742,7 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Appointment Details Modal */}
       {activeType === "appointments" && (
         <OrderDetailsModal
           open={detailsOpen}
@@ -744,6 +750,22 @@ export default function OrdersPage() {
           data={selectedOrder}
           socket={socketInstance}
           onUpdated={handleModalUpdate}
+        />
+      )}
+
+      {/* Lab Order View Modal */}
+      {viewingLabOrder && (
+        <LabOrderViewModal
+          order={viewingLabOrder}
+          onClose={() => setViewingLabOrder(null)}
+        />
+      )}
+
+      {/* Package Order View Modal */}
+      {viewingPackageOrder && (
+        <PackageOrderViewModal
+          order={viewingPackageOrder}
+          onClose={() => setViewingPackageOrder(null)}
         />
       )}
 
@@ -936,7 +958,10 @@ export default function OrdersPage() {
             </td>
             <td className="px-4 py-3.5">
               <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors">
+                <button
+                  className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
+                  onClick={() => setViewingPackageOrder(r)}
+                  title="View Details">
                   <Eye size={16} />
                 </button>
                 {r.paymentStatus !== "SUCCESS" && (
@@ -1009,7 +1034,10 @@ export default function OrdersPage() {
             </td>
             <td className="px-4 py-3.5">
               <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors">
+                <button
+                  className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
+                  onClick={() => setViewingLabOrder(r)}
+                  title="View Details">
                   <Eye size={16} />
                 </button>
                 {r.reportUrl && (

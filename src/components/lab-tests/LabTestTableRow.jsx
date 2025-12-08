@@ -1,7 +1,7 @@
 import React from "react";
-import { Edit2, Trash2, Home, Star } from "lucide-react";
+import { Edit2, Trash2, Home, Star, Eye } from "lucide-react";
 
-function LabTestTableRow({ test, onEdit, onDelete }) {
+function LabTestTableRow({ test, onView, onEdit, onDelete }) {
   return (
     <tr className="border-b hover:bg-slate-50 transition">
       <td className="p-3">
@@ -40,7 +40,13 @@ function LabTestTableRow({ test, onEdit, onDelete }) {
         </span>
       </td>
       <td className="p-3">
-        <div className="flex justify-center gap-2">
+        <div className="flex justify-center gap-1">
+          <button
+            className="p-2 hover:bg-blue-50 rounded-lg transition"
+            onClick={onView}
+            title="View Details">
+            <Eye size={16} className="text-blue-500" />
+          </button>
           <button
             className="p-2 hover:bg-slate-100 rounded-lg transition"
             onClick={onEdit}

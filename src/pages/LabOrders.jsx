@@ -22,7 +22,8 @@ import {
   PaymentBadge,
   OrderFilterCard,
   OrderPagination,
-  OrderPageHeader
+  OrderPageHeader,
+  LabOrderViewModal
 } from "../components/orders";
 
 const DEFAULT_LIMIT = 20;
@@ -62,6 +63,7 @@ export default function LabOrders() {
   const [limit] = useState(DEFAULT_LIMIT);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [viewingOrder, setViewingOrder] = useState(null);
 
   const currentController = useRef(null);
   const confirm = useConfirm();
@@ -210,9 +212,7 @@ export default function LabOrders() {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 overflow-hidden">
           <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-slate-700">
-                Lab Test Records
-              </h3>
+              <h3 className="font-semibold text-slate-700">Lab Test Records</h3>
               {loading && (
                 <div className="flex items-center gap-2 text-sm text-blue-600">
                   <RefreshCw size={14} className="animate-spin" />
@@ -269,6 +269,7 @@ export default function LabOrders() {
                     key={r.id}
                     order={r}
                     index={(page - 1) * limit + i + 1}
+                    onView={() => setViewingOrder(r)}
                   />
                 ))}
               </tbody>
@@ -287,6 +288,14 @@ export default function LabOrders() {
         )}
       </div>
 
+      {/* View Modal */}
+      {viewingOrder && (
+        <LabOrderViewModal
+          order={viewingOrder}
+          onClose={() => setViewingOrder(null)}
+        />
+      )}
+
       <ToastContainer position="top-right" />
     </div>
   );
@@ -296,13 +305,14 @@ export default function LabOrders() {
 // ROW COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
-function LabOrderRow({ order, index }) {
+function LabOrderRow({ order, index, onView }) {
   const r = order;
 
   // For pathology reports (type=lab in backend)
   const patientName = r.patient?.name || r.user?.name || "-";
   const patientPhone = r.patient?.phone || r.user?.phone || "-";
-  const testName = r.testName || r.items?.map((i) => i.testName).join(", ") || "-";
+  const testName =
+    r.testName || r.items?.map((i) => i.testName).join(", ") || "-";
 
   return (
     <tr className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-slate-100 last:border-0">
@@ -368,7 +378,13 @@ function LabOrderRow({ order, index }) {
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-2">
           <button
+            type="button"
             className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onView();
+            }}
             title="View Details">
             <Eye size={16} />
           </button>

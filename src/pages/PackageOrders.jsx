@@ -21,7 +21,8 @@ import {
   PaymentBadge,
   OrderFilterCard,
   OrderPagination,
-  OrderPageHeader
+  OrderPageHeader,
+  PackageOrderViewModal
 } from "../components/orders";
 
 const DEFAULT_LIMIT = 20;
@@ -59,6 +60,7 @@ export default function PackageOrders() {
   const [limit] = useState(DEFAULT_LIMIT);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [viewingOrder, setViewingOrder] = useState(null);
 
   const currentController = useRef(null);
   const confirm = useConfirm();
@@ -298,6 +300,7 @@ export default function PackageOrders() {
                     order={r}
                     index={(page - 1) * limit + i + 1}
                     onMarkPaid={() => onMarkPaidClick(r)}
+                    onView={() => setViewingOrder(r)}
                   />
                 ))}
               </tbody>
@@ -316,6 +319,14 @@ export default function PackageOrders() {
         )}
       </div>
 
+      {/* View Modal */}
+      {viewingOrder && (
+        <PackageOrderViewModal
+          order={viewingOrder}
+          onClose={() => setViewingOrder(null)}
+        />
+      )}
+
       <ToastContainer position="top-right" />
     </div>
   );
@@ -325,7 +336,7 @@ export default function PackageOrders() {
 // ROW COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
-function PackageOrderRow({ order, index, onMarkPaid }) {
+function PackageOrderRow({ order, index, onMarkPaid, onView }) {
   const r = order;
 
   return (
@@ -365,7 +376,9 @@ function PackageOrderRow({ order, index, onMarkPaid }) {
         <div className="flex items-center gap-2">
           <Calendar size={14} className="text-slate-400" />
           <span className="text-sm text-slate-700">
-            {r.scheduledDate?.split("T")[0] || r.createdAt?.split("T")[0] || "-"}
+            {r.scheduledDate?.split("T")[0] ||
+              r.createdAt?.split("T")[0] ||
+              "-"}
           </span>
         </div>
         {r.scheduledTime && (
@@ -390,7 +403,13 @@ function PackageOrderRow({ order, index, onMarkPaid }) {
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-2">
           <button
+            type="button"
             className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onView();
+            }}
             title="View Details">
             <Eye size={16} />
           </button>

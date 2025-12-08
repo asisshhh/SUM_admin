@@ -6,7 +6,7 @@ import { FlaskConical, Search, Plus } from "lucide-react";
 
 // Components
 import { Pagination } from "../components/shared";
-import { LabTestFormModal, LabTestTableRow } from "../components/lab-tests";
+import { LabTestFormModal, LabTestTableRow, LabTestViewModal } from "../components/lab-tests";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -34,6 +34,7 @@ export default function LabTestsPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [editing, setEditing] = useState(null);
+  const [viewing, setViewing] = useState(null);
 
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 400);
@@ -100,6 +101,14 @@ export default function LabTestsPage() {
     });
     if (ok) deleteMutation.mutate(test.id);
   }, [confirm, deleteMutation]);
+
+  const handleView = useCallback((test) => {
+    setViewing(test);
+  }, []);
+
+  const handleCloseView = useCallback(() => {
+    setViewing(null);
+  }, []);
 
   const handleEdit = useCallback((test) => {
     setEditing(test);
@@ -218,6 +227,7 @@ export default function LabTestsPage() {
                 <LabTestTableRow
                   key={test.id}
                   test={test}
+                  onView={() => handleView(test)}
                   onEdit={() => handleEdit(test)}
                   onDelete={() => handleDelete(test)}
                 />
@@ -235,7 +245,15 @@ export default function LabTestsPage() {
         onPage={handlePageChange}
       />
 
-      {/* Modal */}
+      {/* View Modal */}
+      {viewing && (
+        <LabTestViewModal
+          test={viewing}
+          onClose={handleCloseView}
+        />
+      )}
+
+      {/* Edit Modal */}
       {editing !== null && (
         <LabTestFormModal
           test={editing.id ? editing : null}

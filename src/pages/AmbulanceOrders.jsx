@@ -40,8 +40,12 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
     return bookingCharges.filter((id) => id !== baseFareId);
   };
 
-  const [totalDistance, setTotalDistance] = useState(booking?.totalDistance?.toString() || "");
-  const [selectedChargeIds, setSelectedChargeIds] = useState(getInitialSelectedCharges);
+  const [totalDistance, setTotalDistance] = useState(
+    booking?.totalDistance?.toString() || ""
+  );
+  const [selectedChargeIds, setSelectedChargeIds] = useState(
+    getInitialSelectedCharges
+  );
   const [loading, setLoading] = useState(false);
   const [autoSelectedCharges, setAutoSelectedCharges] = useState([]);
 
@@ -112,28 +116,63 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
     });
   }, [totalDistance, paramedicCharges, attendantCharges, baseKm]);
 
-  // Calculate charges dynamically
+  // Calculate charges dynamically - only include charges applicable for distance > 30 km
   const selectedCharges = availableCharges.filter((c) =>
     selectedChargeIds.includes(c.id)
   );
-  const selectedChargesAmount = selectedCharges.reduce(
-    (sum, c) => sum + (c.amount || 0),
-    0
-  );
 
-  // Calculate extra km charges
+  const selectedChargesAmount = useMemo(() => {
+    if (!totalDistance) return 0;
+    const distance = Number(totalDistance);
+
+    // Only calculate extra charges if distance is above 30 km
+    if (distance <= 30) return 0;
+
+    return selectedCharges
+      .filter((c) => {
+        // Exclude base fare and per km charges (handled separately)
+        if (
+          c.chargeType === "BASE_FARE_UPTO_30KM" ||
+          c.chargeType === "PER_KM_ABOVE_30KM"
+        ) {
+          return false;
+        }
+
+        // Only include charges that are applicable for distances above 30 km
+        const from = c.distanceFrom;
+        const to = c.distanceTo;
+
+        if (from !== null && to !== null) {
+          // Range: from-to km - only include if distance is above 30 km and within range
+          return distance > 30 && distance >= from && distance <= to;
+        } else if (from !== null && to === null) {
+          // Range: above from km - only include if distance is above 30 km and >= from
+          return distance > 30 && distance >= from;
+        } else {
+          // No distance range specified - only include if distance is above 30 km
+          return distance > 30;
+        }
+      })
+      .reduce((sum, c) => sum + (c.amount || 0), 0);
+  }, [selectedCharges, totalDistance]);
+
+  // Calculate extra km charges (only for distance above base km)
+  // Formula: (totalKm - baseKM) * perKmCharge
   const extraKmAmount = useMemo(() => {
     if (!totalDistance || !perKmCharge) return 0;
     const distance = Number(totalDistance);
-    if (distance > 30 && perKmCharge.amount) {
-      const extraKms = distance - 30;
-      return extraKms * perKmCharge.amount;
+    if (distance > baseKm && perKmCharge.amount) {
+      const extraKms = distance - baseKm; // totalKm - baseKM
+      return extraKms * perKmCharge.amount; // (totalKm - baseKM) * perKmCharge
     }
     return 0;
-  }, [totalDistance, perKmCharge]);
+  }, [totalDistance, perKmCharge, baseKm]);
 
   const initialAmount = booking?.initialAmount || 0;
-  const extraAmount = selectedChargesAmount + extraKmAmount;
+  // Extra amount should only be calculated if distance is above base km (30 km)
+  // Formula: selectedChargesAmount + (totalKm - baseKM) * perKmCharge
+  const extraAmount =
+    Number(totalDistance) > baseKm ? selectedChargesAmount + extraKmAmount : 0;
   const totalAmount = initialAmount + extraAmount;
 
   const toggleCharge = (chargeId) => {
@@ -146,7 +185,10 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
 
   const calculateMutation = useMutation({
     mutationFn: async (data) => {
-      return await api.post(`/ambulance-orders/${booking.id}/calculate-final`, data);
+      return await api.post(
+        `/ambulance-orders/${booking.id}/calculate-final`,
+        data
+      );
     },
     onSuccess: () => {
       toast.success("Final charges calculated successfully");
@@ -154,7 +196,9 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
       onClose();
     },
     onError: (err) => {
-      toast.error(err.response?.data?.error || "Failed to calculate final charges");
+      toast.error(
+        err.response?.data?.error || "Failed to calculate final charges"
+      );
     }
   });
 
@@ -188,7 +232,9 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
             </button>
           </div>
           <div className="p-6">
-            <p className="text-red-600">Ambulance type information not available for this booking.</p>
+            <p className="text-red-600">
+              Ambulance type information not available for this booking.
+            </p>
           </div>
         </div>
       </div>
@@ -214,8 +260,12 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
           {/* Initial Amount */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="text-sm text-blue-800">
-              <div className="font-semibold mb-2">Initial Amount (from booking):</div>
-              <div className="text-2xl font-bold">₹{initialAmount.toFixed(2)}</div>
+              <div className="font-semibold mb-2">
+                Initial Amount (from booking):
+              </div>
+              <div className="text-2xl font-bold">
+                ₹{initialAmount.toFixed(2)}
+              </div>
             </div>
           </div>
 
@@ -238,19 +288,25 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
               <div className="mt-2 space-y-1">
                 {Number(totalDistance) > baseKm && perKmCharge && (
                   <p className="text-xs text-green-600">
-                    Extra km charges: {(Number(totalDistance) - baseKm).toFixed(1)} km × ₹{perKmCharge.amount} = ₹{extraKmAmount.toFixed(2)}
+                    Extra km charges: ({Number(totalDistance).toFixed(1)} - {baseKm}) × ₹
+                    {perKmCharge.amount} = {(Number(totalDistance) - baseKm).toFixed(1)} km × ₹
+                    {perKmCharge.amount} = ₹{extraKmAmount.toFixed(2)}
                   </p>
                 )}
                 {autoSelectedCharges.length > 0 && (
                   <p className="text-xs text-blue-600 font-medium">
-                    ✓ {autoSelectedCharges.length} charge{autoSelectedCharges.length > 1 ? 's' : ''} automatically selected based on distance
+                    ✓ {autoSelectedCharges.length} charge
+                    {autoSelectedCharges.length > 1 ? "s" : ""} automatically
+                    selected based on distance
                   </p>
                 )}
-                {Number(totalDistance) <= baseKm && Number(totalDistance) > 0 && (
-                  <p className="text-xs text-slate-500">
-                    Distance is within base fare limit ({baseKm} km). No extra charges applicable.
-                  </p>
-                )}
+                {Number(totalDistance) <= baseKm &&
+                  Number(totalDistance) > 0 && (
+                    <p className="text-xs text-slate-500">
+                      Distance is within base fare limit ({baseKm} km). No extra
+                      charges applicable.
+                    </p>
+                  )}
               </div>
             )}
           </div>
@@ -268,9 +324,15 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
                       setSelectedChargeIds([]);
                     } else {
                       // Check first available charge if none selected
-                      if (selectedChargeIds.length === 0 && paramedicCharges.length > 0) {
+                      if (
+                        selectedChargeIds.length === 0 &&
+                        paramedicCharges.length > 0
+                      ) {
                         setSelectedChargeIds([paramedicCharges[0].id]);
-                      } else if (selectedChargeIds.length === 0 && attendantCharges.length > 0) {
+                      } else if (
+                        selectedChargeIds.length === 0 &&
+                        attendantCharges.length > 0
+                      ) {
                         setSelectedChargeIds([attendantCharges[0].id]);
                       }
                     }
@@ -291,9 +353,12 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
                   <div className="space-y-2 ml-7">
                     {paramedicCharges.map((charge) => {
                       const isSelected = selectedChargeIds.includes(charge.id);
-                      const isAutoSelected = autoSelectedCharges.includes(charge.id);
+                      const isAutoSelected = autoSelectedCharges.includes(
+                        charge.id
+                      );
                       const distanceRange =
-                        charge.distanceFrom !== null && charge.distanceTo !== null
+                        charge.distanceFrom !== null &&
+                        charge.distanceTo !== null
                           ? `${charge.distanceFrom}-${charge.distanceTo} km`
                           : charge.distanceFrom !== null
                           ? `Above ${charge.distanceFrom} km`
@@ -317,7 +382,9 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
                             />
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <div className="font-medium text-slate-800 text-sm">{charge.name}</div>
+                                <div className="font-medium text-slate-800 text-sm">
+                                  {charge.name}
+                                </div>
                                 {isAutoSelected && (
                                   <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
                                     Auto
@@ -325,11 +392,15 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
                                 )}
                               </div>
                               {distanceRange && (
-                                <div className="text-xs text-slate-500 mt-0.5">{distanceRange}</div>
+                                <div className="text-xs text-slate-500 mt-0.5">
+                                  {distanceRange}
+                                </div>
                               )}
                             </div>
                           </div>
-                          <div className="font-semibold text-slate-800">₹{charge.amount}</div>
+                          <div className="font-semibold text-slate-800">
+                            ₹{charge.amount}
+                          </div>
                         </label>
                       );
                     })}
@@ -346,9 +417,12 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
                   <div className="space-y-2 ml-7">
                     {attendantCharges.map((charge) => {
                       const isSelected = selectedChargeIds.includes(charge.id);
-                      const isAutoSelected = autoSelectedCharges.includes(charge.id);
+                      const isAutoSelected = autoSelectedCharges.includes(
+                        charge.id
+                      );
                       const distanceRange =
-                        charge.distanceFrom !== null && charge.distanceTo !== null
+                        charge.distanceFrom !== null &&
+                        charge.distanceTo !== null
                           ? `${charge.distanceFrom}-${charge.distanceTo} km`
                           : charge.distanceFrom !== null
                           ? `Above ${charge.distanceFrom} km`
@@ -372,7 +446,9 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
                             />
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <div className="font-medium text-slate-800 text-sm">{charge.name}</div>
+                                <div className="font-medium text-slate-800 text-sm">
+                                  {charge.name}
+                                </div>
                                 {isAutoSelected && (
                                   <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
                                     Auto
@@ -380,11 +456,15 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
                                 )}
                               </div>
                               {distanceRange && (
-                                <div className="text-xs text-slate-500 mt-0.5">{distanceRange}</div>
+                                <div className="text-xs text-slate-500 mt-0.5">
+                                  {distanceRange}
+                                </div>
                               )}
                             </div>
                           </div>
-                          <div className="font-semibold text-slate-800">₹{charge.amount}</div>
+                          <div className="font-semibold text-slate-800">
+                            ₹{charge.amount}
+                          </div>
                         </label>
                       );
                     })}
@@ -398,7 +478,9 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-slate-600">Selected Charges:</span>
-              <span className="font-medium">₹{selectedChargesAmount.toFixed(2)}</span>
+              <span className="font-medium">
+                ₹{selectedChargesAmount.toFixed(2)}
+              </span>
             </div>
             {extraKmAmount > 0 && (
               <div className="flex justify-between text-sm">
@@ -416,7 +498,9 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="text-sm text-green-800">
               <div className="font-semibold mb-2">Final Total Amount:</div>
-              <div className="text-2xl font-bold">₹{totalAmount.toFixed(2)}</div>
+              <div className="text-2xl font-bold">
+                ₹{totalAmount.toFixed(2)}
+              </div>
             </div>
           </div>
 
@@ -471,7 +555,9 @@ function PaymentCompleteModal({ booking, onClose, onSuccess }) {
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to update payment and status");
+      toast.error(
+        err.response?.data?.error || "Failed to update payment and status"
+      );
     } finally {
       setLoading(false);
     }
@@ -506,7 +592,9 @@ function PaymentCompleteModal({ booking, onClose, onSuccess }) {
             </label>
             <select
               value={form.paymentMethod}
-              onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, paymentMethod: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="CASH">Cash</option>
               <option value="CARD">Card</option>
@@ -521,7 +609,9 @@ function PaymentCompleteModal({ booking, onClose, onSuccess }) {
             </label>
             <select
               value={form.paymentStatus}
-              onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, paymentStatus: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="SUCCESS">Success (Paid)</option>
               <option value="PENDING">Pending</option>
@@ -531,8 +621,8 @@ function PaymentCompleteModal({ booking, onClose, onSuccess }) {
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
             <p className="text-sm text-yellow-800">
-              This will mark the booking status as <strong>COMPLETED</strong> and update the payment
-              status.
+              This will mark the booking status as <strong>COMPLETED</strong>{" "}
+              and update the payment status.
             </p>
           </div>
 
@@ -567,7 +657,9 @@ export default function AmbulanceOrders() {
     setToDate,
     setIncludeFuture,
     buildDateParams,
-    resetDates
+    resetDates,
+    clearDates,
+    today
   } = useDateRange();
 
   const [searchInput, setSearchInput] = useState("");
@@ -596,16 +688,23 @@ export default function AmbulanceOrders() {
   const { data: ambulanceTypesData } = useQuery({
     queryKey: ["ambulance-types-all"],
     queryFn: async () => {
-      return (await api.get("/ambulance-types", { params: { pageSize: 100, active: "true" } })).data;
+      return (
+        await api.get("/ambulance-types", {
+          params: { pageSize: 100, active: "true" }
+        })
+      ).data;
     },
     staleTime: 5 * 60 * 1000
   });
 
-  const ambulanceTypes = useMemo(() => ambulanceTypesData?.items || [], [ambulanceTypesData]);
+  const ambulanceTypes = useMemo(
+    () => ambulanceTypesData?.items || [],
+    [ambulanceTypesData]
+  );
 
   // Fetch ambulance orders
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["ambulance-orders", filters],
+    queryKey: ["ambulance-orders", filters, fromDate, toDate, includeFuture],
     queryFn: async () => {
       const params = {
         ...filters,
@@ -635,7 +734,8 @@ export default function AmbulanceOrders() {
 
   // Decline booking
   const declineMutation = useMutation({
-    mutationFn: ({ id, reason }) => api.post(`/ambulance-orders/${id}/decline`, { reason }),
+    mutationFn: ({ id, reason }) =>
+      api.post(`/ambulance-orders/${id}/decline`, { reason }),
     onSuccess: () => {
       toast.success("Booking declined");
       refetch();
@@ -741,6 +841,17 @@ export default function AmbulanceOrders() {
     );
   };
 
+  const isShowingToday = fromDate === today && toDate === today;
+  const isAllTime = !fromDate && !toDate;
+
+  const handleAllTime = useCallback(() => {
+    clearDates();
+  }, [clearDates]);
+
+  const handleToday = useCallback(() => {
+    resetDates();
+  }, [resetDates]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -750,15 +861,56 @@ export default function AmbulanceOrders() {
             <Ambulance className="text-blue-600" size={32} />
             Ambulance Orders
           </h1>
-          <p className="text-slate-500 mt-1">Manage ambulance bookings and payments</p>
+          <p className="text-slate-500 mt-1">
+            Manage ambulance bookings and payments
+          </p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {/* Filter Header with Today/All Time buttons */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            {isShowingToday && (
+              <span className="px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">
+                Showing Today's Orders
+              </span>
+            )}
+            {isAllTime && (
+              <span className="px-3 py-1 text-xs font-semibold bg-purple-100 text-purple-700 rounded-full">
+                Showing All Time Orders
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleToday}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                isShowingToday
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}>
+              Today
+            </button>
+            <button
+              onClick={handleAllTime}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                isAllTime
+                  ? "bg-purple-600 text-white"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}>
+              All Time
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search by name, phone, address..."
@@ -813,12 +965,49 @@ export default function AmbulanceOrders() {
             <option value="true">Emergency</option>
             <option value="false">Non-Emergency</option>
           </select>
-          <div className="flex gap-2">
-      <button
-              onClick={() => resetDates()}
-              className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition">
-              Reset Dates
-      </button>
+        </div>
+
+        {/* Date Range Section */}
+        <div className="mt-4 pt-4 border-t border-slate-200">
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <Calendar className="inline mr-1" size={12} />
+                Date Range
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="flex-1 px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <span className="text-slate-400 font-medium">to</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  disabled={includeFuture}
+                  className="flex-1 px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeFuture}
+                  onChange={(e) => setIncludeFuture(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-slate-600">Include Future</span>
+              </label>
+              <button
+                onClick={resetDates}
+                className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition text-sm">
+                Reset Dates
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -828,10 +1017,12 @@ export default function AmbulanceOrders() {
         {isLoading ? (
           <div className="p-12 text-center text-slate-500">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">No ambulance orders found</div>
+          <div className="p-12 text-center text-slate-500">
+            No ambulance orders found
+          </div>
         ) : (
           <>
-      <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
@@ -859,29 +1050,43 @@ export default function AmbulanceOrders() {
                     <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
                       Actions
                     </th>
-            </tr>
-          </thead>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4">
-                        <div className="font-medium text-slate-800">#{item.id}</div>
+                        <div className="font-medium text-slate-800">
+                          #{item.id}
+                        </div>
                         {item.emergency && (
-                          <span className="text-xs text-red-600 font-semibold">Emergency</span>
+                          <span className="text-xs text-red-600 font-semibold">
+                            Emergency
+                          </span>
                         )}
-                </td>
+                      </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium text-slate-800">{item.user?.name || "-"}</div>
-                        <div className="text-xs text-slate-500">{item.user?.phone || "-"}</div>
+                        <div className="font-medium text-slate-800">
+                          {item.user?.name || "-"}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {item.user?.phone || "-"}
+                        </div>
                         {item.patientName && (
-                          <div className="text-xs text-slate-500">Patient: {item.patientName}</div>
+                          <div className="text-xs text-slate-500">
+                            Patient: {item.patientName}
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         {item.ambulanceType ? (
                           <div>
-                            <div className="font-medium text-slate-800">{item.ambulanceType.name || "-"}</div>
-                            <div className="text-xs text-slate-500">{item.ambulanceType.code || ""}</div>
+                            <div className="font-medium text-slate-800">
+                              {item.ambulanceType.name || "-"}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {item.ambulanceType.code || ""}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-slate-400 text-sm">-</span>
@@ -891,36 +1096,48 @@ export default function AmbulanceOrders() {
                         <div className="text-sm">
                           <div className="flex items-start gap-2 mb-1">
                             <MapPin className="text-green-600" size={14} />
-                            <span className="text-slate-600">{item.pickupAddress}</span>
+                            <span className="text-slate-600">
+                              {item.pickupAddress}
+                            </span>
                           </div>
                           <div className="flex items-start gap-2">
                             <MapPin className="text-red-600" size={14} />
-                            <span className="text-slate-600">{item.destination}</span>
+                            <span className="text-slate-600">
+                              {item.destination}
+                            </span>
                           </div>
                         </div>
-                </td>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="text-sm space-y-1">
                           <div>
                             <span className="text-slate-500">Initial: </span>
-                            <span className="font-medium">₹{item.initialAmount || 0}</span>
+                            <span className="font-medium">
+                              ₹{item.initialAmount || 0}
+                            </span>
                           </div>
                           {item.extraAmount > 0 && (
                             <div>
                               <span className="text-slate-500">Extra: </span>
-                              <span className="font-medium">₹{item.extraAmount}</span>
+                              <span className="font-medium">
+                                ₹{item.extraAmount}
+                              </span>
                             </div>
                           )}
                           <div>
                             <span className="text-slate-500">Total: </span>
                             <span className="font-bold text-green-600">
                               ₹{item.totalAmount || item.initialAmount || 0}
-                  </span>
+                            </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">{getApprovalBadge(item.approved)}</td>
-                      <td className="px-6 py-4 text-center">{getStatusBadge(item.status)}</td>
+                      <td className="px-6 py-4 text-center">
+                        {getApprovalBadge(item.approved)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {getStatusBadge(item.status)}
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2 flex-wrap">
                           <button
@@ -945,33 +1162,34 @@ export default function AmbulanceOrders() {
                               </button>
                             </>
                           )}
-                          {item.status !== "COMPLETED" && item.approved === true && (
-                            <>
-                              {!item.totalAmount && (
-                                <button
-                                  onClick={() => handleCalculateFinal(item)}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                  title="Calculate Final">
-                                  <Calculator size={16} />
-                                </button>
-                              )}
-                              {item.totalAmount && (
-                      <button
-                                  onClick={() => handlePaymentComplete(item)}
-                                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                  title="Update Payment & Complete">
-                                  <DollarSign size={16} />
-                      </button>
-                    )}
-                            </>
-                          )}
+                          {item.status !== "COMPLETED" &&
+                            item.approved === true && (
+                              <>
+                                {!item.totalAmount && (
+                                  <button
+                                    onClick={() => handleCalculateFinal(item)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                    title="Calculate Final">
+                                    <Calculator size={16} />
+                                  </button>
+                                )}
+                                {item.totalAmount && (
+                                  <button
+                                    onClick={() => handlePaymentComplete(item)}
+                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                    title="Update Payment & Complete">
+                                    <DollarSign size={16} />
+                                  </button>
+                                )}
+                              </>
+                            )}
                         </div>
                       </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {total > filters.pageSize && (
               <div className="border-t border-slate-200 p-4">
                 <Pagination
@@ -979,7 +1197,7 @@ export default function AmbulanceOrders() {
                   totalPages={Math.ceil(total / filters.pageSize)}
                   onPageChange={handlePageChange}
                 />
-        </div>
+              </div>
             )}
           </>
         )}
@@ -1106,15 +1324,21 @@ function OrderViewModal({ booking, onClose }) {
         <div className="p-6 space-y-6">
           {/* Order Information */}
           <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-slate-800 mb-3">Order Information</h3>
+            <h3 className="font-semibold text-slate-800 mb-3">
+              Order Information
+            </h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-slate-500">Patient:</span>
-                <span className="ml-2 font-medium">{booking.patientName || booking.user?.name || "-"}</span>
+                <span className="ml-2 font-medium">
+                  {booking.patientName || booking.user?.name || "-"}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500">Contact:</span>
-                <span className="ml-2 font-medium">{booking.contactNumber || booking.user?.phone || "-"}</span>
+                <span className="ml-2 font-medium">
+                  {booking.contactNumber || booking.user?.phone || "-"}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500">Status:</span>
@@ -1123,24 +1347,36 @@ function OrderViewModal({ booking, onClose }) {
               <div>
                 <span className="text-slate-500">Approval:</span>
                 <span className="ml-2 font-medium">
-                  {booking.approved === null ? "Pending" : booking.approved ? "Approved" : "Declined"}
+                  {booking.approved === null
+                    ? "Pending"
+                    : booking.approved
+                    ? "Approved"
+                    : "Declined"}
                 </span>
               </div>
               <div>
                 <span className="text-slate-500">Initial Amount:</span>
-                <span className="ml-2 font-medium">₹{booking.initialAmount || 0}</span>
+                <span className="ml-2 font-medium">
+                  ₹{booking.initialAmount || 0}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500">Extra Amount:</span>
-                <span className="ml-2 font-medium">₹{booking.extraAmount || 0}</span>
+                <span className="ml-2 font-medium">
+                  ₹{booking.extraAmount || 0}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500">Total Amount:</span>
-                <span className="ml-2 font-bold text-green-600">₹{booking.totalAmount || booking.initialAmount || 0}</span>
+                <span className="ml-2 font-bold text-green-600">
+                  ₹{booking.totalAmount || booking.initialAmount || 0}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500">Distance:</span>
-                <span className="ml-2 font-medium">{booking.totalDistance ? `${booking.totalDistance} km` : "-"}</span>
+                <span className="ml-2 font-medium">
+                  {booking.totalDistance ? `${booking.totalDistance} km` : "-"}
+                </span>
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-slate-200">
@@ -1174,9 +1410,14 @@ function OrderViewModal({ booking, onClose }) {
                     className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">{getActionIcon(log.action)}</span>
+                        <span className="text-2xl">
+                          {getActionIcon(log.action)}
+                        </span>
                         <div>
-                          <div className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActionColor(log.action)}`}>
+                          <div
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActionColor(
+                              log.action
+                            )}`}>
                             {log.action.replace(/_/g, " ")}
                           </div>
                           {log.user && (
@@ -1191,7 +1432,9 @@ function OrderViewModal({ booking, onClose }) {
                       </div>
                     </div>
                     {log.description && (
-                      <div className="text-sm text-slate-700 mb-2">{log.description}</div>
+                      <div className="text-sm text-slate-700 mb-2">
+                        {log.description}
+                      </div>
                     )}
                     {log.changes && (
                       <div className="mt-3 pt-3 border-t border-slate-200">
@@ -1212,16 +1455,36 @@ function OrderViewModal({ booking, onClose }) {
                               displayValue = "N/A";
                             } else if (typeof value === "boolean") {
                               displayValue = value ? "Yes" : "No";
-                            } else if (value instanceof Date || (typeof value === "string" && value.includes("T") && value.includes("Z"))) {
-                              displayValue = new Date(value).toLocaleString("en-IN", {
-                                dateStyle: "medium",
-                                timeStyle: "short"
-                              });
+                            } else if (
+                              value instanceof Date ||
+                              (typeof value === "string" &&
+                                value.includes("T") &&
+                                value.includes("Z"))
+                            ) {
+                              displayValue = new Date(value).toLocaleString(
+                                "en-IN",
+                                {
+                                  dateStyle: "medium",
+                                  timeStyle: "short"
+                                }
+                              );
                             } else if (typeof value === "number") {
                               // Check if it's a currency field
-                              if (key.toLowerCase().includes("amount") || key.toLowerCase().includes("price") || key.toLowerCase().includes("charge")) {
-                                displayValue = `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                              } else if (key.toLowerCase().includes("distance")) {
+                              if (
+                                key.toLowerCase().includes("amount") ||
+                                key.toLowerCase().includes("price") ||
+                                key.toLowerCase().includes("charge")
+                              ) {
+                                displayValue = `₹${value.toLocaleString(
+                                  "en-IN",
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  }
+                                )}`;
+                              } else if (
+                                key.toLowerCase().includes("distance")
+                              ) {
                                 displayValue = `${value} km`;
                               } else {
                                 displayValue = value.toLocaleString("en-IN");
@@ -1250,10 +1513,14 @@ function OrderViewModal({ booking, onClose }) {
                                           </div>
                                           {charge.amount !== null && (
                                             <span className="text-xs font-bold text-indigo-700">
-                                              ₹{charge.amount.toLocaleString("en-IN", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2
-                                              })}
+                                              ₹
+                                              {charge.amount.toLocaleString(
+                                                "en-IN",
+                                                {
+                                                  minimumFractionDigits: 2,
+                                                  maximumFractionDigits: 2
+                                                }
+                                              )}
                                             </span>
                                           )}
                                         </div>
@@ -1262,7 +1529,8 @@ function OrderViewModal({ booking, onClose }) {
                                   </div>
                                 );
                               }
-                              displayValue = value.length > 0 ? value.join(", ") : "None";
+                              displayValue =
+                                value.length > 0 ? value.join(", ") : "None";
                             } else if (typeof value === "object") {
                               displayValue = JSON.stringify(value, null, 2);
                             }
@@ -1288,95 +1556,127 @@ function OrderViewModal({ booking, onClose }) {
                         </div>
                       </div>
                     )}
-                    {log.previousData && Object.keys(log.previousData).length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-slate-200">
-                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                          Previous Values
-                        </div>
-                        <div className="space-y-2">
-                          {Object.entries(log.previousData).map(([key, value]) => {
-                            const displayKey = key
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str) => str.toUpperCase())
-                              .trim();
+                    {log.previousData &&
+                      Object.keys(log.previousData).length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-200">
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                            Previous Values
+                          </div>
+                          <div className="space-y-2">
+                            {Object.entries(log.previousData).map(
+                              ([key, value]) => {
+                                const displayKey = key
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str) => str.toUpperCase())
+                                  .trim();
 
-                            let displayValue = value;
-                            if (value === null || value === undefined) {
-                              displayValue = "N/A";
-                            } else if (typeof value === "boolean") {
-                              displayValue = value ? "Yes" : "No";
-                            } else if (value instanceof Date || (typeof value === "string" && value.includes("T") && value.includes("Z"))) {
-                              displayValue = new Date(value).toLocaleString("en-IN", {
-                                dateStyle: "medium",
-                                timeStyle: "short"
-                              });
-                            } else if (typeof value === "number") {
-                              if (key.toLowerCase().includes("amount") || key.toLowerCase().includes("price") || key.toLowerCase().includes("charge")) {
-                                displayValue = `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                              } else if (key.toLowerCase().includes("distance")) {
-                                displayValue = `${value} km`;
-                              } else {
-                                displayValue = value.toLocaleString("en-IN");
-                              }
-                            } else if (Array.isArray(value)) {
-                              // Special handling for selectedChargeIds in previous data
-                              if (key === "selectedChargeIds") {
-                                const charges = formatSelectedCharges(value);
-                                return (
-                                  <div key={key} className="w-full">
-                                    <div className="text-xs text-slate-500 mb-2">
-                                      {displayKey}:
-                                    </div>
-                                    <div className="space-y-1">
-                                      {charges.map((charge) => (
-                                        <div
-                                          key={charge.id}
-                                          className="flex items-center justify-between py-1.5 px-2 bg-slate-50 rounded border border-slate-100">
-                                          <span className="text-xs text-slate-600">
-                                            {charge.name} (#{charge.id})
-                                          </span>
-                                          {charge.amount !== null && (
-                                            <span className="text-xs text-slate-500">
-                                              ₹{charge.amount}
-                                            </span>
-                                          )}
+                                let displayValue = value;
+                                if (value === null || value === undefined) {
+                                  displayValue = "N/A";
+                                } else if (typeof value === "boolean") {
+                                  displayValue = value ? "Yes" : "No";
+                                } else if (
+                                  value instanceof Date ||
+                                  (typeof value === "string" &&
+                                    value.includes("T") &&
+                                    value.includes("Z"))
+                                ) {
+                                  displayValue = new Date(value).toLocaleString(
+                                    "en-IN",
+                                    {
+                                      dateStyle: "medium",
+                                      timeStyle: "short"
+                                    }
+                                  );
+                                } else if (typeof value === "number") {
+                                  if (
+                                    key.toLowerCase().includes("amount") ||
+                                    key.toLowerCase().includes("price") ||
+                                    key.toLowerCase().includes("charge")
+                                  ) {
+                                    displayValue = `₹${value.toLocaleString(
+                                      "en-IN",
+                                      {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                      }
+                                    )}`;
+                                  } else if (
+                                    key.toLowerCase().includes("distance")
+                                  ) {
+                                    displayValue = `${value} km`;
+                                  } else {
+                                    displayValue =
+                                      value.toLocaleString("en-IN");
+                                  }
+                                } else if (Array.isArray(value)) {
+                                  // Special handling for selectedChargeIds in previous data
+                                  if (key === "selectedChargeIds") {
+                                    const charges =
+                                      formatSelectedCharges(value);
+                                    return (
+                                      <div key={key} className="w-full">
+                                        <div className="text-xs text-slate-500 mb-2">
+                                          {displayKey}:
                                         </div>
-                                      ))}
-                                    </div>
+                                        <div className="space-y-1">
+                                          {charges.map((charge) => (
+                                            <div
+                                              key={charge.id}
+                                              className="flex items-center justify-between py-1.5 px-2 bg-slate-50 rounded border border-slate-100">
+                                              <span className="text-xs text-slate-600">
+                                                {charge.name} (#{charge.id})
+                                              </span>
+                                              {charge.amount !== null && (
+                                                <span className="text-xs text-slate-500">
+                                                  ₹{charge.amount}
+                                                </span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  displayValue =
+                                    value.length > 0
+                                      ? value.join(", ")
+                                      : "None";
+                                }
+
+                                // Skip rendering if it's selectedChargeIds (already rendered above)
+                                if (key === "selectedChargeIds") {
+                                  return null;
+                                }
+
+                                return (
+                                  <div
+                                    key={key}
+                                    className="flex items-start justify-between py-1.5 px-3 bg-slate-50/50 rounded border border-slate-100">
+                                    <span className="text-xs text-slate-500 min-w-[120px]">
+                                      {displayKey}:
+                                    </span>
+                                    <span className="text-xs text-slate-600 text-right flex-1 ml-4">
+                                      {displayValue}
+                                    </span>
                                   </div>
                                 );
                               }
-                              displayValue = value.length > 0 ? value.join(", ") : "None";
-                            }
-
-                            // Skip rendering if it's selectedChargeIds (already rendered above)
-                            if (key === "selectedChargeIds") {
-                              return null;
-                            }
-
-                            return (
-                              <div
-                                key={key}
-                                className="flex items-start justify-between py-1.5 px-3 bg-slate-50/50 rounded border border-slate-100">
-                                <span className="text-xs text-slate-500 min-w-[120px]">
-                                  {displayKey}:
-                                </span>
-                                <span className="text-xs text-slate-600 text-right flex-1 ml-4">
-                                  {displayValue}
-                                </span>
-                              </div>
-                            );
-                          })}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                     {log.notes && (
                       <div className="mt-3 pt-3 border-t border-slate-200">
                         <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
                           <div className="text-blue-600 mt-0.5">💡</div>
                           <div className="flex-1">
-                            <div className="text-xs font-semibold text-blue-700 mb-1">Note</div>
-                            <div className="text-xs text-blue-600">{log.notes}</div>
+                            <div className="text-xs font-semibold text-blue-700 mb-1">
+                              Note
+                            </div>
+                            <div className="text-xs text-blue-600">
+                              {log.notes}
+                            </div>
                           </div>
                         </div>
                       </div>

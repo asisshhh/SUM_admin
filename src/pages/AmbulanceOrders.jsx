@@ -21,6 +21,7 @@ import { Pagination } from "../components/shared";
 import useDateRange from "../hooks/useDateRange";
 import AmbulanceOrderDetailsModal from "../components/ambulance/AmbulanceOrderDetailsModal";
 import AssignAmbulanceModal from "../components/ambulance/AssignAmbulanceModal";
+import CalculateFinalModal from "../components/ambulance/CalculateFinalModal";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -30,502 +31,6 @@ function useDebounce(value, delay = 400) {
     return () => clearTimeout(timer);
   }, [value, delay]);
   return debouncedValue;
-}
-
-// Calculate Final Price Modal
-function CalculateFinalModal({ booking, onClose, onSuccess }) {
-  // Initialize with charges selected at booking time (excluding base fare)
-  const getInitialSelectedCharges = () => {
-    const bookingCharges = booking?.selectedChargeIds || [];
-    const baseFareId = booking?.ambulanceType?.charges?.find(
-      (c) => c.chargeType === "BASE_FARE_UPTO_30KM"
-    )?.id;
-    return bookingCharges.filter((id) => id !== baseFareId);
-  };
-
-  const [totalDistance, setTotalDistance] = useState(
-    booking?.totalDistance?.toString() || ""
-  );
-  const [selectedChargeIds, setSelectedChargeIds] = useState(
-    getInitialSelectedCharges
-  );
-  const [loading, setLoading] = useState(false);
-  const [autoSelectedCharges, setAutoSelectedCharges] = useState([]);
-
-  // Get available charges from ambulance type
-  const availableCharges = booking?.ambulanceType?.charges || [];
-  const paramedicCharges = availableCharges.filter((c) =>
-    c.chargeType?.startsWith("PARAMEDIC")
-  );
-  const attendantCharges = availableCharges.filter((c) =>
-    c.chargeType?.startsWith("ATTENDANT")
-  );
-  const perKmCharge = availableCharges.find(
-    (c) => c.chargeType === "PER_KM_ABOVE_30KM"
-  );
-
-  // Base km limit (typically 30 km)
-  const baseKm = 30;
-
-  // Auto-select charges based on distance
-  useEffect(() => {
-    if (!totalDistance) {
-      setAutoSelectedCharges([]);
-      return;
-    }
-
-    const distance = Number(totalDistance);
-    if (distance <= baseKm) {
-      // Clear auto-selected charges when distance is within base km
-      setAutoSelectedCharges([]);
-      // Optionally, you can clear charges that don't have distance range when distance is <= baseKm
-      // But we'll keep manually selected ones for now
-      return;
-    }
-
-    // Find charges that match the distance range
-    const matchingCharges = [];
-    const allExtraCharges = [...paramedicCharges, ...attendantCharges];
-
-    allExtraCharges.forEach((charge) => {
-      const from = charge.distanceFrom;
-      const to = charge.distanceTo;
-
-      // Check if distance falls within the charge's range
-      if (from !== null && to !== null) {
-        // Range: from-to km
-        if (distance >= from && distance <= to) {
-          matchingCharges.push(charge.id);
-        }
-      } else if (from !== null && to === null) {
-        // Range: above from km
-        if (distance >= from) {
-          matchingCharges.push(charge.id);
-        }
-      }
-      // If both from and to are null, charge doesn't have distance-based selection
-    });
-
-    setAutoSelectedCharges(matchingCharges);
-
-    // Auto-select matching charges (add them if not already selected)
-    setSelectedChargeIds((prev) => {
-      // Add matching charges that aren't already selected
-      const newCharges = matchingCharges.filter((id) => !prev.includes(id));
-      if (newCharges.length > 0) {
-        return [...prev, ...newCharges];
-      }
-      return prev; // No changes needed
-    });
-  }, [totalDistance, paramedicCharges, attendantCharges, baseKm]);
-
-  // Calculate charges dynamically - only include charges applicable for distance > 30 km
-  const selectedCharges = availableCharges.filter((c) =>
-    selectedChargeIds.includes(c.id)
-  );
-
-  const selectedChargesAmount = useMemo(() => {
-    if (!totalDistance) return 0;
-    const distance = Number(totalDistance);
-
-    // Only calculate extra charges if distance is above 30 km
-    if (distance <= 30) return 0;
-
-    return selectedCharges
-      .filter((c) => {
-        // Exclude base fare and per km charges (handled separately)
-        if (
-          c.chargeType === "BASE_FARE_UPTO_30KM" ||
-          c.chargeType === "PER_KM_ABOVE_30KM"
-        ) {
-          return false;
-        }
-
-        // Only include charges that are applicable for distances above 30 km
-        const from = c.distanceFrom;
-        const to = c.distanceTo;
-
-        if (from !== null && to !== null) {
-          // Range: from-to km - only include if distance is above 30 km and within range
-          return distance > 30 && distance >= from && distance <= to;
-        } else if (from !== null && to === null) {
-          // Range: above from km - only include if distance is above 30 km and >= from
-          return distance > 30 && distance >= from;
-        } else {
-          // No distance range specified - only include if distance is above 30 km
-          return distance > 30;
-        }
-      })
-      .reduce((sum, c) => sum + (c.amount || 0), 0);
-  }, [selectedCharges, totalDistance]);
-
-  // Calculate extra km charges (only for distance above base km)
-  // Formula: (totalKm - baseKM) * perKmCharge
-  const extraKmAmount = useMemo(() => {
-    if (!totalDistance || !perKmCharge) return 0;
-    const distance = Number(totalDistance);
-    if (distance > baseKm && perKmCharge.amount) {
-      const extraKms = distance - baseKm; // totalKm - baseKM
-      return extraKms * perKmCharge.amount; // (totalKm - baseKM) * perKmCharge
-    }
-    return 0;
-  }, [totalDistance, perKmCharge, baseKm]);
-
-  const initialAmount = booking?.initialAmount || 0;
-  // Extra amount should only be calculated if distance is above base km (30 km)
-  // Formula: selectedChargesAmount + (totalKm - baseKM) * perKmCharge
-  const extraAmount =
-    Number(totalDistance) > baseKm ? selectedChargesAmount + extraKmAmount : 0;
-  const totalAmount = initialAmount + extraAmount;
-
-  const toggleCharge = (chargeId) => {
-    setSelectedChargeIds((prev) =>
-      prev.includes(chargeId)
-        ? prev.filter((id) => id !== chargeId)
-        : [...prev, chargeId]
-    );
-  };
-
-  const calculateMutation = useMutation({
-    mutationFn: async (data) => {
-      return await api.post(
-        `/ambulance-orders/${booking.id}/calculate-final`,
-        data
-      );
-    },
-    onSuccess: () => {
-      toast.success("Final charges calculated successfully");
-      if (onSuccess) onSuccess();
-      onClose();
-    },
-    onError: (err) => {
-      toast.error(
-        err.response?.data?.error || "Failed to calculate final charges"
-      );
-    }
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!totalDistance) {
-      toast.error("Please enter total distance");
-      return;
-    }
-    setLoading(true);
-    calculateMutation.mutate({
-      selectedChargeIds,
-      totalDistance: Number(totalDistance)
-    });
-    setLoading(false);
-  };
-
-  if (!booking?.ambulanceType) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full">
-          <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <Calculator className="text-blue-600" size={24} />
-              Calculate Final Charges
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
-              <XCircle size={20} />
-            </button>
-          </div>
-          <div className="p-6">
-            <p className="text-red-600">
-              Ambulance type information not available for this booking.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Calculator className="text-blue-600" size={24} />
-            Calculate Final Charges
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
-            <XCircle size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Initial Amount */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-sm text-blue-800">
-              <div className="font-semibold mb-2">
-                Initial Amount (from booking):
-              </div>
-              <div className="text-2xl font-bold">
-                ₹{initialAmount.toFixed(2)}
-              </div>
-            </div>
-          </div>
-
-          {/* Total Distance Input */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Total Distance (km) *
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={totalDistance}
-              onChange={(e) => setTotalDistance(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter total distance"
-              required
-            />
-            {totalDistance && (
-              <div className="mt-2 space-y-1">
-                {Number(totalDistance) > baseKm && perKmCharge && (
-                  <p className="text-xs text-green-600">
-                    Extra km charges: ({Number(totalDistance).toFixed(1)} -{" "}
-                    {baseKm}) × ₹{perKmCharge.amount} ={" "}
-                    {(Number(totalDistance) - baseKm).toFixed(1)} km × ₹
-                    {perKmCharge.amount} = ₹{extraKmAmount.toFixed(2)}
-                  </p>
-                )}
-                {autoSelectedCharges.length > 0 && (
-                  <p className="text-xs text-blue-600 font-medium">
-                    ✓ {autoSelectedCharges.length} charge
-                    {autoSelectedCharges.length > 1 ? "s" : ""} automatically
-                    selected based on distance
-                  </p>
-                )}
-                {Number(totalDistance) <= baseKm &&
-                  Number(totalDistance) > 0 && (
-                    <p className="text-xs text-slate-500">
-                      Distance is within base fare limit ({baseKm} km). No extra
-                      charges applicable.
-                    </p>
-                  )}
-              </div>
-            )}
-          </div>
-
-          {/* Extra Charges Section */}
-          {(paramedicCharges.length > 0 || attendantCharges.length > 0) && (
-            <div className="border border-slate-300 rounded-lg p-4 bg-gradient-to-br from-slate-50 to-white">
-              <div className="flex items-center gap-2 mb-4">
-                <input
-                  type="checkbox"
-                  checked={selectedChargeIds.length > 0}
-                  onChange={(e) => {
-                    if (!e.target.checked) {
-                      // Uncheck all extra charges
-                      setSelectedChargeIds([]);
-                    } else {
-                      // Check first available charge if none selected
-                      if (
-                        selectedChargeIds.length === 0 &&
-                        paramedicCharges.length > 0
-                      ) {
-                        setSelectedChargeIds([paramedicCharges[0].id]);
-                      } else if (
-                        selectedChargeIds.length === 0 &&
-                        attendantCharges.length > 0
-                      ) {
-                        setSelectedChargeIds([attendantCharges[0].id]);
-                      }
-                    }
-                  }}
-                  className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                />
-                <label className="text-base font-semibold text-slate-800 cursor-pointer">
-                  Extra Charges Applicable
-                </label>
-              </div>
-
-              {/* Paramedic Charges Selection */}
-              {paramedicCharges.length > 0 && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-2 ml-7">
-                    Paramedic Staff Charges
-                  </label>
-                  <div className="space-y-2 ml-7">
-                    {paramedicCharges.map((charge) => {
-                      const isSelected = selectedChargeIds.includes(charge.id);
-                      const isAutoSelected = autoSelectedCharges.includes(
-                        charge.id
-                      );
-                      const distanceRange =
-                        charge.distanceFrom !== null &&
-                        charge.distanceTo !== null
-                          ? `${charge.distanceFrom}-${charge.distanceTo} km`
-                          : charge.distanceFrom !== null
-                          ? `Above ${charge.distanceFrom} km`
-                          : "";
-                      return (
-                        <label
-                          key={charge.id}
-                          className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition ${
-                            isSelected
-                              ? isAutoSelected
-                                ? "border-green-500 bg-green-50"
-                                : "border-blue-500 bg-blue-50"
-                              : "border-slate-200 bg-white hover:border-slate-300"
-                          }`}>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleCharge(charge.id)}
-                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className="font-medium text-slate-800 text-sm">
-                                  {charge.name}
-                                </div>
-                                {isAutoSelected && (
-                                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
-                                    Auto
-                                  </span>
-                                )}
-                              </div>
-                              {distanceRange && (
-                                <div className="text-xs text-slate-500 mt-0.5">
-                                  {distanceRange}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="font-semibold text-slate-800">
-                            ₹{charge.amount}
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Attendant Charges Selection */}
-              {attendantCharges.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2 ml-7">
-                    Attendant Support Charges
-                  </label>
-                  <div className="space-y-2 ml-7">
-                    {attendantCharges.map((charge) => {
-                      const isSelected = selectedChargeIds.includes(charge.id);
-                      const isAutoSelected = autoSelectedCharges.includes(
-                        charge.id
-                      );
-                      const distanceRange =
-                        charge.distanceFrom !== null &&
-                        charge.distanceTo !== null
-                          ? `${charge.distanceFrom}-${charge.distanceTo} km`
-                          : charge.distanceFrom !== null
-                          ? `Above ${charge.distanceFrom} km`
-                          : "";
-                      return (
-                        <label
-                          key={charge.id}
-                          className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition ${
-                            isSelected
-                              ? isAutoSelected
-                                ? "border-green-500 bg-green-50"
-                                : "border-blue-500 bg-blue-50"
-                              : "border-slate-200 bg-white hover:border-slate-300"
-                          }`}>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleCharge(charge.id)}
-                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className="font-medium text-slate-800 text-sm">
-                                  {charge.name}
-                                </div>
-                                {isAutoSelected && (
-                                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
-                                    Auto
-                                  </span>
-                                )}
-                              </div>
-                              {distanceRange && (
-                                <div className="text-xs text-slate-500 mt-0.5">
-                                  {distanceRange}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="font-semibold text-slate-800">
-                            ₹{charge.amount}
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Charge Summary */}
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Selected Charges:</span>
-              <span className="font-medium">
-                ₹{selectedChargesAmount.toFixed(2)}
-              </span>
-            </div>
-            {extraKmAmount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Extra KM Charges:</span>
-                <span className="font-medium">₹{extraKmAmount.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm pt-2 border-t border-slate-200">
-              <span className="text-slate-600">Extra Amount:</span>
-              <span className="font-semibold">₹{extraAmount.toFixed(2)}</span>
-            </div>
-          </div>
-
-          {/* Total Amount */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm text-green-800">
-              <div className="font-semibold mb-2">Final Total Amount:</div>
-              <div className="text-2xl font-bold">
-                ₹{totalAmount.toFixed(2)}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50">
-              {loading ? "Calculating..." : "Calculate & Save"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
 }
 
 // Payment & Complete Modal
@@ -806,6 +311,42 @@ export default function AmbulanceOrders() {
   const handleAssignAmbulance = useCallback((booking) => {
     setAssigningAmbulance(booking);
   }, []);
+
+  // Cancel booking mutation
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }) =>
+      api.post(`/ambulance-orders/${id}/cancel`, {
+        cancellationReason: reason
+      }),
+    onSuccess: () => {
+      toast.success("Booking cancelled successfully");
+      refetch();
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || "Failed to cancel booking");
+    }
+  });
+
+  const handleCancel = useCallback(
+    async (booking) => {
+      if (booking.status === "COMPLETED") {
+        toast.error("Cannot cancel a completed booking");
+        return;
+      }
+      if (booking.status === "CANCELLED") {
+        toast.error("Booking is already cancelled");
+        return;
+      }
+      const reason = prompt("Enter cancellation reason (optional):");
+      const ok = await confirm({
+        title: "Cancel Booking",
+        message: `Cancel ambulance booking #${booking.id}?`,
+        danger: true
+      });
+      if (ok) cancelMutation.mutate({ id: booking.id, reason });
+    },
+    [confirm, cancelMutation]
+  );
 
   const getApprovalBadge = (approved) => {
     if (approved === null) {
@@ -1160,58 +701,74 @@ export default function AmbulanceOrders() {
                             title="View Details">
                             <Eye size={16} />
                           </button>
-                          {item.approved === null && (
+                          {item.status !== "CANCELLED" && (
                             <>
-                              <button
-                                onClick={() => handleApprove(item)}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                title="Approve">
-                                <CheckCircle size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleDecline(item)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                title="Decline">
-                                <XCircle size={16} />
-                              </button>
-                            </>
-                          )}
-                          {item.approved === true && (
-                            <>
-                              {item.status !== "COMPLETED" && (
-                                <button
-                                  onClick={() => handleAssignAmbulance(item)}
-                                  className={`p-2 rounded-lg transition ${
-                                    item.ambulanceId
-                                      ? "text-purple-600 hover:bg-purple-50"
-                                      : "text-purple-600 hover:bg-purple-50"
-                                  }`}
-                                  title={
-                                    item.ambulanceId
-                                      ? "Reassign Ambulance"
-                                      : "Assign Ambulance"
-                                  }>
-                                  <Truck size={16} />
-                                </button>
-                              )}
-                              {item.status !== "COMPLETED" && (
+                              {item.approved === null && (
                                 <>
-                                  {!item.totalAmount && (
-                                    <button
-                                      onClick={() => handleCalculateFinal(item)}
-                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                      title="Calculate Final">
-                                      <Calculator size={16} />
-                                    </button>
-                                  )}
-                                  {item.totalAmount && (
+                                  <button
+                                    onClick={() => handleApprove(item)}
+                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                    title="Approve">
+                                    <CheckCircle size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDecline(item)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                    title="Decline">
+                                    <XCircle size={16} />
+                                  </button>
+                                </>
+                              )}
+                              {item.approved === true && (
+                                <>
+                                  {item.status !== "COMPLETED" && (
                                     <button
                                       onClick={() =>
-                                        handlePaymentComplete(item)
+                                        handleAssignAmbulance(item)
                                       }
-                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                      title="Update Payment & Complete">
-                                      <DollarSign size={16} />
+                                      className={`p-2 rounded-lg transition ${
+                                        item.ambulanceId
+                                          ? "text-purple-600 hover:bg-purple-50"
+                                          : "text-purple-600 hover:bg-purple-50"
+                                      }`}
+                                      title={
+                                        item.ambulanceId
+                                          ? "Reassign Ambulance"
+                                          : "Assign Ambulance"
+                                      }>
+                                      <Truck size={16} />
+                                    </button>
+                                  )}
+                                  {item.status !== "COMPLETED" && (
+                                    <>
+                                      {!item.totalAmount && (
+                                        <button
+                                          onClick={() =>
+                                            handleCalculateFinal(item)
+                                          }
+                                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                          title="Calculate Final">
+                                          <Calculator size={16} />
+                                        </button>
+                                      )}
+                                      {item.totalAmount && (
+                                        <button
+                                          onClick={() =>
+                                            handlePaymentComplete(item)
+                                          }
+                                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                          title="Update Payment & Complete">
+                                          <DollarSign size={16} />
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+                                  {item.status !== "COMPLETED" && (
+                                    <button
+                                      onClick={() => handleCancel(item)}
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                      title="Cancel Order">
+                                      <XCircle size={16} />
                                     </button>
                                   )}
                                 </>

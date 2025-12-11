@@ -12,7 +12,8 @@ import {
   ListChecks,
   FlaskConical,
   FolderTree,
-  Gift
+  Gift,
+  Settings
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -78,6 +79,7 @@ export default function AppLayout() {
           <NavItem to="/ambulance" icon={Ambulance} label="Ambulances" />
           <NavItem to="/ambulance-types" icon={Ambulance} label="Ambulance Types" />
           <NavItem to="/ambulance-charges" icon={Ambulance} label="Charges" />
+          <NavItem to="/ambulance-features" icon={Settings} label="Features" />
           <NavItem to="/drivers" icon={Ambulance} label="Drivers" />
           <NavItem to="/ambulance-logs" icon={Ambulance} label="Logs" />
 

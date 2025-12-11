@@ -242,8 +242,10 @@ function AmbulanceTypeFormModal({ editing, onClose, onSuccess }) {
     code: "",
     description: "",
     displayOrder: 0,
-    active: true
+    active: true,
+    coordinatorPhones: []
   });
+  const [phoneInput, setPhoneInput] = useState("");
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -253,10 +255,31 @@ function AmbulanceTypeFormModal({ editing, onClose, onSuccess }) {
         code: editing.code || "",
         description: editing.description || "",
         displayOrder: editing.displayOrder || 0,
-        active: editing.active !== undefined ? editing.active : true
+        active: editing.active !== undefined ? editing.active : true,
+        coordinatorPhones: editing.coordinatorPhones || []
       });
     }
   }, [editing]);
+
+  const handleAddPhone = () => {
+    const phone = phoneInput.trim();
+    if (phone && /^[0-9]{10}$/.test(phone)) {
+      if (!formData.coordinatorPhones.includes(phone)) {
+        setFormData({
+          ...formData,
+          coordinatorPhones: [...formData.coordinatorPhones, phone]
+        });
+        setPhoneInput("");
+      }
+    }
+  };
+
+  const handleRemovePhone = (phone) => {
+    setFormData({
+      ...formData,
+      coordinatorPhones: formData.coordinatorPhones.filter((p) => p !== phone)
+    });
+  };
 
   const mutation = useMutation({
     mutationFn: (data) => {
@@ -336,6 +359,49 @@ function AmbulanceTypeFormModal({ editing, onClose, onSuccess }) {
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Description of the ambulance type..."
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Coordinator Phone Numbers</label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddPhone();
+                  }
+                }}
+                placeholder="Enter 10-digit phone number"
+                className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                maxLength={10}
+                pattern="[0-9]{10}"
+              />
+              <button
+                type="button"
+                onClick={handleAddPhone}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                Add
+              </button>
+            </div>
+            {formData.coordinatorPhones.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {formData.coordinatorPhones.map((phone) => (
+                  <span
+                    key={phone}
+                    className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                    {phone}
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhone(phone)}
+                      className="text-blue-700 hover:text-blue-900">
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

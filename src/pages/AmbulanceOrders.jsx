@@ -18,6 +18,7 @@ import {
 import { toast } from "react-toastify";
 import { Pagination } from "../components/shared";
 import useDateRange from "../hooks/useDateRange";
+import AmbulanceOrderDetailsModal from "../components/ambulance/AmbulanceOrderDetailsModal";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -288,8 +289,9 @@ function CalculateFinalModal({ booking, onClose, onSuccess }) {
               <div className="mt-2 space-y-1">
                 {Number(totalDistance) > baseKm && perKmCharge && (
                   <p className="text-xs text-green-600">
-                    Extra km charges: ({Number(totalDistance).toFixed(1)} - {baseKm}) × ₹
-                    {perKmCharge.amount} = {(Number(totalDistance) - baseKm).toFixed(1)} km × ₹
+                    Extra km charges: ({Number(totalDistance).toFixed(1)} -{" "}
+                    {baseKm}) × ₹{perKmCharge.amount} ={" "}
+                    {(Number(totalDistance) - baseKm).toFixed(1)} km × ₹
                     {perKmCharge.amount} = ₹{extraKmAmount.toFixed(2)}
                   </p>
                 )}
@@ -1234,11 +1236,15 @@ export default function AmbulanceOrders() {
         />
       )}
 
-      {/* View Order Modal with Logs */}
+      {/* View Order Modal with Editing */}
       {viewingBooking && (
-        <OrderViewModal
+        <AmbulanceOrderDetailsModal
           booking={viewingBooking}
           onClose={() => setViewingBooking(null)}
+          onUpdated={() => {
+            refetch();
+            setViewingBooking(null);
+          }}
         />
       )}
     </div>
@@ -1280,9 +1286,57 @@ function OrderViewModal({ booking, onClose }) {
     });
   };
 
+  // Helper to get ambulance type name from ID
+  const getAmbulanceTypeName = (typeId) => {
+    if (!typeId) return "N/A";
+    if (booking?.ambulanceType?.id === typeId) {
+      return `${booking.ambulanceType.name} (${booking.ambulanceType.code})`;
+    }
+    return `Ambulance Type #${typeId}`;
+  };
+
+  // Helper to format selected feature pricing IDs with names
+  const formatSelectedFeaturePricing = (pricingIds) => {
+    if (!Array.isArray(pricingIds) || pricingIds.length === 0) return [];
+    // Check if booking has selectedFeaturePricing data
+    if (
+      booking?.selectedFeaturePricing &&
+      booking.selectedFeaturePricing.length > 0
+    ) {
+      return pricingIds.map((id) => {
+        const pricing = booking.selectedFeaturePricing.find((p) => p.id === id);
+        if (pricing) {
+          return {
+            id,
+            name: pricing.name,
+            featureName: pricing.featureName,
+            amount: pricing.amount,
+            unit: pricing.unit
+          };
+        }
+        return {
+          id,
+          name: `Feature Pricing #${id}`,
+          featureName: null,
+          amount: null,
+          unit: null
+        };
+      });
+    }
+    // Fallback: return IDs with placeholder names
+    return pricingIds.map((id) => ({
+      id,
+      name: `Feature Pricing #${id}`,
+      featureName: null,
+      amount: null,
+      unit: null
+    }));
+  };
+
   const getActionIcon = (action) => {
     const icons = {
       BOOKING_CREATED: "📝",
+      BOOKING_UPDATED: "✏️",
       APPROVED: "✅",
       DECLINED: "❌",
       STATUS_CHANGED: "🔄",
@@ -1296,6 +1350,7 @@ function OrderViewModal({ booking, onClose }) {
   const getActionColor = (action) => {
     const colors = {
       BOOKING_CREATED: "bg-blue-100 text-blue-700",
+      BOOKING_UPDATED: "bg-orange-100 text-orange-700",
       APPROVED: "bg-green-100 text-green-700",
       DECLINED: "bg-red-100 text-red-700",
       STATUS_CHANGED: "bg-purple-100 text-purple-700",
@@ -1489,6 +1544,24 @@ function OrderViewModal({ booking, onClose }) {
                               } else {
                                 displayValue = value.toLocaleString("en-IN");
                               }
+                            } else if (
+                              typeof value === "number" &&
+                              key === "ambulanceTypeId"
+                            ) {
+                              // Special handling for ambulanceTypeId - show name instead of ID
+                              const typeName = getAmbulanceTypeName(value);
+                              return (
+                                <div
+                                  key={key}
+                                  className="flex items-start justify-between py-2 px-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+                                  <span className="text-xs font-medium text-slate-600 min-w-[120px]">
+                                    {displayKey}:
+                                  </span>
+                                  <span className="text-xs font-semibold text-purple-700 text-right flex-1 ml-4">
+                                    {typeName}
+                                  </span>
+                                </div>
+                              );
                             } else if (Array.isArray(value)) {
                               // Special handling for selectedChargeIds
                               if (key === "selectedChargeIds") {
@@ -1529,14 +1602,63 @@ function OrderViewModal({ booking, onClose }) {
                                   </div>
                                 );
                               }
+                              // Special handling for selectedFeaturePricingIds
+                              if (key === "selectedFeaturePricingIds") {
+                                const featurePricing =
+                                  formatSelectedFeaturePricing(value);
+                                return (
+                                  <div key={key} className="w-full">
+                                    <div className="text-xs font-medium text-slate-600 mb-2">
+                                      {displayKey}:
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      {featurePricing.map((fp) => (
+                                        <div
+                                          key={fp.id}
+                                          className="flex items-center justify-between py-2 px-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-green-700">
+                                              {fp.featureName || fp.name}
+                                            </span>
+                                            <span className="text-xs text-green-500">
+                                              (#{fp.id})
+                                            </span>
+                                            {fp.name && fp.featureName && (
+                                              <span className="text-xs text-green-400">
+                                                - {fp.name}
+                                              </span>
+                                            )}
+                                          </div>
+                                          {fp.amount !== null && (
+                                            <span className="text-xs font-bold text-emerald-700">
+                                              ₹
+                                              {fp.amount.toLocaleString(
+                                                "en-IN",
+                                                {
+                                                  minimumFractionDigits: 2,
+                                                  maximumFractionDigits: 2
+                                                }
+                                              )}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              }
                               displayValue =
                                 value.length > 0 ? value.join(", ") : "None";
                             } else if (typeof value === "object") {
                               displayValue = JSON.stringify(value, null, 2);
                             }
 
-                            // Skip rendering if it's selectedChargeIds (already rendered above)
-                            if (key === "selectedChargeIds") {
+                            // Skip rendering if it's already rendered above with special formatting
+                            if (
+                              key === "selectedChargeIds" ||
+                              key === "selectedFeaturePricingIds" ||
+                              key === "ambulanceTypeId"
+                            ) {
                               return null;
                             }
 
@@ -1609,6 +1731,24 @@ function OrderViewModal({ booking, onClose }) {
                                     displayValue =
                                       value.toLocaleString("en-IN");
                                   }
+                                } else if (
+                                  typeof value === "number" &&
+                                  key === "ambulanceTypeId"
+                                ) {
+                                  // Special handling for ambulanceTypeId in previous data
+                                  const typeName = getAmbulanceTypeName(value);
+                                  return (
+                                    <div
+                                      key={key}
+                                      className="flex items-start justify-between py-1.5 px-3 bg-slate-50/50 rounded border border-slate-100">
+                                      <span className="text-xs text-slate-500 min-w-[120px]">
+                                        {displayKey}:
+                                      </span>
+                                      <span className="text-xs text-slate-600 text-right flex-1 ml-4">
+                                        {typeName}
+                                      </span>
+                                    </div>
+                                  );
                                 } else if (Array.isArray(value)) {
                                   // Special handling for selectedChargeIds in previous data
                                   if (key === "selectedChargeIds") {
@@ -1638,14 +1778,47 @@ function OrderViewModal({ booking, onClose }) {
                                       </div>
                                     );
                                   }
+                                  // Special handling for selectedFeaturePricingIds in previous data
+                                  if (key === "selectedFeaturePricingIds") {
+                                    const featurePricing =
+                                      formatSelectedFeaturePricing(value);
+                                    return (
+                                      <div key={key} className="w-full">
+                                        <div className="text-xs text-slate-500 mb-2">
+                                          {displayKey}:
+                                        </div>
+                                        <div className="space-y-1">
+                                          {featurePricing.map((fp) => (
+                                            <div
+                                              key={fp.id}
+                                              className="flex items-center justify-between py-1.5 px-2 bg-slate-50 rounded border border-slate-100">
+                                              <span className="text-xs text-slate-600">
+                                                {fp.featureName || fp.name} (#
+                                                {fp.id})
+                                              </span>
+                                              {fp.amount !== null && (
+                                                <span className="text-xs text-slate-500">
+                                                  ₹{fp.amount}
+                                                </span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
                                   displayValue =
                                     value.length > 0
                                       ? value.join(", ")
                                       : "None";
                                 }
 
-                                // Skip rendering if it's selectedChargeIds (already rendered above)
-                                if (key === "selectedChargeIds") {
+                                // Skip rendering if it's already rendered above with special formatting
+                                if (
+                                  key === "selectedChargeIds" ||
+                                  key === "selectedFeaturePricingIds" ||
+                                  key === "ambulanceTypeId"
+                                ) {
                                   return null;
                                 }
 

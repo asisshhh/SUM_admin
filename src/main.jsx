@@ -34,6 +34,7 @@ import HealthPackagesPage from "./pages/HealthPackagesPage.jsx";
 // Ambulance Management
 import AmbulanceTypesPage from "./pages/AmbulanceTypesPage.jsx";
 import AmbulanceChargesPage from "./pages/AmbulanceChargesPage.jsx";
+import AmbulanceFeaturesPage from "./pages/AmbulanceFeaturesPage.jsx";
 import DriversPage from "./pages/DriversPage.jsx";
 import AmbulanceLogsPage from "./pages/AmbulanceLogsPage.jsx";
 
@@ -89,6 +90,7 @@ createRoot(document.getElementById("root")).render(
             {/* Ambulance Management */}
             <Route path="ambulance-types" element={<AmbulanceTypesPage />} />
             <Route path="ambulance-charges" element={<AmbulanceChargesPage />} />
+            <Route path="ambulance-features" element={<AmbulanceFeaturesPage />} />
             <Route path="drivers" element={<DriversPage />} />
             <Route path="ambulance-logs" element={<AmbulanceLogsPage />} />
             {/* Lab Tests & Packages Management */}

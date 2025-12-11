@@ -63,13 +63,31 @@ export default function AmbulanceOrderDetailsModal({
       .reduce((sum, p) => sum + (p.amount || 0), 0);
   }, [selectedPricingIds, displayFeatures]);
 
-  // Toggle pricing selection
-  const togglePricing = (pricingId) => {
-    setSelectedPricingIds((prev) =>
-      prev.includes(pricingId)
-        ? prev.filter((id) => id !== pricingId)
-        : [...prev, pricingId]
-    );
+  // Toggle pricing selection - only one pricing per feature allowed
+  const togglePricing = (pricingId, featureId) => {
+    setSelectedPricingIds((prev) => {
+      // Find the feature that contains this pricing
+      const feature = displayFeatures.find((f) =>
+        f.pricing?.some((p) => p.id === pricingId)
+      );
+
+      if (!feature) return prev;
+
+      // Get all pricing IDs for this feature
+      const featurePricingIds = feature.pricing?.map((p) => p.id) || [];
+
+      // Remove all pricing IDs from this feature
+      const withoutFeaturePricing = prev.filter(
+        (id) => !featurePricingIds.includes(id)
+      );
+
+      // If clicking the same pricing, deselect it; otherwise select the new one
+      if (prev.includes(pricingId)) {
+        return withoutFeaturePricing;
+      } else {
+        return [...withoutFeaturePricing, pricingId];
+      }
+    });
   };
 
   // Update booking mutation
@@ -336,10 +354,13 @@ export default function AmbulanceOrderDetailsModal({
                                 <div className="flex items-center gap-3 flex-1">
                                   {isEditing && (
                                     <input
-                                      type="checkbox"
+                                      type="radio"
+                                      name={`feature-${feature.id}`}
                                       checked={isSelected}
-                                      onChange={() => togglePricing(pricing.id)}
-                                      className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                      onChange={() =>
+                                        togglePricing(pricing.id, feature.id)
+                                      }
+                                      className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
                                     />
                                   )}
                                   <div className="flex-1">

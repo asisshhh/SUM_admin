@@ -52,23 +52,46 @@ export default function SlotBookingModal({ defaultData, onClose }) {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm">Date</label>
+            <label className="text-sm">Date (IST)</label>
             <input
               type="date"
               className="input"
               value={form.date}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
             />
+            {form.date && (
+              <div className="text-xs text-slate-500 mt-1">
+                {new Date(form.date + "T00:00:00").toLocaleDateString("en-IN", {
+                  timeZone: "Asia/Kolkata",
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric"
+                })}
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="text-sm">Time</label>
+            <label className="text-sm">Time (IST)</label>
             <input
               type="time"
               className="input"
               value={form.time}
               onChange={(e) => setForm({ ...form, time: e.target.value })}
             />
+            {form.time && (
+              <div className="text-xs text-slate-500 mt-1">
+                {new Date(`2000-01-01T${form.time}:00`).toLocaleTimeString(
+                  "en-IN",
+                  {
+                    timeZone: "Asia/Kolkata",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true
+                  }
+                )}
+              </div>
+            )}
           </div>
         </div>
 

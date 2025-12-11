@@ -67,7 +67,9 @@ export default function AmbulanceLogsPage() {
             <FileText className="text-blue-600" size={32} />
             Ambulance Logs
           </h1>
-          <p className="text-slate-500 mt-1">View ambulance activity logs and history</p>
+          <p className="text-slate-500 mt-1">
+            View ambulance activity logs and history
+          </p>
         </div>
       </div>
 
@@ -134,12 +136,27 @@ export default function AmbulanceLogsPage() {
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Date & Time</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Ambulance</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Action</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Description</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Location</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Odometer</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Date & Time
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Ambulance
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Booking ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Action
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Odometer
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -158,13 +175,25 @@ export default function AmbulanceLogsPage() {
                           {item.ambulance?.vehicleNumber || "-"}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {item.ambulance?.ambulanceType?.name || item.ambulance?.ambulanceType?.code || ""}
+                          {item.ambulance?.ambulanceType?.name ||
+                            item.ambulance?.ambulanceType?.code ||
+                            ""}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {item.bookingId ? (
+                          <div className="font-medium text-blue-600">
+                            #{item.bookingId}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-sm">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            actionColors[item.action] || "bg-gray-100 text-gray-700"
+                            actionColors[item.action] ||
+                            "bg-gray-100 text-gray-700"
                           }`}>
                           {item.action}
                         </span>
@@ -185,13 +214,16 @@ export default function AmbulanceLogsPage() {
                         </div>
                         {item.latitude && item.longitude && (
                           <div className="text-xs text-slate-500">
-                            {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                            {item.latitude.toFixed(4)},{" "}
+                            {item.longitude.toFixed(4)}
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-slate-600">
-                          {item.odometerReading ? `${item.odometerReading.toLocaleString()} km` : "-"}
+                          {item.odometerReading
+                            ? `${item.odometerReading.toLocaleString()} km`
+                            : "-"}
                         </div>
                       </td>
                     </tr>
@@ -214,4 +246,3 @@ export default function AmbulanceLogsPage() {
     </div>
   );
 }
-

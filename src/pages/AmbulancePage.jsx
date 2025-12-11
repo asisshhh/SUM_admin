@@ -2,7 +2,15 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
-import { Ambulance, Search, Plus, Edit, Trash2, UserPlus, Settings } from "lucide-react";
+import {
+  Ambulance,
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  UserPlus,
+  Settings
+} from "lucide-react";
 import { toast } from "react-toastify";
 import { Pagination } from "../components/shared";
 import AmbulanceFormModal from "../components/ambulance/AmbulanceFormModal";
@@ -48,7 +56,8 @@ export default function AmbulancePage() {
   // Fetch ambulance types for filter
   const { data: typesData } = useQuery({
     queryKey: ["ambulance-types-all"],
-    queryFn: async () => (await api.get("/ambulance-types", { params: { pageSize: 100 } })).data,
+    queryFn: async () =>
+      (await api.get("/ambulance-types", { params: { pageSize: 100 } })).data,
     staleTime: 5 * 60 * 1000
   });
 
@@ -89,14 +98,17 @@ export default function AmbulancePage() {
     setFilters((f) => ({ ...f, page }));
   }, []);
 
-  const handleDelete = useCallback(async (ambulance) => {
-    const ok = await confirm({
-      title: "Delete Ambulance",
-      message: `Are you sure you want to delete ambulance "${ambulance.vehicleNumber}"? This action cannot be undone.`,
-      danger: true
-    });
-    if (ok) deleteMutation.mutate(ambulance.id);
-  }, [confirm, deleteMutation]);
+  const handleDelete = useCallback(
+    async (ambulance) => {
+      const ok = await confirm({
+        title: "Delete Ambulance",
+        message: `Are you sure you want to delete ambulance "${ambulance.vehicleNumber}"? This action cannot be undone.`,
+        danger: true
+      });
+      if (ok) deleteMutation.mutate(ambulance.id);
+    },
+    [confirm, deleteMutation]
+  );
 
   const handleEdit = useCallback((ambulance) => {
     setShowForm(ambulance);
@@ -132,7 +144,9 @@ export default function AmbulancePage() {
             <Ambulance className="text-blue-600" size={32} />
             Ambulances
           </h1>
-          <p className="text-slate-500 mt-1">Manage ambulance fleet and assignments</p>
+          <p className="text-slate-500 mt-1">
+            Manage ambulance fleet and assignments
+          </p>
         </div>
         <button
           onClick={handleAdd}
@@ -144,9 +158,12 @@ export default function AmbulancePage() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+        <div className="flex flex-wrap gap-4">
+          <div className="relative flex-[2] min-w-[250px] max-w-[400px]">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search by vehicle number or model..."
@@ -159,7 +176,7 @@ export default function AmbulancePage() {
             name="ambulanceTypeId"
             value={filters.ambulanceTypeId}
             onChange={handleFilterChange}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            className="flex-1 min-w-[140px] px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             <option value="">All Types</option>
             {ambulanceTypes.map((type) => (
               <option key={type.id} value={type.id}>
@@ -168,34 +185,23 @@ export default function AmbulancePage() {
             ))}
           </select>
           <select
-            name="type"
-            value={filters.type}
+            name="available"
+            value={filters.available}
             onChange={handleFilterChange}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="">All Types (Legacy)</option>
-            <option value="BLS">BLS</option>
-            <option value="ALS">ALS</option>
+            className="flex-1 min-w-[140px] px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="all">All Availability</option>
+            <option value="true">Available</option>
+            <option value="false">Unavailable</option>
           </select>
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              name="available"
-              value={filters.available}
-              onChange={handleFilterChange}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="all">All Availability</option>
-              <option value="true">Available</option>
-              <option value="false">Unavailable</option>
-            </select>
-            <select
-              name="active"
-              value={filters.active}
-              onChange={handleFilterChange}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="all">All Status</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-          </div>
+          <select
+            name="active"
+            value={filters.active}
+            onChange={handleFilterChange}
+            className="flex-1 min-w-[140px] px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="all">All Status</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
         </div>
       </div>
 
@@ -204,54 +210,88 @@ export default function AmbulancePage() {
         {isLoading ? (
           <div className="p-12 text-center text-slate-500">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">No ambulances found</div>
+          <div className="p-12 text-center text-slate-500">
+            No ambulances found
+          </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Vehicle Number</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Model</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Driver</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Features</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Status</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Vehicle Number
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Model
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Driver
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Features
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4">
-                        <div className="font-medium text-slate-800">{item.vehicleNumber}</div>
+                        <div className="font-medium text-slate-800">
+                          {item.vehicleNumber}
+                        </div>
                         {item.registrationNumber && (
-                          <div className="text-xs text-slate-500">Reg: {item.registrationNumber}</div>
+                          <div className="text-xs text-slate-500">
+                            Reg: {item.registrationNumber}
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           {item.ambulanceType ? (
                             <>
-                              <span className="font-medium text-slate-800">{item.ambulanceType.name}</span>
-                              <span className="text-xs text-slate-500">({item.ambulanceType.code})</span>
+                              <span className="font-medium text-slate-800">
+                                {item.ambulanceType.name}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                ({item.ambulanceType.code})
+                              </span>
                             </>
                           ) : (
-                            <span className="text-slate-600">{item.type || "-"}</span>
+                            <span className="text-slate-600">
+                              {item.type || "-"}
+                            </span>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-slate-600">{item.model || "-"}</div>
+                        <div className="text-slate-600">
+                          {item.model || "-"}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         {item.driver ? (
                           <div>
-                            <div className="font-medium text-slate-800">{item.driver.name}</div>
-                            <div className="text-xs text-slate-500">{item.driver.phone}</div>
+                            <div className="font-medium text-slate-800">
+                              {item.driver.name}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {item.driver.phone}
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-slate-400 text-sm">No Driver</span>
+                          <span className="text-slate-400 text-sm">
+                            No Driver
+                          </span>
                         )}
                         <button
                           onClick={() => handleAssignDriver(item)}
@@ -261,7 +301,7 @@ export default function AmbulancePage() {
                         </button>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1 mb-1">
+                        <div className="flex flex-wrap gap-1">
                           {item.features?.slice(0, 2).map((f) => (
                             <span
                               key={f.feature.id}
@@ -270,15 +310,11 @@ export default function AmbulancePage() {
                             </span>
                           ))}
                           {item.features?.length > 2 && (
-                            <span className="text-xs text-slate-500">+{item.features.length - 2} more</span>
+                            <span className="text-xs text-slate-500">
+                              +{item.features.length - 2} more
+                            </span>
                           )}
                         </div>
-                        <button
-                          onClick={() => handleManageFeatures(item)}
-                          className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                          <Settings size={12} />
-                          Manage
-                        </button>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex flex-col gap-1 items-center">

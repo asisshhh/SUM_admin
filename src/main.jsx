@@ -50,59 +50,61 @@ createRoot(document.getElementById("root")).render(
     <QueryClientProvider client={qc}>
       <ConfirmProvider>
         <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <AppLayout />
-              </PrivateRoute>
-            }>
-            <Route index element={<Dashboard />} />
-            {/* <Route path="orders" element={<OrdersPage />} /> */}
-            <Route path="orders" element={<OrderLayout />}>
-              <Route index element={<Navigate to="appointments" replace />} />
-              <Route path="appointments" element={<AppointmentOrders />} />
-              <Route path="ambulance" element={<AmbulanceOrders />} />
-              <Route path="packages" element={<PackageOrders />} />
-              <Route path="lab" element={<LabOrders />} />
-              {/* <Route path="homecare" element={<HomecareOrders />} /> */}
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <AppLayout />
+                </PrivateRoute>
+              }>
+              <Route index element={<Dashboard />} />
+              {/* <Route path="orders" element={<OrdersPage />} /> */}
+              <Route path="orders" element={<OrderLayout />}>
+                <Route index element={<Navigate to="appointments" replace />} />
+                <Route path="appointments" element={<AppointmentOrders />} />
+                <Route path="ambulance" element={<AmbulanceOrders />} />
+                <Route path="packages" element={<PackageOrders />} />
+                <Route path="lab" element={<LabOrders />} />
+                {/* <Route path="homecare" element={<HomecareOrders />} /> */}
+              </Route>
+              <Route path="doctor-queue" element={<DoctorQueue />} />
+              <Route
+                path="doctor/queue-monitor/:doctorId"
+                element={<DoctorQueueMonitor />}
+              />
+              <Route
+                path="doctor/actions/:doctorId"
+                element={<DoctorActionPanel />}
+              />
+              <Route
+                path="widgets/token/:doctorId"
+                element={<TokenWidgetPage />}
+              />
+              <Route path="doctors" element={<DoctorsPage />} />
+              <Route path="doctors/:id" element={<DoctorDetail />} />
+              <Route path="departments" element={<DepartmentsPage />} />
+              <Route path="departments/:id" element={<DepartmentDetail />} />
+              <Route path="ambulance" element={<AmbulancePage />} />
+              {/* Ambulance Management */}
+              <Route path="ambulance-types" element={<AmbulanceTypesPage />} />
+              <Route
+                path="ambulance-features"
+                element={<AmbulanceFeaturesPage />}
+              />
+              <Route path="drivers" element={<DriversPage />} />
+              <Route path="ambulance-logs" element={<AmbulanceLogsPage />} />
+              {/* Lab Tests & Packages Management */}
+              <Route path="lab-tests" element={<LabTestsPage />} />
+              <Route path="test-categories" element={<TestCategoriesPage />} />
+              <Route path="health-packages" element={<HealthPackagesPage />} />
+              <Route path="feedback" element={<FeedbackPage />} />
+              <Route path="banners" element={<BannersPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="doctor-calendar" element={<DoctorCalendarPage />} />
             </Route>
-            <Route path="doctor-queue" element={<DoctorQueue />} />
-            <Route
-              path="doctor/queue-monitor/:doctorId"
-              element={<DoctorQueueMonitor />}
-            />
-            <Route
-              path="doctor/actions/:doctorId"
-              element={<DoctorActionPanel />}
-            />
-            <Route
-              path="widgets/token/:doctorId"
-              element={<TokenWidgetPage />}
-            />
-            <Route path="doctors" element={<DoctorsPage />} />
-            <Route path="doctors/:id" element={<DoctorDetail />} />
-            <Route path="departments" element={<DepartmentsPage />} />
-            <Route path="departments/:id" element={<DepartmentDetail />} />
-            <Route path="ambulance" element={<AmbulancePage />} />
-            {/* Ambulance Management */}
-            <Route path="ambulance-types" element={<AmbulanceTypesPage />} />
-            <Route path="ambulance-charges" element={<AmbulanceChargesPage />} />
-            <Route path="ambulance-features" element={<AmbulanceFeaturesPage />} />
-            <Route path="drivers" element={<DriversPage />} />
-            <Route path="ambulance-logs" element={<AmbulanceLogsPage />} />
-            {/* Lab Tests & Packages Management */}
-            <Route path="lab-tests" element={<LabTestsPage />} />
-            <Route path="test-categories" element={<TestCategoriesPage />} />
-            <Route path="health-packages" element={<HealthPackagesPage />} />
-            <Route path="feedback" element={<FeedbackPage />} />
-            <Route path="banners" element={<BannersPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="doctor-calendar" element={<DoctorCalendarPage />} />
-          </Route>
-        </Routes>
+          </Routes>
         </BrowserRouter>
       </ConfirmProvider>
     </QueryClientProvider>

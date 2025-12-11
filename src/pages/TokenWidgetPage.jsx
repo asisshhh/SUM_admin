@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/client";
-import { getSocket } from "../lib/socket.js";
+import Socket from "../utils/SocketManager";
 
 export default function TokenWidgetPage() {
   const { doctorId } = useParams();
@@ -32,10 +32,11 @@ export default function TokenWidgetPage() {
 
   useEffect(() => {
     load();
-    const socket = getSocket();
-    socket.emit("joinDoctorRoom", { doctorId: Number(doctorId), date: today });
-    socket.on("queueUpdated", load);
-    return () => socket.disconnect();
+    Socket.emit("joinDoctorRoom", { doctorId: Number(doctorId), date: today });
+    const offQueueUpdated = Socket.on("queueUpdated", load);
+    return () => {
+      offQueueUpdated();
+    };
   }, [doctorId]);
 
   return (

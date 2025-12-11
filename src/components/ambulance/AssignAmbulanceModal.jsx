@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/client";
 import { toast } from "react-toastify";
+import useDebounce from "../../hooks/useDebounce";
 import {
   X,
   Ambulance,
@@ -11,17 +12,11 @@ import {
   RefreshCw
 } from "lucide-react";
 
-// Debounce hook
-function useDebounce(value, delay = 400) {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debouncedValue;
-}
-
-export default function AssignAmbulanceModal({ booking, onClose, onSuccess }) {
+const AssignAmbulanceModal = React.memo(function AssignAmbulanceModal({
+  booking,
+  onClose,
+  onSuccess
+}) {
   const qc = useQueryClient();
   const [selectedAmbulanceId, setSelectedAmbulanceId] = useState(
     booking?.ambulanceId?.toString() || ""
@@ -291,4 +286,6 @@ export default function AssignAmbulanceModal({ booking, onClose, onSuccess }) {
       </div>
     </div>
   );
-}
+});
+
+export default AssignAmbulanceModal;

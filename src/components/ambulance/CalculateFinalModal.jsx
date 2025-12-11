@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/client";
 import {
@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 
-export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
+const CalculateFinalModal = React.memo(function CalculateFinalModal({
+  booking,
+  onClose,
+  onSuccess
+}) {
   const qc = useQueryClient();
   const [finalKm, setFinalKm] = useState(
     booking?.totalDistance?.toString() || ""
@@ -38,41 +42,54 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
   const availableFeatures = currentBooking?.availableFeatures || [];
   const initialAmount = currentBooking?.initialAmount || 0;
 
+  // Memoize feature pricing IDs for performance
+  const featurePricingMap = useMemo(() => {
+    const map = new Map();
+    availableFeatures.forEach((feature) => {
+      map.set(feature.id, feature.pricing?.map((p) => p.id) || []);
+    });
+    return map;
+  }, [availableFeatures]);
+
+  // Memoize inlineui features
+  const inlineuiFeatures = useMemo(
+    () => availableFeatures.filter((f) => f.inlineui === true),
+    [availableFeatures]
+  );
+
+  // Memoize PER_KM pricing IDs
+  const perKmPricingIds = useMemo(() => {
+    return availableFeatures
+      .flatMap((f) => f.pricing || [])
+      .filter((p) => p.unit === "PER_KM")
+      .map((p) => p.id);
+  }, [availableFeatures]);
+
   // Auto-select applicable pricing based on distance
   useEffect(() => {
     if (!availableFeatures.length) {
       return;
     }
 
-    // If final KM is cleared or invalid, remove PER_KM pricing and uncheck inlineui features
-    if (!finalKm || isNaN(Number(finalKm)) || Number(finalKm) <= 0) {
-      setSelectedPricingIds((prev) => {
-        const updated = [...prev];
-        const allPricing = availableFeatures.flatMap((f) => f.pricing || []);
+    const distance = finalKm ? Number(finalKm) : 0;
+    const isValidDistance = !isNaN(distance) && distance > 0;
 
-        // Remove PER_KM pricing
-        const perKmPricingIds = allPricing
-          .filter((p) => p.unit === "PER_KM")
-          .map((p) => p.id);
+    // If final KM is cleared or invalid, remove PER_KM pricing and uncheck inlineui features
+    if (!isValidDistance) {
+      setSelectedPricingIds((prev) => {
+        const updated = prev.filter((id) => !perKmPricingIds.includes(id));
 
         // Remove pricing from inlineui features
-        availableFeatures.forEach((feature) => {
-          if (feature.inlineui === true) {
-            const featurePricingIds = feature.pricing?.map((p) => p.id) || [];
-            featurePricingIds.forEach((id) => {
-              const index = updated.indexOf(id);
-              if (index > -1) updated.splice(index, 1);
-            });
-          }
+        inlineuiFeatures.forEach((feature) => {
+          const featurePricingIds = featurePricingMap.get(feature.id) || [];
+          featurePricingIds.forEach((id) => {
+            const index = updated.indexOf(id);
+            if (index > -1) updated.splice(index, 1);
+          });
         });
 
-        return updated.filter((id) => !perKmPricingIds.includes(id));
+        return updated;
       });
-      return;
-    }
-
-    const distance = Number(finalKm);
-    if (distance <= 0) {
       return;
     }
 
@@ -80,34 +97,27 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
     const autoSelectedIds = [];
 
     // Handle inlineui features (auto-select/unselect based on KM > 30)
-    availableFeatures.forEach((feature) => {
-      if (feature.inlineui === true) {
-        // For inlineui features, auto-select/unselect based on KM > 30
-        if (!feature.pricing || feature.pricing.length === 0) return;
+    inlineuiFeatures.forEach((feature) => {
+      if (!feature.pricing || feature.pricing.length === 0) return;
 
-        if (distance > 30) {
-          // Select PER_KM pricing if available, otherwise select first pricing
-          const perKmPricing = feature.pricing.find(
-            (p) => p.unit === "PER_KM" && p.active !== false
-          );
-          if (perKmPricing) {
-            autoSelectedIds.push(perKmPricing.id);
-          } else if (feature.pricing.length > 0) {
-            // Select first pricing option
-            autoSelectedIds.push(feature.pricing[0].id);
-          }
+      if (distance > 30) {
+        const perKmPricing = feature.pricing.find(
+          (p) => p.unit === "PER_KM" && p.active !== false
+        );
+        if (perKmPricing) {
+          autoSelectedIds.push(perKmPricing.id);
+        } else if (feature.pricing.length > 0) {
+          autoSelectedIds.push(feature.pricing[0].id);
         }
-        // If distance <= 30, don't add any pricing (will be cleared below)
       }
     });
 
-    // First, find and auto-select PER_KM pricing if distance > 30 km (for non-inlineui features)
+    // Find and auto-select PER_KM pricing if distance > 30 km (for non-inlineui features)
     if (distance > 30) {
       availableFeatures.forEach((feature) => {
-        if (feature.inlineui === true) return; // Skip inlineui features (handled above)
+        if (feature.inlineui === true) return;
 
-        if (!feature.pricing || feature.pricing.length === 0) return;
-        const perKmPricing = feature.pricing.find(
+        const perKmPricing = feature.pricing?.find(
           (p) => p.unit === "PER_KM" && p.active !== false
         );
         if (perKmPricing && !autoSelectedIds.includes(perKmPricing.id)) {
@@ -121,9 +131,9 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
       const currentSelectedIds = prev;
       const updated = [...prev];
 
-      // First, determine which pricing should be auto-selected for non-inlineui features
+      // Determine which pricing should be auto-selected for non-inlineui features
       availableFeatures.forEach((feature) => {
-        if (feature.inlineui === true) return; // Skip inlineui features (handled separately)
+        if (feature.inlineui === true) return;
 
         if (!feature.pricing || feature.pricing.length === 0) return;
 
@@ -131,7 +141,7 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
         const currentlySelected = feature.pricing.some((p) =>
           currentSelectedIds.includes(p.id)
         );
-        if (!currentlySelected) return; // Don't auto-select if nothing was selected
+        if (!currentlySelected) return;
 
         // Skip if this feature already has pricing selected in autoSelectedIds
         const hasSelected = feature.pricing.some((p) =>
@@ -141,7 +151,6 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
 
         // Find FIXED pricing that matches the distance range
         const matchingPricing = feature.pricing.find((p) => {
-          // Skip PER_KM pricing (handled separately above)
           if (p.unit === "PER_KM") return false;
 
           const from = p.distanceFrom;
@@ -157,7 +166,6 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
           return false;
         });
 
-        // Select the first matching pricing for each feature (only one per feature)
         if (matchingPricing) {
           autoSelectedIds.push(matchingPricing.id);
         }
@@ -165,10 +173,9 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
 
       // Process all features to update selected pricing
       availableFeatures.forEach((feature) => {
-        const featurePricingIds = feature.pricing?.map((p) => p.id) || [];
+        const featurePricingIds = featurePricingMap.get(feature.id) || [];
 
         if (feature.inlineui === true) {
-          // For inlineui features, always update based on auto-selected pricing
           // Remove all pricing from this feature
           featurePricingIds.forEach((id) => {
             const index = updated.indexOf(id);
@@ -182,7 +189,6 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
             updated.push(autoSelected.id);
           }
         } else {
-          // For non-inlineui features, only update if they have auto-selected pricing
           const hasAutoSelected = feature.pricing?.some((p) =>
             autoSelectedIds.includes(p.id)
           );
@@ -206,8 +212,13 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
 
       return updated;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finalKm, availableFeatures]);
+  }, [
+    finalKm,
+    availableFeatures,
+    featurePricingMap,
+    inlineuiFeatures,
+    perKmPricingIds
+  ]);
 
   // Calculate extra KM charges (for distances > 30 km)
   const extraKmCharges = useMemo(() => {
@@ -255,42 +266,48 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
   }, [initialAmount, extraAmount]);
 
   // Toggle pricing selection - only one pricing per feature allowed
-  const togglePricing = (pricingId, featureId) => {
-    setSelectedPricingIds((prev) => {
-      // Find the feature that contains this pricing
-      const feature = availableFeatures.find((f) =>
-        f.pricing?.some((p) => p.id === pricingId)
-      );
+  const togglePricing = useCallback(
+    (pricingId, featureId) => {
+      setSelectedPricingIds((prev) => {
+        // Find the feature that contains this pricing
+        const feature = availableFeatures.find((f) =>
+          f.pricing?.some((p) => p.id === pricingId)
+        );
 
-      if (!feature) return prev;
+        if (!feature) return prev;
 
-      // Get all pricing IDs for this feature
-      const featurePricingIds = feature.pricing?.map((p) => p.id) || [];
+        // Get all pricing IDs for this feature
+        const featurePricingIds = feature.pricing?.map((p) => p.id) || [];
 
-      // Remove all pricing IDs from this feature
-      const withoutFeaturePricing = prev.filter(
-        (id) => !featurePricingIds.includes(id)
-      );
+        // Remove all pricing IDs from this feature
+        const withoutFeaturePricing = prev.filter(
+          (id) => !featurePricingIds.includes(id)
+        );
 
-      // If clicking the same pricing, deselect it; otherwise select the new one
-      if (prev.includes(pricingId)) {
-        return withoutFeaturePricing;
-      } else {
-        return [...withoutFeaturePricing, pricingId];
-      }
-    });
-  };
+        // If clicking the same pricing, deselect it; otherwise select the new one
+        if (prev.includes(pricingId)) {
+          return withoutFeaturePricing;
+        } else {
+          return [...withoutFeaturePricing, pricingId];
+        }
+      });
+    },
+    [availableFeatures]
+  );
 
   // Clear all pricing for a specific feature
-  const clearFeaturePricing = (featureId) => {
-    setSelectedPricingIds((prev) => {
-      const feature = availableFeatures.find((f) => f.id === featureId);
-      if (!feature || !feature.pricing) return prev;
+  const clearFeaturePricing = useCallback(
+    (featureId) => {
+      setSelectedPricingIds((prev) => {
+        const feature = availableFeatures.find((f) => f.id === featureId);
+        if (!feature || !feature.pricing) return prev;
 
-      const featurePricingIds = feature.pricing.map((p) => p.id);
-      return prev.filter((id) => !featurePricingIds.includes(id));
-    });
-  };
+        const featurePricingIds = feature.pricing.map((p) => p.id);
+        return prev.filter((id) => !featurePricingIds.includes(id));
+      });
+    },
+    [availableFeatures]
+  );
 
   // Calculate final charges mutation
   const calculateMutation = useMutation({
@@ -687,4 +704,6 @@ export default function CalculateFinalModal({ booking, onClose, onSuccess }) {
       </div>
     </div>
   );
-}
+});
+
+export default CalculateFinalModal;

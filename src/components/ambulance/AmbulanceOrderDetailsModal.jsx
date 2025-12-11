@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 
-export default function AmbulanceOrderDetailsModal({
+const AmbulanceOrderDetailsModal = React.memo(function AmbulanceOrderDetailsModal({
   booking,
   onClose,
   onUpdated
@@ -439,4 +439,6 @@ export default function AmbulanceOrderDetailsModal({
       </div>
     </div>
   );
-}
+});
+
+export default AmbulanceOrderDetailsModal;

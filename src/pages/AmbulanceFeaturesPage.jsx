@@ -2,7 +2,16 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
-import { Settings, Search, Plus, Edit, Trash2, DollarSign, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Settings,
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  DollarSign,
+  ChevronDown,
+  ChevronRight
+} from "lucide-react";
 import { toast } from "react-toastify";
 import { Pagination } from "../components/shared";
 
@@ -72,14 +81,17 @@ export default function AmbulanceFeaturesPage() {
     setFilters((f) => ({ ...f, page }));
   }, []);
 
-  const handleDelete = useCallback(async (feature) => {
-    const ok = await confirm({
-      title: "Delete Feature",
-      message: `Are you sure you want to delete "${feature.name}"? This will also delete all associated pricing.`,
-      danger: true
-    });
-    if (ok) deleteMutation.mutate(feature.id);
-  }, [confirm, deleteMutation]);
+  const handleDelete = useCallback(
+    async (feature) => {
+      const ok = await confirm({
+        title: "Delete Feature",
+        message: `Are you sure you want to delete "${feature.name}"? This will also delete all associated pricing.`,
+        danger: true
+      });
+      if (ok) deleteMutation.mutate(feature.id);
+    },
+    [confirm, deleteMutation]
+  );
 
   const handleEdit = useCallback((feature) => {
     setEditing(feature);
@@ -117,7 +129,9 @@ export default function AmbulanceFeaturesPage() {
             <Settings className="text-blue-600" size={32} />
             Ambulance Features
           </h1>
-          <p className="text-slate-500 mt-1">Manage ambulance features and their pricing</p>
+          <p className="text-slate-500 mt-1">
+            Manage ambulance features and their pricing
+          </p>
         </div>
         <button
           onClick={handleAdd}
@@ -131,7 +145,10 @@ export default function AmbulanceFeaturesPage() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search features..."
@@ -157,7 +174,9 @@ export default function AmbulanceFeaturesPage() {
         {isLoading ? (
           <div className="p-12 text-center text-slate-500">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">No features found</div>
+          <div className="p-12 text-center text-slate-500">
+            No features found
+          </div>
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -165,11 +184,21 @@ export default function AmbulanceFeaturesPage() {
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase w-[50px]"></th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Description</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Pricing Rules</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Status</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Pricing Rules
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -183,20 +212,32 @@ export default function AmbulanceFeaturesPage() {
                               onClick={() => toggleExpand(item.id)}
                               className="p-1 hover:bg-slate-200 rounded">
                               {isExpanded ? (
-                                <ChevronDown size={16} className="text-slate-600" />
+                                <ChevronDown
+                                  size={16}
+                                  className="text-slate-600"
+                                />
                               ) : (
-                                <ChevronRight size={16} className="text-slate-600" />
+                                <ChevronRight
+                                  size={16}
+                                  className="text-slate-600"
+                                />
                               )}
                             </button>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="font-medium text-slate-800">{item.name}</div>
+                            <div className="font-medium text-slate-800">
+                              {item.name}
+                            </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-slate-600 max-w-md truncate">{item.description || "-"}</div>
+                            <div className="text-sm text-slate-600 max-w-md truncate">
+                              {item.description || "-"}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="text-sm font-medium text-slate-700">{item._count?.pricing || 0}</span>
+                            <span className="text-sm font-medium text-slate-700">
+                              {item._count?.pricing || 0}
+                            </span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span
@@ -292,14 +333,17 @@ function FeaturePricingManager({ feature }) {
 
   const pricingItems = pricingData?.items || [];
 
-  const handleDeletePricing = useCallback(async (pricing) => {
-    const ok = await confirm({
-      title: "Delete Pricing Rule",
-      message: `Are you sure you want to delete "${pricing.name}"?`,
-      danger: true
-    });
-    if (ok) deletePricingMutation.mutate(pricing.id);
-  }, [confirm, deletePricingMutation]);
+  const handleDeletePricing = useCallback(
+    async (pricing) => {
+      const ok = await confirm({
+        title: "Delete Pricing Rule",
+        message: `Are you sure you want to delete "${pricing.name}"?`,
+        danger: true
+      });
+      if (ok) deletePricingMutation.mutate(pricing.id);
+    },
+    [confirm, deletePricingMutation]
+  );
 
   return (
     <div className="space-y-4">
@@ -316,21 +360,39 @@ function FeaturePricingManager({ feature }) {
         </button>
       </div>
       {isLoading ? (
-        <div className="text-center text-slate-500 py-4">Loading pricing...</div>
+        <div className="text-center text-slate-500 py-4">
+          Loading pricing...
+        </div>
       ) : pricingItems.length === 0 ? (
-        <div className="text-center text-slate-500 py-4">No pricing rules defined</div>
+        <div className="text-center text-slate-500 py-4">
+          No pricing rules defined
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100 border-b border-slate-200">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Ambulance Type</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Distance Range</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 uppercase">Amount</th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase">Unit</th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase">Status</th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase">
+                  Ambulance Type
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase">
+                  Name
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase">
+                  Distance Range
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 uppercase">
+                  Amount
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase">
+                  Unit
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase">
+                  Status
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -339,18 +401,23 @@ function FeaturePricingManager({ feature }) {
                   <td className="px-3 py-2">
                     <div className="text-xs text-slate-600">
                       {pricing.ambulanceType ? (
-                        <span className="font-medium">{pricing.ambulanceType.name}</span>
+                        <span className="font-medium">
+                          {pricing.ambulanceType.name}
+                        </span>
                       ) : (
                         <span className="text-slate-400 italic">All Types</span>
                       )}
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <div className="font-medium text-slate-800">{pricing.name}</div>
+                    <div className="font-medium text-slate-800">
+                      {pricing.name}
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <div className="text-xs text-slate-600">
-                      {pricing.distanceFrom !== null && pricing.distanceTo !== null
+                      {pricing.distanceFrom !== null &&
+                      pricing.distanceTo !== null
                         ? `${pricing.distanceFrom}-${pricing.distanceTo} km`
                         : pricing.distanceFrom !== null
                         ? `>${pricing.distanceFrom} km`
@@ -360,7 +427,9 @@ function FeaturePricingManager({ feature }) {
                     </div>
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <span className="font-semibold text-slate-800">₹{pricing.amount}</span>
+                    <span className="font-semibold text-slate-800">
+                      ₹{pricing.amount}
+                    </span>
                   </td>
                   <td className="px-3 py-2 text-center">
                     <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
@@ -430,7 +499,8 @@ function AmbulanceFeatureFormModal({ editing, onClose, onSuccess }) {
     description: "",
     icon: "",
     displayOrder: 0,
-    active: true
+    active: true,
+    showInline: false
   });
   const [errors, setErrors] = useState({});
 
@@ -441,7 +511,9 @@ function AmbulanceFeatureFormModal({ editing, onClose, onSuccess }) {
         description: editing.description || "",
         icon: editing.icon || "",
         displayOrder: editing.displayOrder || 0,
-        active: editing.active !== undefined ? editing.active : true
+        active: editing.active !== undefined ? editing.active : true,
+        showInline:
+          editing.showInline !== undefined ? editing.showInline : false
       });
     }
   }, [editing]);
@@ -454,7 +526,11 @@ function AmbulanceFeatureFormModal({ editing, onClose, onSuccess }) {
       return api.post("/ambulance-features", data);
     },
     onSuccess: () => {
-      toast.success(editing ? "Feature updated successfully" : "Feature created successfully");
+      toast.success(
+        editing
+          ? "Feature updated successfully"
+          : "Feature created successfully"
+      );
       onSuccess();
     },
     onError: (err) => {
@@ -491,57 +567,103 @@ function AmbulanceFeatureFormModal({ editing, onClose, onSuccess }) {
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Name *
+            </label>
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g., Paramedic Support"
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Description
+            </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows={3}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Description of the feature..."
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Icon URL</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Icon URL
+            </label>
             <input
               type="text"
               value={formData.icon}
-              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, icon: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Icon URL (optional)"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Display Order</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Display Order
+              </label>
               <input
                 type="number"
                 value={formData.displayOrder}
-                onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    displayOrder: parseInt(e.target.value) || 0
+                  })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Status
+              </label>
               <select
                 value={formData.active}
-                onChange={(e) => setFormData({ ...formData, active: e.target.value === "true" })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    active: e.target.value === "true"
+                  })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value={true}>Active</option>
                 <option value={false}>Inactive</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.showInline}
+                onChange={(e) =>
+                  setFormData({ ...formData, showInline: e.target.checked })
+                }
+                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-slate-700">
+                Show Inline
+              </span>
+            </label>
+            <p className="text-xs text-slate-500 mt-1 ml-6">
+              Enable this to display the feature inline in the UI
+            </p>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <button
@@ -582,7 +704,8 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
   // Fetch ambulance types for dropdown
   const { data: typesData } = useQuery({
     queryKey: ["ambulance-types-all"],
-    queryFn: async () => (await api.get("/ambulance-types", { params: { pageSize: 100 } })).data,
+    queryFn: async () =>
+      (await api.get("/ambulance-types", { params: { pageSize: 100 } })).data,
     staleTime: 5 * 60 * 1000
   });
 
@@ -610,7 +733,10 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
       const payload = {
         ...data,
         featureId: Number(data.featureId),
-        ambulanceTypeId: data.ambulanceTypeId && data.ambulanceTypeId !== "" ? Number(data.ambulanceTypeId) : null,
+        ambulanceTypeId:
+          data.ambulanceTypeId && data.ambulanceTypeId !== ""
+            ? Number(data.ambulanceTypeId)
+            : null,
         distanceFrom: data.distanceFrom ? Number(data.distanceFrom) : null,
         distanceTo: data.distanceTo ? Number(data.distanceTo) : null,
         amount: Number(data.amount),
@@ -622,7 +748,11 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
       return api.post("/ambulance-feature-pricing", payload);
     },
     onSuccess: () => {
-      toast.success(editing ? "Pricing rule updated successfully" : "Pricing rule created successfully");
+      toast.success(
+        editing
+          ? "Pricing rule updated successfully"
+          : "Pricing rule created successfully"
+      );
       onSuccess();
     },
     onError: (err) => {
@@ -640,7 +770,8 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
     // Validation
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.amount || Number(formData.amount) <= 0) newErrors.amount = "Valid amount is required";
+    if (!formData.amount || Number(formData.amount) <= 0)
+      newErrors.amount = "Valid amount is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -661,10 +792,14 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Ambulance Type</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Ambulance Type
+            </label>
             <select
               value={formData.ambulanceTypeId}
-              onChange={(e) => setFormData({ ...formData, ambulanceTypeId: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, ambulanceTypeId: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="">All Types (Global Pricing)</option>
               {ambulanceTypes.map((type) => (
@@ -673,24 +808,36 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-500 mt-1">Leave empty for global pricing that applies to all ambulance types</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Leave empty for global pricing that applies to all ambulance types
+            </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Name *
+            </label>
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g., Paramedic Charges (Upto 100 Kms)"
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Description
+            </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows={2}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Description of the pricing rule..."
@@ -698,11 +845,15 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Distance From (km)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Distance From (km)
+              </label>
               <input
                 type="number"
                 value={formData.distanceFrom}
-                onChange={(e) => setFormData({ ...formData, distanceFrom: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, distanceFrom: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0"
                 min="0"
@@ -710,11 +861,15 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Distance To (km)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Distance To (km)
+              </label>
               <input
                 type="number"
                 value={formData.distanceTo}
-                onChange={(e) => setFormData({ ...formData, distanceTo: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, distanceTo: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="100 (leave empty for unlimited)"
                 min="0"
@@ -722,45 +877,69 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Amount (₹) *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Amount (₹) *
+              </label>
               <input
                 type="number"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="1000"
                 min="0"
                 step="0.01"
               />
-              {errors.amount && <p className="text-red-500 text-sm mt-1">{errors.amount}</p>}
+              {errors.amount && (
+                <p className="text-red-500 text-sm mt-1">{errors.amount}</p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Unit</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Unit
+              </label>
               <select
                 value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, unit: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="FIXED">Fixed</option>
                 <option value="PER_KM">Per KM</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Display Order</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Display Order
+              </label>
               <input
                 type="number"
                 value={formData.displayOrder}
-                onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    displayOrder: parseInt(e.target.value) || 0
+                  })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Status
+              </label>
               <select
                 value={formData.active}
-                onChange={(e) => setFormData({ ...formData, active: e.target.value === "true" })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    active: e.target.value === "true"
+                  })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value={true}>Active</option>
                 <option value={false}>Inactive</option>
@@ -786,4 +965,3 @@ function FeaturePricingFormModal({ feature, editing, onClose, onSuccess }) {
     </div>
   );
 }
-

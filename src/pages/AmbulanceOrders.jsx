@@ -13,12 +13,14 @@ import {
   Calendar,
   MapPin,
   Phone,
-  User
+  User,
+  Truck
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { Pagination } from "../components/shared";
 import useDateRange from "../hooks/useDateRange";
 import AmbulanceOrderDetailsModal from "../components/ambulance/AmbulanceOrderDetailsModal";
+import AssignAmbulanceModal from "../components/ambulance/AssignAmbulanceModal";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -685,6 +687,7 @@ export default function AmbulanceOrders() {
   const [showCalculateModal, setShowCalculateModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [viewingBooking, setViewingBooking] = useState(null);
+  const [assigningAmbulance, setAssigningAmbulance] = useState(null);
 
   // Fetch ambulance types for filter
   const { data: ambulanceTypesData } = useQuery({
@@ -798,6 +801,10 @@ export default function AmbulanceOrders() {
     } catch (err) {
       toast.error("Failed to fetch booking details");
     }
+  }, []);
+
+  const handleAssignAmbulance = useCallback((booking) => {
+    setAssigningAmbulance(booking);
   }, []);
 
   const getApprovalBadge = (approved) => {
@@ -1089,6 +1096,11 @@ export default function AmbulanceOrders() {
                             <div className="text-xs text-slate-500">
                               {item.ambulanceType.code || ""}
                             </div>
+                            {item.ambulance && (
+                              <div className="text-xs text-green-600 mt-1 font-medium">
+                                🚑 {item.ambulance.vehicleNumber}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-slate-400 text-sm">-</span>
@@ -1164,27 +1176,48 @@ export default function AmbulanceOrders() {
                               </button>
                             </>
                           )}
-                          {item.status !== "COMPLETED" &&
-                            item.approved === true && (
-                              <>
-                                {!item.totalAmount && (
-                                  <button
-                                    onClick={() => handleCalculateFinal(item)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                    title="Calculate Final">
-                                    <Calculator size={16} />
-                                  </button>
-                                )}
-                                {item.totalAmount && (
-                                  <button
-                                    onClick={() => handlePaymentComplete(item)}
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                    title="Update Payment & Complete">
-                                    <DollarSign size={16} />
-                                  </button>
-                                )}
-                              </>
-                            )}
+                          {item.approved === true && (
+                            <>
+                              {item.status !== "COMPLETED" && (
+                                <button
+                                  onClick={() => handleAssignAmbulance(item)}
+                                  className={`p-2 rounded-lg transition ${
+                                    item.ambulanceId
+                                      ? "text-purple-600 hover:bg-purple-50"
+                                      : "text-purple-600 hover:bg-purple-50"
+                                  }`}
+                                  title={
+                                    item.ambulanceId
+                                      ? "Reassign Ambulance"
+                                      : "Assign Ambulance"
+                                  }>
+                                  <Truck size={16} />
+                                </button>
+                              )}
+                              {item.status !== "COMPLETED" && (
+                                <>
+                                  {!item.totalAmount && (
+                                    <button
+                                      onClick={() => handleCalculateFinal(item)}
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                      title="Calculate Final">
+                                      <Calculator size={16} />
+                                    </button>
+                                  )}
+                                  {item.totalAmount && (
+                                    <button
+                                      onClick={() =>
+                                        handlePaymentComplete(item)
+                                      }
+                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                      title="Update Payment & Complete">
+                                      <DollarSign size={16} />
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1244,6 +1277,18 @@ export default function AmbulanceOrders() {
           onUpdated={() => {
             refetch();
             setViewingBooking(null);
+          }}
+        />
+      )}
+
+      {/* Assign Ambulance Modal */}
+      {assigningAmbulance && (
+        <AssignAmbulanceModal
+          booking={assigningAmbulance}
+          onClose={() => setAssigningAmbulance(null)}
+          onSuccess={() => {
+            refetch();
+            setAssigningAmbulance(null);
           }}
         />
       )}

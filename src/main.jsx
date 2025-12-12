@@ -31,6 +31,9 @@ import TokenWidgetPage from "./pages/TokenWidgetPage.jsx";
 import LabTestsPage from "./pages/LabTestsPage.jsx";
 import TestCategoriesPage from "./pages/TestCategoriesPage.jsx";
 import HealthPackagesPage from "./pages/HealthPackagesPage.jsx";
+// Home Healthcare Management
+import HomeHealthcareServicesPage from "./pages/HomeHealthcareServicesPage.jsx";
+import HomeHealthcarePackagesPage from "./pages/HomeHealthcarePackagesPage.jsx";
 // Ambulance Management
 import AmbulanceTypesPage from "./pages/AmbulanceTypesPage.jsx";
 import AmbulanceChargesPage from "./pages/AmbulanceChargesPage.jsx";
@@ -99,6 +102,15 @@ createRoot(document.getElementById("root")).render(
               <Route path="lab-tests" element={<LabTestsPage />} />
               <Route path="test-categories" element={<TestCategoriesPage />} />
               <Route path="health-packages" element={<HealthPackagesPage />} />
+              {/* Home Healthcare Management */}
+              <Route
+                path="home-healthcare-services"
+                element={<HomeHealthcareServicesPage />}
+              />
+              <Route
+                path="home-healthcare-packages"
+                element={<HomeHealthcarePackagesPage />}
+              />
               <Route path="feedback" element={<FeedbackPage />} />
               <Route path="banners" element={<BannersPage />} />
               <Route path="reports" element={<ReportsPage />} />

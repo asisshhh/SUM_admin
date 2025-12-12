@@ -231,12 +231,13 @@ export default function AmbulanceLogsPage() {
                 </tbody>
               </table>
             </div>
-            {total > filters.pageSize && (
-              <div className="border-t border-slate-200 p-4">
+            {total > 0 && (
+              <div className="border-t border-slate-200 p-4 bg-slate-50/50">
                 <Pagination
-                  currentPage={filters.page}
-                  totalPages={Math.ceil(total / filters.pageSize)}
-                  onPageChange={handlePageChange}
+                  page={filters.page}
+                  total={total}
+                  pageSize={filters.pageSize}
+                  onPage={handlePageChange}
                 />
               </div>
             )}

@@ -42,6 +42,14 @@ const CalculateFinalModal = React.memo(function CalculateFinalModal({
   const availableFeatures = currentBooking?.availableFeatures || [];
   const initialAmount = currentBooking?.initialAmount || 0;
 
+  // Store original pricing IDs that were paid for at booking time
+  // This represents the charges for which payment has already been done
+  const originalPaidPricingIds = useMemo(() => {
+    const originalIds = currentBooking?.selectedFeaturePricingIds || [];
+    // Normalize to numbers for consistent comparison
+    return originalIds.map((id) => Number(id));
+  }, [currentBooking?.selectedFeaturePricingIds]);
+
   // Memoize feature pricing IDs for performance
   const featurePricingMap = useMemo(() => {
     const map = new Map();
@@ -296,17 +304,31 @@ const CalculateFinalModal = React.memo(function CalculateFinalModal({
   );
 
   // Clear all pricing for a specific feature
+  // Reset to only the original charges that were paid for at booking time
   const clearFeaturePricing = useCallback(
     (featureId) => {
       setSelectedPricingIds((prev) => {
         const feature = availableFeatures.find((f) => f.id === featureId);
         if (!feature || !feature.pricing) return prev;
 
-        const featurePricingIds = feature.pricing.map((p) => p.id);
-        return prev.filter((id) => !featurePricingIds.includes(id));
+        // Get all pricing IDs for this feature
+        const featurePricingIds = feature.pricing.map((p) => Number(p.id));
+
+        // Find which of the original paid pricing IDs belong to this feature
+        const originalPaidForThisFeature = originalPaidPricingIds.filter((id) =>
+          featurePricingIds.includes(id)
+        );
+
+        // Remove all pricing IDs from this feature (both original and newly added)
+        const withoutThisFeature = prev
+          .map((id) => Number(id))
+          .filter((id) => !featurePricingIds.includes(id));
+
+        // Add back only the original paid pricing IDs for this feature
+        return [...withoutThisFeature, ...originalPaidForThisFeature];
       });
     },
-    [availableFeatures]
+    [availableFeatures, originalPaidPricingIds]
   );
 
   // Calculate final charges mutation

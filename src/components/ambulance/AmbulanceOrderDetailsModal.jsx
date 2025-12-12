@@ -97,6 +97,18 @@ const AmbulanceOrderDetailsModal = React.memo(
       });
     };
 
+    // Clear all pricing for a specific feature
+    const clearFeaturePricing = (featureId) => {
+      setSelectedPricingIds((prev) => {
+        const feature = displayFeatures.find((f) => f.id === featureId);
+        if (!feature || !feature.pricing) return prev;
+
+        const featurePricingIds = feature.pricing.map((p) => Number(p.id));
+        const normalizedPrev = prev.map((id) => Number(id));
+        return normalizedPrev.filter((id) => !featurePricingIds.includes(id));
+      });
+    };
+
     // Update booking mutation
     const updateMutation = useMutation({
       mutationFn: async (data) => {
@@ -437,90 +449,126 @@ const AmbulanceOrderDetailsModal = React.memo(
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {displayFeatures.map((feature) => (
-                      <div
-                        key={feature.id}
-                        className="bg-white border border-slate-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          {feature.icon && (
-                            <span className="text-xl">{feature.icon}</span>
-                          )}
-                          <h4 className="font-semibold text-slate-800">
-                            {feature.name}
-                          </h4>
-                          {feature.description && (
-                            <span className="text-xs text-slate-500">
-                              - {feature.description}
-                            </span>
+                    {displayFeatures.map((feature) => {
+                      // Check if any pricing is selected for this feature
+                      const featurePricingIds =
+                        feature.pricing?.map((p) => Number(p.id)) || [];
+                      const hasSelectedPricing = featurePricingIds.some((id) =>
+                        selectedPricingIds
+                          .map((pid) => Number(pid))
+                          .includes(id)
+                      );
+
+                      return (
+                        <div
+                          key={feature.id}
+                          className="bg-white border border-slate-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              {feature.icon && (
+                                <span className="text-xl">{feature.icon}</span>
+                              )}
+                              <h4 className="font-semibold text-slate-800">
+                                {feature.name}
+                              </h4>
+                              {feature.description && (
+                                <span className="text-xs text-slate-500">
+                                  - {feature.description}
+                                </span>
+                              )}
+                            </div>
+                            {isEditing &&
+                              feature.inlineui !== true &&
+                              feature.pricing &&
+                              hasSelectedPricing && (
+                                <button
+                                  onClick={() =>
+                                    clearFeaturePricing(feature.id)
+                                  }
+                                  className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg transition"
+                                  title="Clear all pricing for this feature">
+                                  <X size={14} />
+                                  Clear
+                                </button>
+                              )}
+                          </div>
+                          {feature.pricing && feature.pricing.length > 0 ? (
+                            <div className="space-y-2 ml-6">
+                              {feature.pricing.map((pricing) => {
+                                // Normalize IDs to numbers for comparison
+                                const pricingId = Number(pricing.id);
+                                const isSelected = selectedPricingIds
+                                  .map((id) => Number(id))
+                                  .includes(pricingId);
+                                return (
+                                  <label
+                                    key={pricing.id}
+                                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition ${
+                                      feature.inlineui === true
+                                        ? "cursor-default opacity-75"
+                                        : "cursor-pointer"
+                                    } ${
+                                      isSelected
+                                        ? "border-blue-500 bg-blue-50"
+                                        : "border-slate-200 bg-white hover:border-slate-300"
+                                    } ${!isEditing ? "cursor-default" : ""}`}>
+                                    <div className="flex items-center gap-3 flex-1">
+                                      {isEditing && (
+                                        <input
+                                          type="radio"
+                                          name={`feature-${feature.id}`}
+                                          checked={isSelected}
+                                          disabled={feature.inlineui === true}
+                                          onChange={() =>
+                                            feature.inlineui !== true &&
+                                            togglePricing(
+                                              pricing.id,
+                                              feature.id
+                                            )
+                                          }
+                                          className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        />
+                                      )}
+                                      <div className="flex-1">
+                                        <div className="font-medium text-slate-800 text-sm">
+                                          {pricing.name}
+                                        </div>
+                                        {pricing.description && (
+                                          <div className="text-xs text-slate-500 mt-0.5">
+                                            {pricing.description}
+                                          </div>
+                                        )}
+                                        {(pricing.distanceFrom !== null ||
+                                          pricing.distanceTo !== null) && (
+                                          <div className="text-xs text-slate-400 mt-1">
+                                            Distance:{" "}
+                                            {pricing.distanceFrom !== null
+                                              ? `${pricing.distanceFrom}`
+                                              : "0"}
+                                            {" - "}
+                                            {pricing.distanceTo !== null
+                                              ? `${pricing.distanceTo}`
+                                              : "unlimited"}{" "}
+                                            km
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="font-semibold text-slate-800 ml-4">
+                                      ₹{pricing.amount}
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-slate-400 ml-6">
+                              No pricing options available
+                            </div>
                           )}
                         </div>
-                        {feature.pricing && feature.pricing.length > 0 ? (
-                          <div className="space-y-2 ml-6">
-                            {feature.pricing.map((pricing) => {
-                              // Normalize IDs to numbers for comparison
-                              const pricingId = Number(pricing.id);
-                              const isSelected = selectedPricingIds
-                                .map((id) => Number(id))
-                                .includes(pricingId);
-                              return (
-                                <label
-                                  key={pricing.id}
-                                  className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition ${
-                                    isSelected
-                                      ? "border-blue-500 bg-blue-50"
-                                      : "border-slate-200 bg-white hover:border-slate-300"
-                                  } ${!isEditing ? "cursor-default" : ""}`}>
-                                  <div className="flex items-center gap-3 flex-1">
-                                    {isEditing && (
-                                      <input
-                                        type="radio"
-                                        name={`feature-${feature.id}`}
-                                        checked={isSelected}
-                                        onChange={() =>
-                                          togglePricing(pricing.id, feature.id)
-                                        }
-                                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                                      />
-                                    )}
-                                    <div className="flex-1">
-                                      <div className="font-medium text-slate-800 text-sm">
-                                        {pricing.name}
-                                      </div>
-                                      {pricing.description && (
-                                        <div className="text-xs text-slate-500 mt-0.5">
-                                          {pricing.description}
-                                        </div>
-                                      )}
-                                      {(pricing.distanceFrom !== null ||
-                                        pricing.distanceTo !== null) && (
-                                        <div className="text-xs text-slate-400 mt-1">
-                                          Distance:{" "}
-                                          {pricing.distanceFrom !== null
-                                            ? `${pricing.distanceFrom}`
-                                            : "0"}
-                                          {" - "}
-                                          {pricing.distanceTo !== null
-                                            ? `${pricing.distanceTo}`
-                                            : "unlimited"}{" "}
-                                          km
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="font-semibold text-slate-800 ml-4">
-                                    ₹{pricing.amount}
-                                  </div>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-slate-400 ml-6">
-                            No pricing options available
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -22,7 +22,7 @@ import AppointmentOrders from "./pages/AppointmentOrders.jsx";
 import AmbulanceOrders from "./pages/AmbulanceOrders.jsx";
 import PackageOrders from "./pages/PackageOrders.jsx";
 import LabOrders from "./pages/LabOrders.jsx";
-import HomecareOrders from "./pages/HomecareOrders.jsx";
+import HomeHealthcareOrders from "./pages/HomeHealthcareOrders.jsx";
 import DoctorQueue from "./pages/DoctorQueue.jsx";
 import DoctorQueueMonitor from "./pages/DoctorQueueMonitor.jsx";
 import DoctorActionPanel from "./pages/DoctorActionPanel.jsx";
@@ -70,7 +70,7 @@ createRoot(document.getElementById("root")).render(
                 <Route path="ambulance" element={<AmbulanceOrders />} />
                 <Route path="packages" element={<PackageOrders />} />
                 <Route path="lab" element={<LabOrders />} />
-                {/* <Route path="homecare" element={<HomecareOrders />} /> */}
+                <Route path="homecare" element={<HomeHealthcareOrders />} />
               </Route>
               <Route path="doctor-queue" element={<DoctorQueue />} />
               <Route

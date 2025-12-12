@@ -5,7 +5,7 @@ import api from "../api/client";
 import useDateRange from "../hooks/useDateRange";
 import OrderDetailsModal from "../components/OrderDetailsModal";
 import { printReceipt } from "../components/ReceiptPrint";
-import io from "socket.io-client";
+import Socket from "../utils/SocketManager";
 
 // Import modular components
 import {
@@ -155,15 +155,19 @@ export default function AppointmentOrders() {
 
   // Socket connection
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const socket = io(import.meta.env.VITE_SOCKET_URL, { auth: { token } });
-    setSocketInstance(socket);
-
     const refresh = () => load(1);
-    socket.on("queueUpdatedForAllDoctors", refresh);
-    socket.on("queueUpdated", refresh);
+    const offQueueUpdatedForAll = Socket.on(
+      "queueUpdatedForAllDoctors",
+      refresh
+    );
+    const offQueueUpdated = Socket.on("queueUpdated", refresh);
 
-    return () => socket.disconnect();
+    setSocketInstance(Socket.getSocket());
+
+    return () => {
+      offQueueUpdatedForAll();
+      offQueueUpdated();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ═══════════════════════════════════════════════════════════════════

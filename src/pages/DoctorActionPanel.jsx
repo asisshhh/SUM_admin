@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/client";
-import { getSocket } from "../lib/socket.js";
+import Socket from "../utils/SocketManager";
 
 export default function DoctorActionPanel() {
   const { doctorId } = useParams();
@@ -31,20 +31,22 @@ export default function DoctorActionPanel() {
 
   useEffect(() => {
     load();
-    const socket = getSocket();
-    socket.emit("joinDoctorRoom", { doctorId: Number(doctorId), date: today });
-    socket.on("queueUpdated", load);
-    return () => socket.disconnect();
+    Socket.emit("joinDoctorRoom", { doctorId: Number(doctorId), date: today });
+    const offQueueUpdated = Socket.on("queueUpdated", load);
+    return () => {
+      offQueueUpdated();
+    };
   }, [doctorId, load, today]);
 
   const callNext = async () => {
-    const socket = getSocket();
-    socket.emit("doctorNext", { doctorId: Number(doctorId), date: today });
+    await Socket.emit("doctorNext", {
+      doctorId: Number(doctorId),
+      date: today
+    });
   };
 
   const skip = async () => {
-    const socket = getSocket();
-    socket.emit("doctorSkip", {
+    await Socket.emit("doctorSkip", {
       doctorId: Number(doctorId),
       date: today,
       reason: "Skipped by doctor"

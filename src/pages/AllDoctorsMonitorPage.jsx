@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getSocket } from "../lib/socket.js";
+import Socket from "../utils/SocketManager";
 import api from "../api/client";
 import {
   Stethoscope,
@@ -65,24 +65,28 @@ export default function AllDoctorsMonitor() {
   // SOCKET LIVE UPDATES
   // -------------------------------------------------------
   useEffect(() => {
-    socketRef.current = getSocket();
+    socketRef.current = Socket.getSocket();
 
-    socketRef.current.on("connect", () => {
+    const offConnect = Socket.onConnect(() => {
       console.log("📡 All Doctors Monitor Connected");
     });
 
     // whenever any doctor queue changes
-    socketRef.current.on("queueUpdatedForAllDoctors", () => {
+    const offQueueUpdatedForAll = Socket.on("queueUpdatedForAllDoctors", () => {
       console.log("🔄 Monitor refresh triggered");
       loadData();
     });
 
-    socketRef.current.on("queueUpdated", () => {
+    const offQueueUpdated = Socket.on("queueUpdated", () => {
       console.log("🔄 Individual queue updated");
       loadData();
     });
 
-    return () => socketRef.current.disconnect();
+    return () => {
+      offConnect();
+      offQueueUpdatedForAll();
+      offQueueUpdated();
+    };
   }, []);
 
   // Init Load

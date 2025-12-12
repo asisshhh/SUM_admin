@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { io } from "socket.io-client";
+import Socket from "../utils/SocketManager";
 import api from "../api/client";
 import useDateRange from "../hooks/useDateRange";
-
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export default function ReceptionistCheckin({ doctorId }) {
   const { fromDate, buildDateParams } = useDateRange(); // default = today
@@ -13,24 +11,21 @@ export default function ReceptionistCheckin({ doctorId }) {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    const s = io(SOCKET_URL, {
-      path: "/socket.io",
-      auth: { token: token ? `Bearer ${token}` : "" }
-    });
-
-    setSocket(s);
-
-    s.on("connect", () => {
+    const offConnect = Socket.onConnect(() => {
       console.log("Reception connected");
     });
 
-    s.on("actionSuccess", (m) => console.log("Success:", m));
-    s.on("actionError", (m) => alert(m.message));
+    const offActionSuccess = Socket.on("actionSuccess", (m) =>
+      console.log("Success:", m)
+    );
+    const offActionError = Socket.on("actionError", (m) => alert(m.message));
+
+    setSocket(Socket.getSocket());
 
     return () => {
-      s.disconnect();
+      offConnect();
+      offActionSuccess();
+      offActionError();
     };
   }, []);
 

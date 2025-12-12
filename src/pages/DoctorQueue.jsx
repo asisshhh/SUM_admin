@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import io from "socket.io-client";
+import Socket from "../utils/SocketManager";
 import api from "../api/client";
 import { Users, User, Phone, Clock, Loader2, RefreshCw } from "lucide-react";
 
@@ -104,20 +104,13 @@ export default function DoctorQueue() {
   // Socket initialization and handlers
   useEffect(() => {
     setConnecting(true);
-    const token = localStorage.getItem("token");
-    const socket = io(import.meta.env.VITE_SOCKET_URL, {
-      auth: { token },
-      transports: ["websocket"]
-    });
-
-    socketRef.current = socket;
 
     const handleConnect = () => {
       setConnecting(false);
-      console.log("socket connected", socket.id);
+      console.log("socket connected", Socket.getSocket()?.id);
       // If doctor already selected, join its room
       if (doctor) {
-        socket.emit("joinDoctorRoom", { doctorId: doctor, date: today });
+        Socket.emit("joinDoctorRoom", { doctorId: doctor, date: today });
       }
     };
 
@@ -146,21 +139,27 @@ export default function DoctorQueue() {
       if (!date || date === today) loadQueue(doctor);
     };
 
-    socket.on("connect", handleConnect);
-    socket.on("connect_error", handleConnectError);
-    socket.on("queueUpdated", handleQueueUpdated);
-    socket.on("queueUpdatedForAllDoctors", handleQueueUpdatedForAll);
+    // Use centralized SocketManager
+    const offConnect = Socket.onConnect(handleConnect);
+    const offConnectError = Socket.on("connect_error", handleConnectError);
+    const offQueueUpdated = Socket.on("queueUpdated", handleQueueUpdated);
+    const offQueueUpdatedForAll = Socket.on(
+      "queueUpdatedForAllDoctors",
+      handleQueueUpdatedForAll
+    );
+
+    // If already connected, trigger connect handler
+    if (Socket.isConnected()) {
+      handleConnect();
+    }
+
+    socketRef.current = Socket.getSocket();
 
     return () => {
-      try {
-        socket.off("connect", handleConnect);
-        socket.off("connect_error", handleConnectError);
-        socket.off("queueUpdated", handleQueueUpdated);
-        socket.off("queueUpdatedForAllDoctors", handleQueueUpdatedForAll);
-        socket.disconnect();
-      } catch (e) {
-        // ignore
-      }
+      offConnect();
+      offConnectError();
+      offQueueUpdated();
+      offQueueUpdatedForAll();
       socketRef.current = null;
       setConnecting(false);
     };
@@ -169,8 +168,8 @@ export default function DoctorQueue() {
 
   // join room whenever doctor changes
   useEffect(() => {
-    const s = socketRef.current;
-    if (!s) return;
+    const s = Socket.getSocket();
+    if (!s || !Socket.isConnected()) return;
     if (!doctor) {
       setQueue([]);
       return;

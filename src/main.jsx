@@ -22,7 +22,7 @@ import AppointmentOrders from "./pages/AppointmentOrders.jsx";
 import AmbulanceOrders from "./pages/AmbulanceOrders.jsx";
 import PackageOrders from "./pages/PackageOrders.jsx";
 import LabOrders from "./pages/LabOrders.jsx";
-import HomecareOrders from "./pages/HomecareOrders.jsx";
+import HomeHealthcareOrders from "./pages/HomeHealthcareOrders.jsx";
 import DoctorQueue from "./pages/DoctorQueue.jsx";
 import DoctorQueueMonitor from "./pages/DoctorQueueMonitor.jsx";
 import DoctorActionPanel from "./pages/DoctorActionPanel.jsx";
@@ -31,6 +31,15 @@ import TokenWidgetPage from "./pages/TokenWidgetPage.jsx";
 import LabTestsPage from "./pages/LabTestsPage.jsx";
 import TestCategoriesPage from "./pages/TestCategoriesPage.jsx";
 import HealthPackagesPage from "./pages/HealthPackagesPage.jsx";
+// Home Healthcare Management
+import HomeHealthcareServicesPage from "./pages/HomeHealthcareServicesPage.jsx";
+import HomeHealthcarePackagesPage from "./pages/HomeHealthcarePackagesPage.jsx";
+// Ambulance Management
+import AmbulanceTypesPage from "./pages/AmbulanceTypesPage.jsx";
+import AmbulanceChargesPage from "./pages/AmbulanceChargesPage.jsx";
+import AmbulanceFeaturesPage from "./pages/AmbulanceFeaturesPage.jsx";
+import DriversPage from "./pages/DriversPage.jsx";
+import AmbulanceLogsPage from "./pages/AmbulanceLogsPage.jsx";
 
 const qc = new QueryClient();
 const token = () => localStorage.getItem("token");
@@ -44,53 +53,70 @@ createRoot(document.getElementById("root")).render(
     <QueryClientProvider client={qc}>
       <ConfirmProvider>
         <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <AppLayout />
-              </PrivateRoute>
-            }>
-            <Route index element={<Dashboard />} />
-            {/* <Route path="orders" element={<OrdersPage />} /> */}
-            <Route path="orders" element={<OrderLayout />}>
-              <Route index element={<Navigate to="appointments" replace />} />
-              <Route path="appointments" element={<AppointmentOrders />} />
-              <Route path="ambulance" element={<AmbulanceOrders />} />
-              <Route path="packages" element={<PackageOrders />} />
-              <Route path="lab" element={<LabOrders />} />
-              {/* <Route path="homecare" element={<HomecareOrders />} /> */}
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <AppLayout />
+                </PrivateRoute>
+              }>
+              <Route index element={<Dashboard />} />
+              {/* <Route path="orders" element={<OrdersPage />} /> */}
+              <Route path="orders" element={<OrderLayout />}>
+                <Route index element={<Navigate to="appointments" replace />} />
+                <Route path="appointments" element={<AppointmentOrders />} />
+                <Route path="ambulance" element={<AmbulanceOrders />} />
+                <Route path="packages" element={<PackageOrders />} />
+                <Route path="lab" element={<LabOrders />} />
+                <Route path="homecare" element={<HomeHealthcareOrders />} />
+              </Route>
+              <Route path="doctor-queue" element={<DoctorQueue />} />
+              <Route
+                path="doctor/queue-monitor/:doctorId"
+                element={<DoctorQueueMonitor />}
+              />
+              <Route
+                path="doctor/actions/:doctorId"
+                element={<DoctorActionPanel />}
+              />
+              <Route
+                path="widgets/token/:doctorId"
+                element={<TokenWidgetPage />}
+              />
+              <Route path="doctors" element={<DoctorsPage />} />
+              <Route path="doctors/:id" element={<DoctorDetail />} />
+              <Route path="departments" element={<DepartmentsPage />} />
+              <Route path="departments/:id" element={<DepartmentDetail />} />
+              <Route path="ambulance" element={<AmbulancePage />} />
+              {/* Ambulance Management */}
+              <Route path="ambulance-types" element={<AmbulanceTypesPage />} />
+              <Route
+                path="ambulance-features"
+                element={<AmbulanceFeaturesPage />}
+              />
+              <Route path="drivers" element={<DriversPage />} />
+              <Route path="ambulance-logs" element={<AmbulanceLogsPage />} />
+              {/* Lab Tests & Packages Management */}
+              <Route path="lab-tests" element={<LabTestsPage />} />
+              <Route path="test-categories" element={<TestCategoriesPage />} />
+              <Route path="health-packages" element={<HealthPackagesPage />} />
+              {/* Home Healthcare Management */}
+              <Route
+                path="home-healthcare-services"
+                element={<HomeHealthcareServicesPage />}
+              />
+              <Route
+                path="home-healthcare-packages"
+                element={<HomeHealthcarePackagesPage />}
+              />
+              <Route path="feedback" element={<FeedbackPage />} />
+              <Route path="banners" element={<BannersPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="doctor-calendar" element={<DoctorCalendarPage />} />
             </Route>
-            <Route path="doctor-queue" element={<DoctorQueue />} />
-            <Route
-              path="doctor/queue-monitor/:doctorId"
-              element={<DoctorQueueMonitor />}
-            />
-            <Route
-              path="doctor/actions/:doctorId"
-              element={<DoctorActionPanel />}
-            />
-            <Route
-              path="widgets/token/:doctorId"
-              element={<TokenWidgetPage />}
-            />
-            <Route path="doctors" element={<DoctorsPage />} />
-            <Route path="doctors/:id" element={<DoctorDetail />} />
-            <Route path="departments" element={<DepartmentsPage />} />
-            <Route path="departments/:id" element={<DepartmentDetail />} />
-            <Route path="ambulance" element={<AmbulancePage />} />
-            {/* Lab Tests & Packages Management */}
-            <Route path="lab-tests" element={<LabTestsPage />} />
-            <Route path="test-categories" element={<TestCategoriesPage />} />
-            <Route path="health-packages" element={<HealthPackagesPage />} />
-            <Route path="feedback" element={<FeedbackPage />} />
-            <Route path="banners" element={<BannersPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="doctor-calendar" element={<DoctorCalendarPage />} />
-          </Route>
-        </Routes>
+          </Routes>
         </BrowserRouter>
       </ConfirmProvider>
     </QueryClientProvider>

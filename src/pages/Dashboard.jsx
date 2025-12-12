@@ -21,21 +21,40 @@ const Dashboard = () => {
   }, []);
 
   const loadSummary = async () => {
-    const res = await api.get("/analytics/summary");
-    setSummary(res.data);
+    try {
+      const res = await api.get("/analytics/summary");
+      setSummary(res.data);
+    } catch (err) {
+      console.error("Failed to load analytics summary:", err);
+      // Set default values on error
+      setSummary({
+        appointmentsToday: 0,
+        totalAppointments: 0,
+        totalDoctors: 0,
+        totalPatients: 0,
+        pendingAmbulances: 0,
+        totalPackageOrders: 0,
+        totalRevenue: 0
+      });
+    }
   };
 
   const loadGraph = async () => {
-    const res = await api.get("/analytics/appointments-graph");
-    setAppointmentGraph(
-      res.data.map((d) => ({
-        day: new Date(d.day).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short"
-        }),
-        count: Number(d.count)
-      }))
-    );
+    try {
+      const res = await api.get("/analytics/appointments-graph");
+      setAppointmentGraph(
+        res.data.map((d) => ({
+          day: new Date(d.day).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short"
+          }),
+          count: Number(d.count)
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to load appointments graph:", err);
+      setAppointmentGraph([]);
+    }
   };
 
   return (

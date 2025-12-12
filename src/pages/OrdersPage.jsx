@@ -10,7 +10,7 @@ import OrderDetailsModal from "../components/OrderDetailsModal";
 import LabOrderViewModal from "../components/orders/LabOrderViewModal";
 import PackageOrderViewModal from "../components/orders/PackageOrderViewModal";
 import { printReceipt } from "../components/ReceiptPrint";
-import io from "socket.io-client";
+import Socket from "../utils/SocketManager";
 import {
   Calendar,
   Stethoscope,
@@ -276,15 +276,19 @@ export default function OrdersPage() {
   }, [department]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const socket = io(import.meta.env.VITE_SOCKET_URL, { auth: { token } });
-    setSocketInstance(socket);
-
     const refresh = () => load(1);
-    socket.on("queueUpdatedForAllDoctors", refresh);
-    socket.on("queueUpdated", refresh);
+    const offQueueUpdatedForAll = Socket.on(
+      "queueUpdatedForAllDoctors",
+      refresh
+    );
+    const offQueueUpdated = Socket.on("queueUpdated", refresh);
 
-    return () => socket.disconnect();
+    setSocketInstance(Socket.getSocket());
+
+    return () => {
+      offQueueUpdatedForAll();
+      offQueueUpdated();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ═══════════════════════════════════════════════════════════════════

@@ -1,14 +1,15 @@
-import { io } from "socket.io-client";
+// DEPRECATED: Use SocketManager from ../utils/SocketManager.js instead
+// This file is kept for backward compatibility but redirects to SocketManager
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
+import Socket from "../utils/SocketManager";
 
+/**
+ * @deprecated Use Socket.getSocket() from SocketManager instead
+ * This function is kept for backward compatibility
+ */
 export function getSocket() {
-  const token = localStorage.getItem("token");
-
-  return io(SOCKET_URL, {
-    path: "/socket.io",
-    auth: {
-      token: token ? `Bearer ${token}` : ""
-    }
-  });
+  console.warn(
+    "getSocket() from lib/socket.js is deprecated. Use Socket.getSocket() from utils/SocketManager.js instead."
+  );
+  return Socket.getSocket();
 }

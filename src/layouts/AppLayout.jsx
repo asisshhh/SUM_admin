@@ -12,7 +12,10 @@ import {
   ListChecks,
   FlaskConical,
   FolderTree,
-  Gift
+  Gift,
+  Settings,
+  Home,
+  Package
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -70,15 +73,53 @@ export default function AppLayout() {
             label="Doctor Calendar"
           />
           <NavItem to="/departments" icon={Building2} label="Departments" />
-          <NavItem to="/ambulance" icon={Ambulance} label="Ambulance" />
+
+          {/* Ambulance Section */}
+          <div className="mt-4 mb-2 px-4">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Ambulance
+            </span>
+          </div>
+          <NavItem to="/ambulance" icon={Ambulance} label="Ambulances" />
+          <NavItem
+            to="/ambulance-types"
+            icon={Ambulance}
+            label="Ambulance Types"
+          />
+          <NavItem to="/ambulance-features" icon={Settings} label="Features" />
+          <NavItem to="/drivers" icon={Ambulance} label="Drivers" />
+          <NavItem to="/ambulance-logs" icon={Ambulance} label="Logs" />
 
           {/* Lab & Packages Section */}
           <div className="mt-4 mb-2 px-4">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lab & Packages</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Lab & Packages
+            </span>
           </div>
-          <NavItem to="/test-categories" icon={FolderTree} label="Test Categories" />
+          <NavItem
+            to="/test-categories"
+            icon={FolderTree}
+            label="Test Categories"
+          />
           <NavItem to="/lab-tests" icon={FlaskConical} label="Lab Tests" />
           <NavItem to="/health-packages" icon={Gift} label="Health Packages" />
+
+          {/* Home Healthcare Section */}
+          <div className="mt-4 mb-2 px-4">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Home Healthcare
+            </span>
+          </div>
+          <NavItem
+            to="/home-healthcare-services"
+            icon={Home}
+            label="Services"
+          />
+          <NavItem
+            to="/home-healthcare-packages"
+            icon={Package}
+            label="Packages"
+          />
 
           <NavItem to="/feedback" icon={MessageSquare} label="Feedback" />
           <NavItem to="/banners" icon={Image} label="Banners" />

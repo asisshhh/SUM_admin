@@ -70,6 +70,12 @@ echo "Preparing target directory: $TARGET_DIR"
 mkdir -p "$TARGET_DIR"
 
 echo "Syncing build artifacts to $TARGET_DIR"
-rsync -a --delete --exclude '.DS_Store' "$WORK_DIR/dist/" "$TARGET_DIR/"
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --delete --exclude '.DS_Store' "$WORK_DIR/dist/" "$TARGET_DIR/"
+else
+  echo "rsync not found; using cp fallback (clearing target first)"
+  rm -rf "$TARGET_DIR"/*
+  cp -a "$WORK_DIR/dist/." "$TARGET_DIR/"
+fi
 
 echo "Deploy completed."

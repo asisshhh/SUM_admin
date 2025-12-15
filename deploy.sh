@@ -12,6 +12,7 @@ set -euo pipefail
 #   BRANCH     : branch to deploy (default: main)
 #   TARGET_DIR : destination for built assets (default: ../frontend_app)
 #   USE_LOCAL  : true/false. If true (default), use current dir repo and pull. If false, fresh clone to temp dir.
+#   AUTO_STASH : true/false. If true (default), stash local changes before pull to avoid conflicts (stash kept).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_URL="${REPO_URL:-https://github.com/asisshhh/SUM_admin.git}"
@@ -34,6 +35,14 @@ if [[ "${USE_LOCAL:-true}" != "true" ]]; then
 else
   if [[ -d "$WORK_DIR/.git" ]]; then
     echo "Using existing repo at $WORK_DIR (branch: $BRANCH); pulling latest..."
+    # Auto-stash local changes to avoid merge conflicts
+    if [[ "${AUTO_STASH:-true}" == "true" ]]; then
+      if ! git -C "$WORK_DIR" diff --quiet || ! git -C "$WORK_DIR" diff --cached --quiet; then
+        STASH_MSG="deploy-$(date +%Y%m%d%H%M%S)"
+        echo "Local changes detected. Stashing with message: $STASH_MSG"
+        git -C "$WORK_DIR" stash push --include-untracked -m "$STASH_MSG" || true
+      fi
+    fi
     git -C "$WORK_DIR" fetch origin "$BRANCH"
     git -C "$WORK_DIR" checkout "$BRANCH"
     git -C "$WORK_DIR" pull --ff-only origin "$BRANCH"

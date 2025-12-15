@@ -78,6 +78,13 @@ npm run build
 echo "Preparing target directory: $TARGET_DIR"
 mkdir -p "$TARGET_DIR"
 
+echo "Checking write access to $TARGET_DIR"
+if ! touch "$TARGET_DIR/.deploy_write_test" 2>/dev/null; then
+  echo "ERROR: No write permission to $TARGET_DIR. Please adjust ownership/permissions or run with sudo." >&2
+  exit 1
+fi
+rm -f "$TARGET_DIR/.deploy_write_test" || true
+
 echo "Syncing build artifacts to $TARGET_DIR"
 if command -v rsync >/dev/null 2>&1; then
   rsync -a --delete --exclude '.DS_Store' "$WORK_DIR/dist/" "$TARGET_DIR/"

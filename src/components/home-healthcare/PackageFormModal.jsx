@@ -26,8 +26,6 @@ function PackageFormModal({ pkg, onClose }) {
     mrp: pkg?.mrp || "",
     validityDays: pkg?.validityDays || "",
     duration: pkg?.duration || "",
-    imageUrl: pkg?.imageUrl || "",
-    bannerUrl: pkg?.bannerUrl || "",
     popular: pkg?.popular ?? false,
     featured: pkg?.featured ?? false,
     displayOrder: pkg?.displayOrder || 0,
@@ -81,21 +79,6 @@ function PackageFormModal({ pkg, onClose }) {
       }
     }
 
-    if (form.imageUrl && form.imageUrl.trim()) {
-      try {
-        new URL(form.imageUrl);
-      } catch {
-        errs.imageUrl = "Please enter a valid URL";
-      }
-    }
-
-    if (form.bannerUrl && form.bannerUrl.trim()) {
-      try {
-        new URL(form.bannerUrl);
-      } catch {
-        errs.bannerUrl = "Please enter a valid URL";
-      }
-    }
 
     if (form.shortDesc && form.shortDesc.length > 300) {
       errs.shortDesc = "Short description cannot exceed 300 characters";
@@ -160,8 +143,6 @@ function PackageFormModal({ pkg, onClose }) {
       mrp: form.mrp ? parseFloat(form.mrp) : null,
       validityDays: form.validityDays ? parseInt(form.validityDays) : null,
       duration: form.duration ? parseInt(form.duration) : null,
-      imageUrl: form.imageUrl?.trim() || null,
-      bannerUrl: form.bannerUrl?.trim() || null,
       popular: form.popular,
       featured: form.featured,
       displayOrder: parseInt(form.displayOrder) || 0,
@@ -396,37 +377,6 @@ function PackageFormModal({ pkg, onClose }) {
                 onChange={(e) => updateField("displayOrder", e.target.value)}
                 min="0"
               />
-            </div>
-          </div>
-
-          {/* Image URLs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Image URL</label>
-              <input
-                className={inputClass("imageUrl")}
-                value={form.imageUrl}
-                onChange={(e) => updateField("imageUrl", e.target.value)}
-                onBlur={() => handleBlur("imageUrl")}
-                placeholder="https://..."
-              />
-              {touched.imageUrl && errors.imageUrl && (
-                <p className="text-xs text-red-500">{errors.imageUrl}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Banner URL</label>
-              <input
-                className={inputClass("bannerUrl")}
-                value={form.bannerUrl}
-                onChange={(e) => updateField("bannerUrl", e.target.value)}
-                onBlur={() => handleBlur("bannerUrl")}
-                placeholder="https://..."
-              />
-              {touched.bannerUrl && errors.bannerUrl && (
-                <p className="text-xs text-red-500">{errors.bannerUrl}</p>
-              )}
             </div>
           </div>
 

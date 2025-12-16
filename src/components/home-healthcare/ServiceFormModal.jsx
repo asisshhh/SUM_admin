@@ -29,8 +29,6 @@ function ServiceFormModal({ service, onClose }) {
     mrp: service?.mrp || "",
     duration: service?.duration || "",
     categoryId: service?.categoryId || "",
-    imageUrl: service?.imageUrl || "",
-    bannerUrl: service?.bannerUrl || "",
     requirements: service?.requirements || "",
     popular: service?.popular ?? false,
     featured: service?.featured ?? false,
@@ -74,22 +72,6 @@ function ServiceFormModal({ service, onClose }) {
       errs.duration = "Duration is required";
     } else if (parseInt(form.duration) <= 0) {
       errs.duration = "Duration must be greater than 0 minutes";
-    }
-
-    if (form.imageUrl && form.imageUrl.trim()) {
-      try {
-        new URL(form.imageUrl);
-      } catch {
-        errs.imageUrl = "Please enter a valid URL";
-      }
-    }
-
-    if (form.bannerUrl && form.bannerUrl.trim()) {
-      try {
-        new URL(form.bannerUrl);
-      } catch {
-        errs.bannerUrl = "Please enter a valid URL";
-      }
     }
 
     if (form.shortDesc && form.shortDesc.length > 300) {
@@ -152,8 +134,6 @@ function ServiceFormModal({ service, onClose }) {
       duration: parseInt(form.duration),
       displayOrder: parseInt(form.displayOrder) || 0,
       categoryId: form.categoryId ? parseInt(form.categoryId) : null,
-      imageUrl: form.imageUrl || null,
-      bannerUrl: form.bannerUrl || null,
       description: form.description || null,
       shortDesc: form.shortDesc || null,
       requirements: form.requirements || null
@@ -350,39 +330,6 @@ function ServiceFormModal({ service, onClose }) {
               placeholder="Any special requirements or instructions"
               rows={3}
             />
-          </div>
-
-          {/* Image URLs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Image URL</label>
-              <input
-                type="url"
-                className={inputClass("imageUrl")}
-                value={form.imageUrl}
-                onChange={(e) => updateField("imageUrl", e.target.value)}
-                onBlur={() => handleBlur("imageUrl")}
-                placeholder="https://..."
-              />
-              {touched.imageUrl && errors.imageUrl && (
-                <p className="text-xs text-red-500">{errors.imageUrl}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Banner URL</label>
-              <input
-                type="url"
-                className={inputClass("bannerUrl")}
-                value={form.bannerUrl}
-                onChange={(e) => updateField("bannerUrl", e.target.value)}
-                onBlur={() => handleBlur("bannerUrl")}
-                placeholder="https://..."
-              />
-              {touched.bannerUrl && errors.bannerUrl && (
-                <p className="text-xs text-red-500">{errors.bannerUrl}</p>
-              )}
-            </div>
           </div>
 
           {/* Display Options */}

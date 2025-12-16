@@ -13,7 +13,6 @@ export default function PackageModal({ pkg = {}, onClose }) {
     description: pkg.description || "",
     validityDays: pkg.validityDays || "",
     category: pkg.category || "",
-    imageUrl: pkg.imageUrl || "",
     active: pkg.active ?? true
   });
 
@@ -73,15 +72,6 @@ export default function PackageModal({ pkg = {}, onClose }) {
               className="input"
               value={form.category}
               onChange={(e) => update("category", e.target.value)}
-            />
-          </div>
-
-          <div className="col-span-2">
-            <label className="text-sm">Image URL</label>
-            <input
-              className="input"
-              value={form.imageUrl}
-              onChange={(e) => update("imageUrl", e.target.value)}
             />
           </div>
 

@@ -1,7 +1,15 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/client";
-import { Package, X, AlertCircle, Star, Sparkles, Check, FlaskConical } from "lucide-react";
+import {
+  Package,
+  X,
+  AlertCircle,
+  Star,
+  Sparkles,
+  Check,
+  FlaskConical
+} from "lucide-react";
 import TestSelector from "./TestSelector";
 
 function PackageFormModal({ pkg, onClose }) {
@@ -16,7 +24,6 @@ function PackageFormModal({ pkg, onClose }) {
     discountPrice: pkg?.discountPrice || "",
     mrp: pkg?.mrp || "",
     validityDays: pkg?.validityDays || "",
-    imageUrl: pkg?.imageUrl || "",
     preparation: pkg?.preparation || "",
     reportTime: pkg?.reportTime || "",
     sampleType: pkg?.sampleType || "",
@@ -24,7 +31,7 @@ function PackageFormModal({ pkg, onClose }) {
     featured: pkg?.featured ?? false,
     displayOrder: pkg?.displayOrder || 0,
     active: pkg?.active ?? true,
-    testIds: pkg?.tests?.map(t => t.testId || t.id) || []
+    testIds: pkg?.tests?.map((t) => t.testId || t.id) || []
   }));
 
   const [errors, setErrors] = useState({});
@@ -66,14 +73,6 @@ function PackageFormModal({ pkg, onClose }) {
       }
     }
 
-    if (form.imageUrl && form.imageUrl.trim()) {
-      try {
-        new URL(form.imageUrl);
-      } catch {
-        errs.imageUrl = "Please enter a valid URL";
-      }
-    }
-
     if (form.shortDesc && form.shortDesc.length > 300) {
       errs.shortDesc = "Short description cannot exceed 300 characters";
     }
@@ -86,10 +85,13 @@ function PackageFormModal({ pkg, onClose }) {
     return errs;
   }, [form]);
 
-  const handleBlur = useCallback((field) => {
-    setTouched((t) => ({ ...t, [field]: true }));
-    validate();
-  }, [validate]);
+  const handleBlur = useCallback(
+    (field) => {
+      setTouched((t) => ({ ...t, [field]: true }));
+      validate();
+    },
+    [validate]
+  );
 
   const updateField = useCallback((field, value) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -110,7 +112,10 @@ function PackageFormModal({ pkg, onClose }) {
   });
 
   const handleSubmit = useCallback(() => {
-    const allTouched = Object.keys(form).reduce((acc, key) => ({ ...acc, [key]: true }), {});
+    const allTouched = Object.keys(form).reduce(
+      (acc, key) => ({ ...acc, [key]: true }),
+      {}
+    );
     setTouched(allTouched);
 
     const errs = validate();
@@ -124,7 +129,6 @@ function PackageFormModal({ pkg, onClose }) {
       discountPrice: form.discountPrice ? parseFloat(form.discountPrice) : null,
       mrp: form.mrp ? parseFloat(form.mrp) : null,
       validityDays: form.validityDays ? parseInt(form.validityDays) : null,
-      imageUrl: form.imageUrl?.trim() || null,
       preparation: form.preparation?.trim() || null,
       reportTime: form.reportTime?.trim() || null,
       sampleType: form.sampleType?.trim() || null,
@@ -139,12 +143,16 @@ function PackageFormModal({ pkg, onClose }) {
   }, [form, validate, save]);
 
   const inputClass = (field) =>
-    `input ${touched[field] && errors[field] ? "border-red-500 focus:ring-red-500" : ""}`;
+    `input ${
+      touched[field] && errors[field] ? "border-red-500 focus:ring-red-500" : ""
+    }`;
 
   // Calculate savings
   const savings = useMemo(() => {
     if (form.price && form.discountPrice) {
-      return (parseFloat(form.price) - parseFloat(form.discountPrice)).toFixed(0);
+      return (parseFloat(form.price) - parseFloat(form.discountPrice)).toFixed(
+        0
+      );
     }
     return null;
   }, [form.price, form.discountPrice]);
@@ -187,7 +195,9 @@ function PackageFormModal({ pkg, onClose }) {
                 onBlur={() => handleBlur("name")}
                 placeholder="e.g. Full Body Checkup"
               />
-              {touched.name && errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+              {touched.name && errors.name && (
+                <p className="text-xs text-red-500">{errors.name}</p>
+              )}
             </div>
 
             <div className="space-y-1 md:col-span-2">
@@ -200,8 +210,12 @@ function PackageFormModal({ pkg, onClose }) {
                 placeholder="Brief tagline for the package"
                 maxLength={300}
               />
-              {touched.shortDesc && errors.shortDesc && <p className="text-xs text-red-500">{errors.shortDesc}</p>}
-              <p className="text-xs text-slate-400">{form.shortDesc?.length || 0}/300</p>
+              {touched.shortDesc && errors.shortDesc && (
+                <p className="text-xs text-red-500">{errors.shortDesc}</p>
+              )}
+              <p className="text-xs text-slate-400">
+                {form.shortDesc?.length || 0}/300
+              </p>
             </div>
 
             <div className="space-y-1 md:col-span-2">
@@ -215,8 +229,12 @@ function PackageFormModal({ pkg, onClose }) {
                 placeholder="Detailed package description..."
                 maxLength={2000}
               />
-              {touched.description && errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
-              <p className="text-xs text-slate-400">{form.description?.length || 0}/2000</p>
+              {touched.description && errors.description && (
+                <p className="text-xs text-red-500">{errors.description}</p>
+              )}
+              <p className="text-xs text-slate-400">
+                {form.description?.length || 0}/2000
+              </p>
             </div>
           </div>
 
@@ -240,11 +258,15 @@ function PackageFormModal({ pkg, onClose }) {
                   min="0"
                   step="0.01"
                 />
-                {touched.price && errors.price && <p className="text-xs text-red-500">{errors.price}</p>}
+                {touched.price && errors.price && (
+                  <p className="text-xs text-red-500">{errors.price}</p>
+                )}
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium">Discount Price (₹)</label>
+                <label className="text-sm font-medium">
+                  Discount Price (₹)
+                </label>
                 <input
                   type="number"
                   className={inputClass("discountPrice")}
@@ -272,7 +294,9 @@ function PackageFormModal({ pkg, onClose }) {
                   min="0"
                   step="0.01"
                 />
-                {touched.mrp && errors.mrp && <p className="text-xs text-red-500">{errors.mrp}</p>}
+                {touched.mrp && errors.mrp && (
+                  <p className="text-xs text-red-500">{errors.mrp}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -286,13 +310,16 @@ function PackageFormModal({ pkg, onClose }) {
                   placeholder="30"
                   min="1"
                 />
-                {touched.validityDays && errors.validityDays && <p className="text-xs text-red-500">{errors.validityDays}</p>}
+                {touched.validityDays && errors.validityDays && (
+                  <p className="text-xs text-red-500">{errors.validityDays}</p>
+                )}
               </div>
             </div>
 
             {savings && (
               <div className="mt-3 text-sm text-green-700 font-medium">
-                💸 Customer saves ₹{savings} ({((savings / form.price) * 100).toFixed(0)}% off)
+                💸 Customer saves ₹{savings} (
+                {((savings / form.price) * 100).toFixed(0)}% off)
               </div>
             )}
           </div>
@@ -346,7 +373,9 @@ function PackageFormModal({ pkg, onClose }) {
 
           {/* Preparation */}
           <div className="space-y-1">
-            <label className="text-sm font-medium">Preparation Instructions</label>
+            <label className="text-sm font-medium">
+              Preparation Instructions
+            </label>
             <textarea
               className="input resize-none"
               rows={2}
@@ -354,19 +383,6 @@ function PackageFormModal({ pkg, onClose }) {
               onChange={(e) => updateField("preparation", e.target.value)}
               placeholder="e.g. 10-12 hours fasting required"
             />
-          </div>
-
-          {/* Image URL */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Image URL</label>
-            <input
-              className={inputClass("imageUrl")}
-              value={form.imageUrl}
-              onChange={(e) => updateField("imageUrl", e.target.value)}
-              onBlur={() => handleBlur("imageUrl")}
-              placeholder="https://..."
-            />
-            {touched.imageUrl && errors.imageUrl && <p className="text-xs text-red-500">{errors.imageUrl}</p>}
           </div>
 
           {/* Toggles */}
@@ -408,12 +424,18 @@ function PackageFormModal({ pkg, onClose }) {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 p-6 border-t bg-slate-50 rounded-b-2xl">
-          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn bg-blue-600 text-white hover:bg-blue-700"
             onClick={handleSubmit}
             disabled={save.isPending}>
-            {save.isPending ? "Saving..." : isNew ? "Create Package" : "Update Package"}
+            {save.isPending
+              ? "Saving..."
+              : isNew
+              ? "Create Package"
+              : "Update Package"}
           </button>
         </div>
       </div>
@@ -422,4 +444,3 @@ function PackageFormModal({ pkg, onClose }) {
 }
 
 export default React.memo(PackageFormModal);
-

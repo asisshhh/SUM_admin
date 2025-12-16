@@ -2,7 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
-import { FolderTree, Search, Plus, Edit2, Trash2, X, Check, AlertCircle, GripVertical, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  FolderTree,
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Check,
+  AlertCircle,
+  GripVertical,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -27,7 +39,8 @@ function Pager({ page, pageSize, total, onPage }) {
   return (
     <div className="flex items-center justify-between">
       <p className="text-sm text-slate-600">
-        Showing <span className="font-medium">{start}</span> to <span className="font-medium">{end}</span> of{" "}
+        Showing <span className="font-medium">{start}</span> to{" "}
+        <span className="font-medium">{end}</span> of{" "}
         <span className="font-medium">{total}</span> results
       </p>
       <div className="flex items-center gap-2">
@@ -61,7 +74,6 @@ function CategoryFormModal({ category, onClose }) {
   const [form, setForm] = useState({
     name: category?.name || "",
     description: category?.description || "",
-    iconUrl: category?.iconUrl || "",
     displayOrder: category?.displayOrder || 0,
     active: category?.active ?? true
   });
@@ -72,7 +84,8 @@ function CategoryFormModal({ category, onClose }) {
   const validate = () => {
     const errs = {};
     if (!form.name?.trim()) errs.name = "Category name is required";
-    if (form.name?.trim()?.length < 2) errs.name = "Name must be at least 2 characters";
+    if (form.name?.trim()?.length < 2)
+      errs.name = "Name must be at least 2 characters";
     return errs;
   };
 
@@ -113,7 +126,9 @@ function CategoryFormModal({ category, onClose }) {
   };
 
   const inputClass = (field) =>
-    `input ${touched[field] && errors[field] ? "border-red-500 focus:ring-red-500" : ""}`;
+    `input ${
+      touched[field] && errors[field] ? "border-red-500 focus:ring-red-500" : ""
+    }`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -152,7 +167,9 @@ function CategoryFormModal({ category, onClose }) {
               onBlur={() => handleBlur("name")}
               placeholder="e.g. Hematology"
             />
-            {touched.name && errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+            {touched.name && errors.name && (
+              <p className="text-xs text-red-500">{errors.name}</p>
+            )}
           </div>
 
           {/* Description */}
@@ -164,17 +181,6 @@ function CategoryFormModal({ category, onClose }) {
               value={form.description}
               onChange={(e) => updateField("description", e.target.value)}
               placeholder="Category description..."
-            />
-          </div>
-
-          {/* Icon URL */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Icon URL</label>
-            <input
-              className="input"
-              value={form.iconUrl}
-              onChange={(e) => updateField("iconUrl", e.target.value)}
-              placeholder="https://..."
             />
           </div>
 
@@ -196,7 +202,9 @@ function CategoryFormModal({ category, onClose }) {
               <select
                 className="select"
                 value={String(form.active)}
-                onChange={(e) => updateField("active", e.target.value === "true")}>
+                onChange={(e) =>
+                  updateField("active", e.target.value === "true")
+                }>
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
               </select>
@@ -206,12 +214,18 @@ function CategoryFormModal({ category, onClose }) {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 p-6 border-t bg-slate-50 rounded-b-2xl">
-          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn bg-violet-600 text-white hover:bg-violet-700"
             onClick={handleSubmit}
             disabled={save.isPending}>
-            {save.isPending ? "Saving..." : isNew ? "Create Category" : "Update Category"}
+            {save.isPending
+              ? "Saving..."
+              : isNew
+              ? "Create Category"
+              : "Update Category"}
           </button>
         </div>
       </div>
@@ -261,11 +275,14 @@ export default function TestCategoriesPage() {
   const items = data?.items || [];
   const total = data?.total || 0;
 
-  const onChange = (e) => setFilters((f) => ({ ...f, [e.target.name]: e.target.value, page: 1 }));
+  const onChange = (e) =>
+    setFilters((f) => ({ ...f, [e.target.name]: e.target.value, page: 1 }));
 
   const handleDelete = async (cat) => {
     if (cat.testCount > 0) {
-      alert(`Cannot delete category with ${cat.testCount} linked tests. Remove or reassign tests first.`);
+      alert(
+        `Cannot delete category with ${cat.testCount} linked tests. Remove or reassign tests first.`
+      );
       return;
     }
     const ok = await confirm({
@@ -285,8 +302,12 @@ export default function TestCategoriesPage() {
             <FolderTree className="text-violet-600" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Test Categories</h1>
-            <p className="text-sm text-slate-500">Organize lab tests into categories</p>
+            <h1 className="text-2xl font-bold text-slate-800">
+              Test Categories
+            </h1>
+            <p className="text-sm text-slate-500">
+              Organize lab tests into categories
+            </p>
           </div>
         </div>
         <button
@@ -304,7 +325,10 @@ export default function TestCategoriesPage() {
           <div className="flex-1 min-w-[200px]">
             <label className="text-sm text-slate-600 mb-1 block">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
               <input
                 className="input pl-10 pr-8"
                 value={searchInput}
@@ -322,7 +346,11 @@ export default function TestCategoriesPage() {
           {/* Status */}
           <div className="min-w-[120px]">
             <label className="text-sm text-slate-600 mb-1 block">Status</label>
-            <select name="active" className="select" value={filters.active} onChange={onChange}>
+            <select
+              name="active"
+              className="select"
+              value={filters.active}
+              onChange={onChange}>
               <option value="all">All</option>
               <option value="true">Active</option>
               <option value="false">Inactive</option>
@@ -336,7 +364,9 @@ export default function TestCategoriesPage() {
         {isLoading ? (
           <div className="p-8 text-center text-slate-500">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">No categories found</div>
+          <div className="p-8 text-center text-slate-500">
+            No categories found
+          </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b">
@@ -352,20 +382,20 @@ export default function TestCategoriesPage() {
             </thead>
             <tbody>
               {items.map((cat, idx) => (
-                <tr key={cat.id} className="border-b hover:bg-slate-50 transition">
+                <tr
+                  key={cat.id}
+                  className="border-b hover:bg-slate-50 transition">
                   <td className="p-3 text-slate-400">
                     <GripVertical size={16} className="cursor-move" />
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-3">
-                      {cat.iconUrl ? (
-                        <img src={cat.iconUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
-                      ) : (
-                        <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center">
-                          <FolderTree size={16} className="text-violet-600" />
-                        </div>
-                      )}
-                      <span className="font-medium text-slate-800">{cat.name}</span>
+                      <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center">
+                        <FolderTree size={16} className="text-violet-600" />
+                      </div>
+                      <span className="font-medium text-slate-800">
+                        {cat.name}
+                      </span>
                     </div>
                   </td>
                   <td className="p-3 text-slate-600 max-w-xs truncate">
@@ -376,11 +406,16 @@ export default function TestCategoriesPage() {
                       {cat.testCount || 0} tests
                     </span>
                   </td>
-                  <td className="p-3 text-center text-slate-600">{cat.displayOrder}</td>
+                  <td className="p-3 text-center text-slate-600">
+                    {cat.displayOrder}
+                  </td>
                   <td className="p-3 text-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      cat.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        cat.active
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
                       {cat.active ? "Active" : "Inactive"}
                     </span>
                   </td>
@@ -397,7 +432,14 @@ export default function TestCategoriesPage() {
                         onClick={() => handleDelete(cat)}
                         title="Delete"
                         disabled={cat.testCount > 0}>
-                        <Trash2 size={16} className={cat.testCount > 0 ? "text-slate-300" : "text-red-500"} />
+                        <Trash2
+                          size={16}
+                          className={
+                            cat.testCount > 0
+                              ? "text-slate-300"
+                              : "text-red-500"
+                          }
+                        />
                       </button>
                     </div>
                   </td>
@@ -416,9 +458,11 @@ export default function TestCategoriesPage() {
       />
 
       {editing && (
-        <CategoryFormModal category={editing} onClose={() => setEditing(null)} />
+        <CategoryFormModal
+          category={editing}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );
 }
-

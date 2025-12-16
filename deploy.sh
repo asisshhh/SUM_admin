@@ -13,6 +13,12 @@ set -euo pipefail
 #   TARGET_DIR : destination for built assets (default: ../frontend_app)
 #   USE_LOCAL  : true/false. If true (default), use current dir repo and pull. If false, fresh clone to temp dir.
 #   AUTO_STASH : true/false. If true (default), stash local changes before pull to avoid conflicts (stash kept).
+#   ENV        : environment (local|staging|prod). If not set, auto-detects from:
+#                 - Hostname (staging/defigo → staging, prod/soahospitals → prod)
+#                 - Git branch (staging → staging, main/master → prod, dev → local)
+#                 - TARGET_DIR path (if contains staging/prod)
+#                 - Environment marker files (.env.staging, .env.prod, .env.local)
+#                 If auto-detection fails and .env exists, preserves it. Otherwise defaults to prod.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_URL="${REPO_URL:-https://github.com/asisshhh/SUM_admin.git}"
@@ -52,16 +58,130 @@ else
   fi
 fi
 
+# Handle environment-specific .env file
 ENV_FILE="$WORK_DIR/.env"
-if [[ -f "$ENV_FILE" ]]; then
-  echo "Updating existing .env..."
-else
-  echo "Creating .env..."
+
+# Auto-detect environment if not explicitly set
+if [[ -z "${ENV:-}" ]]; then
+  echo "🔍 Auto-detecting deployment environment..."
+
+  # Method 1: Check hostname (most reliable for server deployments)
+  HOSTNAME=$(hostname 2>/dev/null || echo "")
+  if [[ -n "$HOSTNAME" ]]; then
+    if [[ "$HOSTNAME" == *"staging"* ]] || [[ "$HOSTNAME" == *"stage"* ]] || [[ "$HOSTNAME" == *"defigo"* ]]; then
+      ENV="staging"
+      echo "  ✓ Detected: staging (hostname: $HOSTNAME)"
+    elif [[ "$HOSTNAME" == *"prod"* ]] || [[ "$HOSTNAME" == *"production"* ]] || [[ "$HOSTNAME" == *"soahospitals"* ]]; then
+      ENV="prod"
+      echo "  ✓ Detected: prod (hostname: $HOSTNAME)"
+    elif [[ "$HOSTNAME" == *"local"* ]] || [[ "$HOSTNAME" == "localhost" ]]; then
+      ENV="local"
+      echo "  ✓ Detected: local (hostname: $HOSTNAME)"
+    fi
+  fi
+
+  # Method 2: Check git branch (useful for CI/CD)
+  if [[ -z "${ENV:-}" ]] && [[ -d "$WORK_DIR/.git" ]]; then
+    BRANCH_NAME=$(git -C "$WORK_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    if [[ -n "$BRANCH_NAME" ]]; then
+      if [[ "$BRANCH_NAME" == *"staging"* ]] || [[ "$BRANCH_NAME" == *"stage"* ]]; then
+        ENV="staging"
+        echo "  ✓ Detected: staging (branch: $BRANCH_NAME)"
+      elif [[ "$BRANCH_NAME" == *"prod"* ]] || [[ "$BRANCH_NAME" == *"production"* ]] || [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "master" ]]; then
+        ENV="prod"
+        echo "  ✓ Detected: prod (branch: $BRANCH_NAME)"
+      elif [[ "$BRANCH_NAME" == *"local"* ]] || [[ "$BRANCH_NAME" == *"dev"* ]] || [[ "$BRANCH_NAME" == "develop" ]]; then
+        ENV="local"
+        echo "  ✓ Detected: local (branch: $BRANCH_NAME)"
+      fi
+    fi
+  fi
+
+  # Method 3: Check TARGET_DIR path for environment hints
+  if [[ -z "${ENV:-}" ]] && [[ -n "$TARGET_DIR" ]]; then
+    if [[ "$TARGET_DIR" == *"staging"* ]] || [[ "$TARGET_DIR" == *"stage"* ]]; then
+      ENV="staging"
+      echo "  ✓ Detected: staging (target directory: $TARGET_DIR)"
+    elif [[ "$TARGET_DIR" == *"prod"* ]] || [[ "$TARGET_DIR" == *"production"* ]]; then
+      ENV="prod"
+      echo "  ✓ Detected: prod (target directory: $TARGET_DIR)"
+    fi
+  fi
+
+  # Method 4: Check for environment marker files
+  if [[ -z "${ENV:-}" ]]; then
+    if [[ -f "$WORK_DIR/.env.staging" ]] || [[ -f "$SCRIPT_DIR/.env.staging" ]]; then
+      ENV="staging"
+      echo "  ✓ Detected: staging (found .env.staging file)"
+    elif [[ -f "$WORK_DIR/.env.prod" ]] || [[ -f "$SCRIPT_DIR/.env.prod" ]]; then
+      ENV="prod"
+      echo "  ✓ Detected: prod (found .env.prod file)"
+    elif [[ -f "$WORK_DIR/.env.local" ]] || [[ -f "$SCRIPT_DIR/.env.local" ]]; then
+      ENV="local"
+      echo "  ✓ Detected: local (found .env.local file)"
+    fi
+  fi
 fi
-cat > "$ENV_FILE" <<'EOF'
+
+# If still not set, handle gracefully
+if [[ -z "${ENV:-}" ]]; then
+  if [[ -f "$ENV_FILE" ]]; then
+    echo "  ⚠️  Auto-detection failed. Preserving existing .env file."
+    echo "     To set explicitly: ENV=local|staging|prod ./deploy.sh"
+  else
+    echo "  ⚠️  Auto-detection failed and no .env file found."
+    echo "     Defaulting to production. To override: ENV=local|staging|prod ./deploy.sh"
+    ENV="prod"
+  fi
+else
+  echo "  → Using environment: $ENV"
+fi
+
+if [[ -n "${ENV:-}" ]]; then
+  echo ""
+  echo "📝 Configuring .env for $ENV environment..."
+
+  case "$ENV" in
+    local)
+      API_URL="http://localhost:4000/api/admin"
+      SOCKET_URL="http://localhost:4000"
+      ;;
+    staging)
+      API_URL="https://sumum.defigo.in/api/admin"
+      SOCKET_URL="https://sumum.defigo.in"
+      ;;
+    prod|production)
+      API_URL="https://sumumapp.soahospitals.com/api/admin"
+      SOCKET_URL="https://sumumapp.soahospitals.com"
+      ;;
+    *)
+      echo "ERROR: Invalid ENV value '$ENV'. Must be one of: local, staging, prod" >&2
+      exit 1
+      ;;
+  esac
+
+  if [[ -f "$ENV_FILE" ]]; then
+    echo "Updating .env for $ENV environment..."
+  else
+    echo "Creating .env for $ENV environment..."
+  fi
+
+  cat > "$ENV_FILE" <<EOF
+VITE_API_URL=${API_URL}
+VITE_SOCKET_URL=${SOCKET_URL}
+EOF
+  echo "✓ .env configured for $ENV environment"
+else
+  if [[ -f "$ENV_FILE" ]]; then
+    echo "Preserving existing .env file (ENV not specified)"
+  else
+    echo "WARNING: No .env file found and ENV not specified. Creating default (production) .env..."
+    cat > "$ENV_FILE" <<'EOF'
 VITE_API_URL=https://sumumapp.soahospitals.com/api/admin
 VITE_SOCKET_URL=https://sumumapp.soahospitals.com
 EOF
+  fi
+fi
 
 echo "Installing dependencies..."
 cd "$WORK_DIR"

@@ -15,7 +15,8 @@ import {
   Gift,
   Settings,
   Home,
-  Package
+  Package,
+  AlertCircle
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -122,6 +123,7 @@ export default function AppLayout() {
           />
 
           <NavItem to="/feedback" icon={MessageSquare} label="Feedback" />
+          <NavItem to="/grievances" icon={AlertCircle} label="Grievances" />
           <NavItem to="/banners" icon={Image} label="Banners" />
           <NavItem to="/reports" icon={BarChart2} label="Reports" />
         </nav>

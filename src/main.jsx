@@ -40,6 +40,8 @@ import AmbulanceChargesPage from "./pages/AmbulanceChargesPage.jsx";
 import AmbulanceFeaturesPage from "./pages/AmbulanceFeaturesPage.jsx";
 import DriversPage from "./pages/DriversPage.jsx";
 import AmbulanceLogsPage from "./pages/AmbulanceLogsPage.jsx";
+// Grievances Management
+import GrievancesPage from "./pages/GrievancesPage.jsx";
 
 const qc = new QueryClient();
 const token = () => localStorage.getItem("token");
@@ -112,6 +114,7 @@ createRoot(document.getElementById("root")).render(
                 element={<HomeHealthcarePackagesPage />}
               />
               <Route path="feedback" element={<FeedbackPage />} />
+              <Route path="grievances" element={<GrievancesPage />} />
               <Route path="banners" element={<BannersPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="doctor-calendar" element={<DoctorCalendarPage />} />

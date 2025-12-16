@@ -105,10 +105,11 @@ class SocketManager {
     this.socket = io(this.url, {
       auth: { token },
       path: "/socket.io",
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionDelay: 500,
+      reconnectionDelay: 1000,
       reconnectionAttempts: Infinity,
+      timeout: 20000,
       // Force new connection if URL changes (useful for development)
       forceNew: false
     });
@@ -140,7 +141,18 @@ class SocketManager {
     });
 
     this.socket.on("connect_error", (err) => {
-      console.warn("Socket connect_error:", err?.message || err);
+      console.error("❌ Socket connect_error:", err?.message || err);
+      console.error("Socket URL:", this.url);
+      console.error("Error details:", err);
+      // Notify disconnect callbacks on connection error
+      this.connected = false;
+      this._disconnectCallbacks.forEach((cb) => {
+        try {
+          cb(err?.message || "Connection error");
+        } catch (e) {
+          console.error("Error in disconnect callback:", e);
+        }
+      });
     });
 
     // rebind saved listeners (useful if socket reconnects to a new instance)

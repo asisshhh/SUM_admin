@@ -173,9 +173,6 @@ export default function AmbulanceTypesPage() {
                       Description
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
-                      Charges
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
                       Ambulances
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
@@ -203,11 +200,6 @@ export default function AmbulanceTypesPage() {
                         <div className="text-sm text-slate-600 max-w-md truncate">
                           {item.description || "-"}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-sm font-medium text-slate-700">
-                          {item._count?.charges || 0}
-                        </span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="text-sm font-medium text-slate-700">

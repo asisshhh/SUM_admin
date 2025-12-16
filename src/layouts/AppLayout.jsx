@@ -16,7 +16,8 @@ import {
   Settings,
   Home,
   Package,
-  AlertCircle
+  AlertCircle,
+  Activity
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -126,6 +127,14 @@ export default function AppLayout() {
           <NavItem to="/grievances" icon={AlertCircle} label="Grievances" />
           <NavItem to="/banners" icon={Image} label="Banners" />
           <NavItem to="/reports" icon={BarChart2} label="Reports" />
+
+          {/* Admin Section */}
+          <div className="mt-4 mb-2 px-4">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Admin
+            </span>
+          </div>
+          <NavItem to="/activity-logs" icon={Activity} label="Activity Logs" />
         </nav>
 
         {/* Logout Button */}

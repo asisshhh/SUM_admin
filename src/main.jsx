@@ -42,6 +42,8 @@ import DriversPage from "./pages/DriversPage.jsx";
 import AmbulanceLogsPage from "./pages/AmbulanceLogsPage.jsx";
 // Grievances Management
 import GrievancesPage from "./pages/GrievancesPage.jsx";
+// Admin Activity Logs
+import AdminActivityLogsPage from "./pages/AdminActivityLogsPage.jsx";
 
 const qc = new QueryClient();
 const token = () => localStorage.getItem("token");
@@ -118,6 +120,7 @@ createRoot(document.getElementById("root")).render(
               <Route path="banners" element={<BannersPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="doctor-calendar" element={<DoctorCalendarPage />} />
+              <Route path="activity-logs" element={<AdminActivityLogsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

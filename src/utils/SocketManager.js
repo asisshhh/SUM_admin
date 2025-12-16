@@ -105,11 +105,14 @@ class SocketManager {
     this.socket = io(this.url, {
       auth: { token },
       path: "/socket.io",
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"], // Try polling first (works better through reverse proxies)
+      autoConnect: true,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: Infinity,
       timeout: 20000,
+      upgrade: true, // Allow transport upgrade
+      rememberUpgrade: false, // Don't remember upgrade preference
       // Force new connection if URL changes (useful for development)
       forceNew: false
     });

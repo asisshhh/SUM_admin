@@ -438,15 +438,13 @@ export default function AdminActivityLogsPage() {
         </div>
 
         {/* Pagination */}
-        {data && data.totalPages > 1 && (
+        {data && data.total > 0 && (
           <div className="p-4 border-t">
             <Pagination
-              currentPage={page}
-              totalPages={data.totalPages}
-              onPageChange={setPage}
+              page={page}
+              total={data.total}
               pageSize={pageSize}
-              onPageSizeChange={setPageSize}
-              totalItems={data.total}
+              onPage={setPage}
             />
           </div>
         )}

@@ -1,5 +1,5 @@
-import React from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Stethoscope,
@@ -21,12 +21,19 @@ import {
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
-const NavItem = ({ to, icon: Icon, label }) => (
-  <NavLink
-    to={to}
-    end
-    className={({ isActive }) =>
-      `
+const NavItem = ({ to, icon: Icon, label }) => {
+  const handleClick = () => {
+    // Scroll to top when menu item is clicked
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  return (
+    <NavLink
+      to={to}
+      end
+      onClick={handleClick}
+      className={({ isActive }) =>
+        `
       flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
       hover:bg-slate-100 hover:text-blue-600
       ${
@@ -35,14 +42,22 @@ const NavItem = ({ to, icon: Icon, label }) => (
           : "text-slate-700"
       }
       `
-    }>
-    <Icon size={18} />
-    <span>{label}</span>
-  </NavLink>
-);
+      }>
+      <Icon size={18} />
+      <span>{label}</span>
+    </NavLink>
+  );
+};
 
 export default function AppLayout() {
   const nav = useNavigate();
+  const location = useLocation();
+
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [location.pathname]);
+
   const logout = () => {
     localStorage.removeItem("token");
     nav("/login");

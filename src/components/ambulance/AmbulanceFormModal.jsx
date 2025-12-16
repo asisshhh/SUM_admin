@@ -4,26 +4,34 @@ import api from "../../api/client";
 import { toast } from "react-toastify";
 import { X } from "lucide-react";
 
-export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [], onSuccess }) {
+export default function AmbulanceFormModal({
+  data,
+  onClose,
+  ambulanceTypes = [],
+  onSuccess
+}) {
   const qc = useQueryClient();
   const isEdit = !!data?.id;
 
   // Fetch ambulance types if not provided
   const { data: typesData } = useQuery({
     queryKey: ["ambulance-types-all"],
-    queryFn: async () => (await api.get("/ambulance-types", { params: { pageSize: 100 } })).data,
+    queryFn: async () =>
+      (await api.get("/ambulance-types", { params: { pageSize: 100 } })).data,
     enabled: ambulanceTypes.length === 0,
     staleTime: 5 * 60 * 1000
   });
 
   const allTypes = useMemo(() => {
-    return ambulanceTypes.length > 0 ? ambulanceTypes : (typesData?.items || []);
+    return ambulanceTypes.length > 0 ? ambulanceTypes : typesData?.items || [];
   }, [ambulanceTypes, typesData]);
 
   // Fetch drivers for assignment
   const { data: driversData } = useQuery({
     queryKey: ["drivers-all"],
-    queryFn: async () => (await api.get("/drivers", { params: { pageSize: 100, active: "true" } })).data,
+    queryFn: async () =>
+      (await api.get("/drivers", { params: { pageSize: 100, active: "true" } }))
+        .data,
     staleTime: 2 * 60 * 1000
   });
 
@@ -32,9 +40,7 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
   const [form, setForm] = useState({
     vehicleNumber: data?.vehicleNumber || "",
     model: data?.model || "",
-    registrationNumber: data?.registrationNumber || "",
     ambulanceTypeId: data?.ambulanceTypeId?.toString() || "",
-    type: data?.type || "ALS",
     insuranceExpiry: data?.insuranceExpiry
       ? new Date(data.insuranceExpiry).toISOString().split("T")[0]
       : "",
@@ -53,9 +59,7 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
       setForm({
         vehicleNumber: data.vehicleNumber || "",
         model: data.model || "",
-        registrationNumber: data.registrationNumber || "",
         ambulanceTypeId: data.ambulanceTypeId?.toString() || "",
-        type: data.type || "ALS",
         insuranceExpiry: data.insuranceExpiry
           ? new Date(data.insuranceExpiry).toISOString().split("T")[0]
           : "",
@@ -80,10 +84,8 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
     mutationFn: async (formData) => {
       const payload = {
         vehicleNumber: formData.vehicleNumber.trim(),
-        model: formData.model?.trim() || null,
-        registrationNumber: formData.registrationNumber?.trim() || null,
-        ambulanceTypeId: formData.ambulanceTypeId ? Number(formData.ambulanceTypeId) : null,
-        type: formData.type || "ALS",
+        model: formData.model.trim(),
+        ambulanceTypeId: Number(formData.ambulanceTypeId),
         insuranceExpiry: formData.insuranceExpiry || null,
         lastMaintenanceDate: formData.lastMaintenanceDate || null,
         available: Boolean(formData.available),
@@ -98,7 +100,11 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ambulances"] });
-      toast.success(isEdit ? "Ambulance updated successfully" : "Ambulance created successfully");
+      toast.success(
+        isEdit
+          ? "Ambulance updated successfully"
+          : "Ambulance created successfully"
+      );
       if (onSuccess) onSuccess();
       onClose();
     },
@@ -116,8 +122,39 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
 
     // Validation
     const newErrors = {};
+
     if (!form.vehicleNumber.trim()) {
       newErrors.vehicleNumber = "Vehicle number is required";
+    } else if (form.vehicleNumber.trim().length < 2) {
+      newErrors.vehicleNumber = "Vehicle number must be at least 2 characters";
+    }
+
+    if (!form.model.trim()) {
+      newErrors.model = "Model is required";
+    } else if (form.model.trim().length < 2) {
+      newErrors.model = "Model must be at least 2 characters";
+    }
+
+    if (!form.ambulanceTypeId) {
+      newErrors.ambulanceTypeId = "Ambulance type is required";
+    }
+
+    if (!form.insuranceExpiry) {
+      newErrors.insuranceExpiry = "Insurance expiry date is required";
+    } else {
+      const insuranceDate = new Date(form.insuranceExpiry);
+      if (isNaN(insuranceDate.getTime())) {
+        newErrors.insuranceExpiry = "Invalid insurance expiry date";
+      }
+    }
+
+    if (!form.lastMaintenanceDate) {
+      newErrors.lastMaintenanceDate = "Last maintenance date is required";
+    } else {
+      const maintenanceDate = new Date(form.lastMaintenanceDate);
+      if (isNaN(maintenanceDate.getTime())) {
+        newErrors.lastMaintenanceDate = "Invalid maintenance date";
+      }
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -159,44 +196,42 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
                 placeholder="e.g., DL-01-AB-1234"
               />
               {errors.vehicleNumber && (
-                <p className="text-red-500 text-sm mt-1">{errors.vehicleNumber}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.vehicleNumber}
+                </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Model</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Model *
+              </label>
               <input
                 type="text"
                 value={form.model}
                 onChange={(e) => update("model", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.model ? "border-red-300" : "border-slate-300"
+                }`}
                 placeholder="e.g., Tata Winger"
               />
+              {errors.model && (
+                <p className="text-red-500 text-sm mt-1">{errors.model}</p>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Registration Number
-              </label>
-              <input
-                type="text"
-                value={form.registrationNumber}
-                onChange={(e) => update("registrationNumber", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Registration number"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Ambulance Type
+                Ambulance Type *
               </label>
               <select
                 value={form.ambulanceTypeId}
                 onChange={(e) => update("ambulanceTypeId", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.ambulanceTypeId ? "border-red-300" : "border-slate-300"
+                }`}>
                 <option value="">Select Type</option>
                 {allTypes.map((type) => (
                   <option key={type.id} value={type.id}>
@@ -204,23 +239,17 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
                   </option>
                 ))}
               </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Type (Legacy)</label>
-              <select
-                value={form.type}
-                onChange={(e) => update("type", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="BLS">Basic Life Support (BLS)</option>
-                <option value="ALS">Advanced Life Support (ALS)</option>
-              </select>
+              {errors.ambulanceTypeId && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.ambulanceTypeId}
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Driver</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Driver
+              </label>
               <select
                 value={form.driverId}
                 onChange={(e) => update("driverId", e.target.value)}
@@ -238,32 +267,50 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Insurance Expiry
+                Insurance Expiry *
               </label>
               <input
                 type="date"
                 value={form.insuranceExpiry}
                 onChange={(e) => update("insuranceExpiry", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.insuranceExpiry ? "border-red-300" : "border-slate-300"
+                }`}
               />
+              {errors.insuranceExpiry && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.insuranceExpiry}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Last Maintenance Date
+                Last Maintenance Date *
               </label>
               <input
                 type="date"
                 value={form.lastMaintenanceDate}
                 onChange={(e) => update("lastMaintenanceDate", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.lastMaintenanceDate
+                    ? "border-red-300"
+                    : "border-slate-300"
+                }`}
               />
+              {errors.lastMaintenanceDate && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.lastMaintenanceDate}
+                </p>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Availability</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Availability
+              </label>
               <select
                 value={form.available}
                 onChange={(e) => update("available", e.target.value === "true")}
@@ -274,7 +321,9 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Status
+              </label>
               <select
                 value={form.active}
                 onChange={(e) => update("active", e.target.value === "true")}
@@ -296,7 +345,11 @@ export default function AmbulanceFormModal({ data, onClose, ambulanceTypes = [],
               type="submit"
               disabled={saveMutation.isPending}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50">
-              {saveMutation.isPending ? "Saving..." : isEdit ? "Update" : "Create"}
+              {saveMutation.isPending
+                ? "Saving..."
+                : isEdit
+                ? "Update"
+                : "Create"}
             </button>
           </div>
         </form>

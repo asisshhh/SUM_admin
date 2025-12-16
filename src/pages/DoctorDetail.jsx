@@ -16,7 +16,7 @@ export default function DoctorDetail() {
 
   const { data: statsByRange } = useQuery({
     queryKey: ["doctor-stats-range", id, range],
-    enabled: range.from && range.to,
+    enabled: !!(range.from && range.to),
     queryFn: async () =>
       (
         await api.get(`/doctors/${id}/stats`, {

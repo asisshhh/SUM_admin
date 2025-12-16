@@ -54,7 +54,9 @@ export default function AmbulanceTypesPage() {
       toast.success("Ambulance type deleted successfully");
     },
     onError: (err) => {
-      toast.error(err.response?.data?.error || "Failed to delete ambulance type");
+      toast.error(
+        err.response?.data?.error || "Failed to delete ambulance type"
+      );
     }
   });
 
@@ -71,14 +73,17 @@ export default function AmbulanceTypesPage() {
     setFilters((f) => ({ ...f, page }));
   }, []);
 
-  const handleDelete = useCallback(async (type) => {
-    const ok = await confirm({
-      title: "Delete Ambulance Type",
-      message: `Are you sure you want to delete "${type.name}"? This will also delete all associated charges.`,
-      danger: true
-    });
-    if (ok) deleteMutation.mutate(type.id);
-  }, [confirm, deleteMutation]);
+  const handleDelete = useCallback(
+    async (type) => {
+      const ok = await confirm({
+        title: "Delete Ambulance Type",
+        message: `Are you sure you want to delete "${type.name}"? This will also delete all associated charges.`,
+        danger: true
+      });
+      if (ok) deleteMutation.mutate(type.id);
+    },
+    [confirm, deleteMutation]
+  );
 
   const handleEdit = useCallback((type) => {
     setEditing(type);
@@ -98,27 +103,32 @@ export default function AmbulanceTypesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 flex items-center gap-3">
             <Ambulance className="text-blue-600" size={32} />
             Ambulance Types
           </h1>
-          <p className="text-slate-500 mt-1">Manage ambulance types and their configurations</p>
+          <p className="text-slate-500 mt-1 text-sm sm:text-base">
+            Manage ambulance types and their configurations
+          </p>
         </div>
         <button
           onClick={handleAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full sm:w-auto">
           <Plus size={18} />
           Add Type
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+          <div className="relative md:col-span-2">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search by name or code..."
@@ -131,7 +141,7 @@ export default function AmbulanceTypesPage() {
             name="active"
             value={filters.active}
             onChange={handleFilterChange}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             <option value="all">All Status</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
@@ -144,39 +154,65 @@ export default function AmbulanceTypesPage() {
         {isLoading ? (
           <div className="p-12 text-center text-slate-500">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">No ambulance types found</div>
+          <div className="p-12 text-center text-slate-500">
+            No ambulance types found
+          </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Code</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Description</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Charges</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Ambulances</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Status</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Charges
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Ambulances
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4">
-                        <span className="font-mono text-sm font-semibold text-blue-600">{item.code}</span>
+                        <span className="font-mono text-sm font-semibold text-blue-600">
+                          {item.code}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium text-slate-800">{item.name}</div>
+                        <div className="font-medium text-slate-800">
+                          {item.name}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-slate-600 max-w-md truncate">{item.description || "-"}</div>
+                        <div className="text-sm text-slate-600 max-w-md truncate">
+                          {item.description || "-"}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className="text-sm font-medium text-slate-700">{item._count?.charges || 0}</span>
+                        <span className="text-sm font-medium text-slate-700">
+                          {item._count?.charges || 0}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className="text-sm font-medium text-slate-700">{item._count?.ambulances || 0}</span>
+                        <span className="text-sm font-medium text-slate-700">
+                          {item._count?.ambulances || 0}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span
@@ -289,7 +325,11 @@ function AmbulanceTypeFormModal({ editing, onClose, onSuccess }) {
       return api.post("/ambulance-types", data);
     },
     onSuccess: () => {
-      toast.success(editing ? "Ambulance type updated successfully" : "Ambulance type created successfully");
+      toast.success(
+        editing
+          ? "Ambulance type updated successfully"
+          : "Ambulance type created successfully"
+      );
       onSuccess();
     },
     onError: (err) => {
@@ -308,7 +348,8 @@ function AmbulanceTypeFormModal({ editing, onClose, onSuccess }) {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.code.trim()) newErrors.code = "Code is required";
-    if (formData.code.trim().length < 2) newErrors.code = "Code must be at least 2 characters";
+    if (formData.code.trim().length < 2)
+      newErrors.code = "Code must be at least 2 characters";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -328,40 +369,58 @@ function AmbulanceTypeFormModal({ editing, onClose, onSuccess }) {
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Name *
+            </label>
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g., Basic Life Support Ambulance"
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Code *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Code *
+            </label>
             <input
               type="text"
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+              onChange={(e) =>
+                setFormData({ ...formData, code: e.target.value.toUpperCase() })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
               placeholder="e.g., BLS"
               maxLength={10}
             />
-            {errors.code && <p className="text-red-500 text-sm mt-1">{errors.code}</p>}
+            {errors.code && (
+              <p className="text-red-500 text-sm mt-1">{errors.code}</p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Description
+            </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows={3}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Description of the ambulance type..."
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Coordinator Phone Numbers</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Coordinator Phone Numbers
+            </label>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
@@ -405,20 +464,34 @@ function AmbulanceTypeFormModal({ editing, onClose, onSuccess }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Display Order</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Display Order
+              </label>
               <input
                 type="number"
                 value={formData.displayOrder}
-                onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    displayOrder: parseInt(e.target.value) || 0
+                  })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Status
+              </label>
               <select
                 value={formData.active}
-                onChange={(e) => setFormData({ ...formData, active: e.target.value === "true" })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    active: e.target.value === "true"
+                  })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value={true}>Active</option>
                 <option value={false}>Inactive</option>
@@ -444,4 +517,3 @@ function AmbulanceTypeFormModal({ editing, onClose, onSuccess }) {
     </div>
   );
 }
-

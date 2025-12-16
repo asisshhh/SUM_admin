@@ -6,20 +6,20 @@ function DepartmentTableRow({ department, onEdit, onDelete }) {
   return (
     <tr className="border-b hover:bg-slate-50 transition">
       <td className="p-3">
-        <Link className="flex items-center gap-3 group" to={`/departments/${department.id}`}>
+        <Link
+          className="flex items-center gap-3 group"
+          to={`/departments/${department.id}`}>
           <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-            {department.iconUrl ? (
-              <img src={department.iconUrl} alt="" className="w-6 h-6 object-contain" />
-            ) : (
-              <Building2 size={18} className="text-indigo-600" />
-            )}
+            <Building2 size={18} className="text-indigo-600" />
           </div>
           <div>
             <div className="font-medium text-slate-800 group-hover:text-indigo-600 transition">
               {department.name}
             </div>
             {department.displayOrder !== null && (
-              <div className="text-xs text-slate-400">Order: {department.displayOrder}</div>
+              <div className="text-xs text-slate-400">
+                Order: {department.displayOrder}
+              </div>
             )}
           </div>
         </Link>
@@ -37,9 +37,12 @@ function DepartmentTableRow({ department, onEdit, onDelete }) {
       </td>
 
       <td className="p-3 text-center">
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          department.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-        }`}>
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            department.active
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}>
           {department.active ? "Active" : "Inactive"}
         </span>
       </td>
@@ -65,4 +68,3 @@ function DepartmentTableRow({ department, onEdit, onDelete }) {
 }
 
 export default React.memo(DepartmentTableRow);
-

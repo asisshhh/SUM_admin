@@ -11,7 +11,6 @@ function DepartmentFormModal({ initial, onClose }) {
     name: initial?.name || "",
     description: initial?.description || "",
     active: initial?.active ?? true,
-    iconUrl: initial?.iconUrl || "",
     displayOrder: initial?.displayOrder ?? ""
   }));
 
@@ -33,14 +32,6 @@ function DepartmentFormModal({ initial, onClose }) {
       newErrors.description = "Description cannot exceed 500 characters";
     }
 
-    if (form.iconUrl && form.iconUrl.trim()) {
-      try {
-        new URL(form.iconUrl);
-      } catch {
-        newErrors.iconUrl = "Please enter a valid URL";
-      }
-    }
-
     if (form.displayOrder !== "" && form.displayOrder !== null) {
       const order = Number(form.displayOrder);
       if (isNaN(order) || order < 0) {
@@ -52,10 +43,13 @@ function DepartmentFormModal({ initial, onClose }) {
     return Object.keys(newErrors).length === 0;
   }, [form]);
 
-  const handleBlur = useCallback((field) => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-    validate();
-  }, [validate]);
+  const handleBlur = useCallback(
+    (field) => {
+      setTouched((prev) => ({ ...prev, [field]: true }));
+      validate();
+    },
+    [validate]
+  );
 
   const updateField = useCallback((field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -68,8 +62,8 @@ function DepartmentFormModal({ initial, onClose }) {
         name: form.name.trim(),
         description: form.description.trim() || null,
         active: form.active,
-        iconUrl: form.iconUrl.trim() || null,
-        displayOrder: form.displayOrder !== "" ? Number(form.displayOrder) : null
+        displayOrder:
+          form.displayOrder !== "" ? Number(form.displayOrder) : null
       };
 
       if (isEdit) {
@@ -84,7 +78,10 @@ function DepartmentFormModal({ initial, onClose }) {
   });
 
   const handleSubmit = useCallback(() => {
-    const allTouched = Object.keys(form).reduce((acc, key) => ({ ...acc, [key]: true }), {});
+    const allTouched = Object.keys(form).reduce(
+      (acc, key) => ({ ...acc, [key]: true }),
+      {}
+    );
     setTouched(allTouched);
 
     if (validate()) {
@@ -93,7 +90,9 @@ function DepartmentFormModal({ initial, onClose }) {
   }, [form, validate, save]);
 
   const inputClass = (field) =>
-    `input ${touched[field] && errors[field] ? "border-red-500 focus:ring-red-500" : ""}`;
+    `input ${
+      touched[field] && errors[field] ? "border-red-500 focus:ring-red-500" : ""
+    }`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -151,7 +150,9 @@ function DepartmentFormModal({ initial, onClose }) {
             {touched.description && errors.description && (
               <p className="text-xs text-red-500">{errors.description}</p>
             )}
-            <p className="text-xs text-slate-400">{form.description.length}/500 characters</p>
+            <p className="text-xs text-slate-400">
+              {form.description.length}/500 characters
+            </p>
           </div>
 
           {/* Active & Display Order */}
@@ -161,7 +162,9 @@ function DepartmentFormModal({ initial, onClose }) {
               <select
                 className="select"
                 value={String(form.active)}
-                onChange={(e) => updateField("active", e.target.value === "true")}>
+                onChange={(e) =>
+                  updateField("active", e.target.value === "true")
+                }>
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
               </select>
@@ -183,31 +186,22 @@ function DepartmentFormModal({ initial, onClose }) {
               )}
             </div>
           </div>
-
-          {/* Icon URL */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Icon URL</label>
-            <input
-              className={inputClass("iconUrl")}
-              value={form.iconUrl}
-              onChange={(e) => updateField("iconUrl", e.target.value)}
-              onBlur={() => handleBlur("iconUrl")}
-              placeholder="https://..."
-            />
-            {touched.iconUrl && errors.iconUrl && (
-              <p className="text-xs text-red-500">{errors.iconUrl}</p>
-            )}
-          </div>
         </div>
 
         {/* Footer */}
         <div className="flex justify-end gap-3 p-6 border-t bg-slate-50 rounded-b-2xl">
-          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn bg-indigo-600 text-white hover:bg-indigo-700"
             onClick={handleSubmit}
             disabled={save.isPending}>
-            {save.isPending ? "Saving..." : isEdit ? "Update Department" : "Create Department"}
+            {save.isPending
+              ? "Saving..."
+              : isEdit
+              ? "Update Department"
+              : "Create Department"}
           </button>
         </div>
       </div>
@@ -216,4 +210,3 @@ function DepartmentFormModal({ initial, onClose }) {
 }
 
 export default React.memo(DepartmentFormModal);
-

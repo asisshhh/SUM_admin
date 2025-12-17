@@ -131,26 +131,19 @@ export default function DoctorCalendarPage() {
 
   const handleEventClick = (clickInfo) => {
     const ext = clickInfo.event.extendedProps;
-    // Convert UTC date to IST
+    // Server is already in IST, use dates directly
     const eventDate = new Date(clickInfo.event.start);
-    // Get IST date string (YYYY-MM-DD)
-    const istDateStr = eventDate.toLocaleDateString("en-CA", {
-      timeZone: "Asia/Kolkata"
-    });
-    // Get IST time string (HH:MM)
-    const istTimeStr = eventDate.toLocaleTimeString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
-    });
+    // Get date string (YYYY-MM-DD)
+    const dateStr = eventDate.toISOString().split("T")[0];
+    // Get time string (HH:MM)
+    const timeStr = eventDate.toTimeString().slice(0, 5);
 
     if (ext?.type === "schedule") {
       // Open slot booking modal for that date and start time
       setSelectedSlot({
         doctorId,
-        date: istDateStr,
-        time: istTimeStr
+        date: dateStr,
+        time: timeStr
       });
     } else if (ext?.type === "appointment") {
       // Show appointment details
@@ -158,8 +151,8 @@ export default function DoctorCalendarPage() {
         id: ext.appointmentId,
         patientName: ext.patientName || "N/A",
         patientPhone: ext.patientPhone || "N/A",
-        date: istDateStr,
-        time: istTimeStr,
+        date: dateStr,
+        time: timeStr,
         status: ext.status || "PENDING",
         notes: ext.notes || ""
       });
@@ -173,19 +166,12 @@ export default function DoctorCalendarPage() {
       toast.warning("Please select a doctor first");
       return;
     }
-    // Convert UTC date to IST
+    // Server is already in IST, use dates directly
     const slotDate = new Date(slotInfo.start);
-    // Get IST date string (YYYY-MM-DD)
-    const date = slotDate.toLocaleDateString("en-CA", {
-      timeZone: "Asia/Kolkata"
-    });
-    // Get IST time string (HH:MM)
-    const time = slotDate.toLocaleTimeString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
-    });
+    // Get date string (YYYY-MM-DD)
+    const date = slotDate.toISOString().split("T")[0];
+    // Get time string (HH:MM)
+    const time = slotDate.toTimeString().slice(0, 5);
     setSelectedSlot({
       doctorId,
       date,
@@ -396,7 +382,6 @@ export default function DoctorCalendarPage() {
                 slotMaxTime="22:00:00"
                 allDaySlot={false}
                 eventClassNames={eventClassNames}
-                timeZone="Asia/Kolkata"
                 displayEventTime={true}
                 dayHeaderFormat={{ weekday: "short", day: "numeric" }}
                 slotLabelFormat={{
@@ -454,7 +439,6 @@ export default function DoctorCalendarPage() {
                     {new Date(
                       selectedAppointment.date + "T00:00:00"
                     ).toLocaleDateString("en-IN", {
-                      timeZone: "Asia/Kolkata",
                       weekday: "long",
                       year: "numeric",
                       month: "long",
@@ -467,9 +451,8 @@ export default function DoctorCalendarPage() {
                   <span className="font-medium text-slate-800">
                     {selectedAppointment.time
                       ? new Date(
-                          `${selectedAppointment.date}T${selectedAppointment.time}:00`
+                          `2000-01-01T${selectedAppointment.time}:00`
                         ).toLocaleTimeString("en-IN", {
-                          timeZone: "Asia/Kolkata",
                           hour: "2-digit",
                           minute: "2-digit",
                           hour12: true

@@ -52,7 +52,7 @@ export default function SlotBookingModal({ defaultData, onClose }) {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm">Date (IST)</label>
+            <label className="text-sm">Date</label>
             <input
               type="date"
               className="input"
@@ -62,7 +62,6 @@ export default function SlotBookingModal({ defaultData, onClose }) {
             {form.date && (
               <div className="text-xs text-slate-500 mt-1">
                 {new Date(form.date + "T00:00:00").toLocaleDateString("en-IN", {
-                  timeZone: "Asia/Kolkata",
                   day: "2-digit",
                   month: "2-digit",
                   year: "numeric"
@@ -72,7 +71,7 @@ export default function SlotBookingModal({ defaultData, onClose }) {
           </div>
 
           <div>
-            <label className="text-sm">Time (IST)</label>
+            <label className="text-sm">Time</label>
             <input
               type="time"
               className="input"
@@ -84,7 +83,6 @@ export default function SlotBookingModal({ defaultData, onClose }) {
                 {new Date(`2000-01-01T${form.time}:00`).toLocaleTimeString(
                   "en-IN",
                   {
-                    timeZone: "Asia/Kolkata",
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: true

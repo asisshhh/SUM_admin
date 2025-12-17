@@ -45,7 +45,7 @@ export default function OrderDetailsModal({
     localData.doctor?.consultationFee ??
     "-";
 
-  const formatDate = (dt) => (dt ? new Date(dt).toLocaleString() : "-");
+  const formatDate = (dt) => (dt ? new Date(dt).toLocaleString("en-IN") : "-");
 
   const badgeColor = {
     PENDING: "bg-yellow-100 text-yellow-800 border-yellow-300",

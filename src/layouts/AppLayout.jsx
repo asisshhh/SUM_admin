@@ -17,7 +17,8 @@ import {
   Home,
   Package,
   AlertCircle,
-  Activity
+  Activity,
+  Clock
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -88,6 +89,21 @@ export default function AppLayout() {
             to="/doctor-calendar"
             icon={Stethoscope}
             label="Doctor Calendar"
+          />
+          <NavItem
+            to="/doctor-schedule"
+            icon={Clock}
+            label="Doctor Schedule"
+          />
+          <NavItem
+            to="/global-schedule"
+            icon={Clock}
+            label="Global Schedule"
+          />
+          <NavItem
+            to="/time-slot-templates"
+            icon={Clock}
+            label="Time Slot Templates"
           />
           <NavItem to="/departments" icon={Building2} label="Departments" />
 

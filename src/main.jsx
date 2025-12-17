@@ -44,6 +44,12 @@ import AmbulanceLogsPage from "./pages/AmbulanceLogsPage.jsx";
 import GrievancesPage from "./pages/GrievancesPage.jsx";
 // Admin Activity Logs
 import AdminActivityLogsPage from "./pages/AdminActivityLogsPage.jsx";
+// Global Schedule Management
+import GlobalSchedulePage from "./pages/GlobalSchedulePage.jsx";
+// Doctor Schedule Management
+import DoctorSchedulePage from "./pages/DoctorSchedulePage.jsx";
+// Time Slot Templates Management
+import TimeSlotTemplatesPage from "./pages/TimeSlotTemplatesPage.jsx";
 
 const qc = new QueryClient();
 const token = () => localStorage.getItem("token");
@@ -120,6 +126,12 @@ createRoot(document.getElementById("root")).render(
               <Route path="banners" element={<BannersPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="doctor-calendar" element={<DoctorCalendarPage />} />
+              <Route path="doctor-schedule" element={<DoctorSchedulePage />} />
+              <Route path="global-schedule" element={<GlobalSchedulePage />} />
+              <Route
+                path="time-slot-templates"
+                element={<TimeSlotTemplatesPage />}
+              />
               <Route path="activity-logs" element={<AdminActivityLogsPage />} />
             </Route>
           </Routes>

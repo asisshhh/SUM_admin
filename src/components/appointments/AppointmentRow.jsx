@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, Clock, Eye, Printer, Users } from "lucide-react";
+import { Calendar, Clock, Eye, Printer, Users, CreditCard } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 export default function AppointmentRow({
@@ -10,12 +10,16 @@ export default function AppointmentRow({
 }) {
   const r = appointment;
 
+  // Calculate payment status (same logic as OrderDetailsModal)
+  const effectivePaymentStatus =
+    r.paymentStatus === "PAID"
+      ? "SUCCESS"
+      : r.paymentStatus || r.billing?.status || "PENDING";
+
   return (
     <tr className="hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-transparent transition-all duration-200 border-b border-slate-100 last:border-0">
       {/* Index */}
-      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">
-        #{index}
-      </td>
+      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">#{index}</td>
 
       {/* Patient Info */}
       <td className="px-4 py-3.5">
@@ -51,6 +55,11 @@ export default function AppointmentRow({
           }
           isPaid={r.paymentStatus === "SUCCESS"}
         />
+      </td>
+
+      {/* Payment Status */}
+      <td className="px-4 py-3.5">
+        <PaymentStatusCell status={effectivePaymentStatus} />
       </td>
 
       {/* Actions */}
@@ -109,12 +118,37 @@ function ScheduleCell({ date, timeSlot }) {
 function AmountCell({ amount, isPaid }) {
   return (
     <div
-      className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold ${
+      className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap ${
         isPaid
           ? "bg-emerald-100 text-emerald-700"
           : "bg-amber-100 text-amber-700"
       }`}>
-      ₹ {amount ?? "-"}
+      ₹{amount ?? "-"}
+    </div>
+  );
+}
+
+function PaymentStatusCell({ status }) {
+  const statusColors = {
+    PENDING: "bg-yellow-100 text-yellow-700 border-yellow-300",
+    INITIATED: "bg-blue-100 text-blue-700 border-blue-300",
+    SUCCESS: "bg-emerald-100 text-emerald-700 border-emerald-300",
+    FAILED: "bg-red-100 text-red-700 border-red-300",
+    REFUNDED: "bg-orange-100 text-orange-700 border-orange-300",
+    PARTIAL: "bg-purple-100 text-purple-700 border-purple-300",
+    CANCELLED: "bg-gray-100 text-gray-700 border-gray-300"
+  };
+
+  const colorClass =
+    statusColors[status] || "bg-slate-100 text-slate-700 border-slate-300";
+
+  return (
+    <div className="flex items-center gap-2">
+      <CreditCard size={14} className="text-slate-400" />
+      <span
+        className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${colorClass}`}>
+        {status || "PENDING"}
+      </span>
     </div>
   );
 }
@@ -147,4 +181,3 @@ function ActionButtons({ onView, onPrint, doctorId }) {
     </div>
   );
 }
-

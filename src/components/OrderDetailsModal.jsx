@@ -7,7 +7,8 @@ import {
   Clock,
   Hash,
   CalendarDays,
-  ChevronDown
+  ChevronDown,
+  CreditCard
 } from "lucide-react";
 import api from "../api/client";
 
@@ -55,27 +56,39 @@ export default function OrderDetailsModal({
     IN_QUEUE: "bg-purple-100 text-purple-800 border-purple-300"
   };
 
+  const paymentStatusColor = {
+    PENDING: "text-yellow-600",
+    INITIATED: "text-blue-600",
+    SUCCESS: "text-green-600",
+    FAILED: "text-red-600",
+    REFUNDED: "text-orange-600",
+    PARTIAL: "text-purple-600",
+    CANCELLED: "text-gray-600"
+  };
+
   const Row = ({ label, value, icon: Icon }) => (
-    <div className="flex items-center justify-between py-2 border-b border-slate-200">
-      <div className="flex items-center gap-2 text-slate-600">
-        {Icon && <Icon size={16} />}
-        <span className="font-medium">{label}</span>
+    <div className="flex items-center justify-between py-3 border-b border-slate-200/60 last:border-0">
+      <div className="flex items-center gap-2.5 text-slate-600">
+        {Icon && <Icon size={17} className="text-violet-600" />}
+        <span className="font-semibold text-slate-700">{label}</span>
       </div>
-      <span className="text-slate-900">{value ?? "-"}</span>
+      <span className="text-slate-900 font-medium">{value ?? "-"}</span>
     </div>
   );
 
   const Avatar = ({ name }) => (
-    <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
+    <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
       {name?.[0] || "?"}
     </div>
   );
 
   const InfoCard = ({ title, icon: Icon, children }) => (
-    <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon size={18} className="text-slate-700" />
-        <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
+    <div className="p-5 rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white to-slate-50/50 shadow-lg mb-6">
+      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200/60">
+        <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+          <Icon size={18} className="text-white" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-800">{title}</h3>
       </div>
       {children}
     </div>
@@ -231,160 +244,198 @@ export default function OrderDetailsModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-      <div className="bg-white rounded-2xl w-[580px] max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100">
-          <X size={20} />
-        </button>
-
-        <h2 className="text-2xl font-semibold text-slate-900 mb-6">
-          Appointment Details
-        </h2>
-
-        {/* Appointment Info */}
-        <div className="space-y-3 rounded-xl p-4 bg-slate-50 border border-slate-200 shadow-sm">
-          <Row label="Appointment ID" value={localData.id} icon={Hash} />
-          <Row
-            label="Date"
-            value={formatDate(localData.date)}
-            icon={CalendarDays}
-          />
-          <Row label="Time Slot" value={localData.timeSlot} icon={Clock} />
-
-          {/* Status */}
-          <div className="relative">
-            <div className="flex justify-between items-center py-2 border-b border-slate-200">
-              <span className="text-slate-600 font-medium">Status</span>
-              <button
-                onClick={() => setStatusOpen((v) => !v)}
-                className={`px-3 py-1 text-sm font-semibold rounded-full border flex items-center gap-1 ${
-                  badgeColor[localData.status]
-                }`}>
-                {localData.status} <ChevronDown size={14} />
-              </button>
-            </div>
-
-            {statusOpen && (
-              <div className="absolute right-0 bg-white border shadow-lg rounded-lg z-20 w-40">
-                {statusOptions.map((s) => (
-                  <div
-                    key={s}
-                    className="px-3 py-2 hover:bg-slate-100 cursor-pointer text-sm"
-                    onClick={() => updateStatus(s)}>
-                    {s}
-                  </div>
-                ))}
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-[640px] max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+        {/* Fixed Premium Header */}
+        <div className="relative bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-6 py-5 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <CalendarDays className="text-white" size={20} />
               </div>
-            )}
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  Appointment Details
+                </h2>
+                <p className="text-sm text-white/80 font-medium">
+                  ID: #{localData.id}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all text-white">
+              <X size={20} />
+            </button>
           </div>
-
-          <Row label="Token Number" value={localData.tokenNumber} />
-          <Row label="Queue Position" value={localData.queuePosition} />
         </div>
 
-        {/* Patient */}
-        {localData.patient && (
-          <InfoCard title="Patient Details" icon={User}>
-            <div className="flex items-start gap-3">
-              <Avatar name={localData.patient.name} />
-              <div>
-                <p className="text-slate-900 font-semibold">
-                  {localData.patient.name}
-                </p>
-                <p className="text-slate-600 text-sm">
-                  Phone: {localData.patient.phone || "-"}
-                </p>
-              </div>
-            </div>
-          </InfoCard>
-        )}
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {/* Appointment Info */}
+          <div className="space-y-3 rounded-2xl p-5 bg-gradient-to-br from-slate-50 to-white border border-slate-200/60 shadow-lg mb-6">
+            <Row label="Appointment ID" value={localData.id} icon={Hash} />
+            <Row
+              label="Date"
+              value={formatDate(localData.date)}
+              icon={CalendarDays}
+            />
+            <Row label="Time Slot" value={localData.timeSlot} icon={Clock} />
 
-        {/* Doctor */}
-        {localData.doctor && (
-          <InfoCard title="Doctor Details" icon={Stethoscope}>
-            <div className="flex items-start gap-3">
-              <Avatar name={localData.doctor.user?.name} />
-              <div>
-                <p className="text-slate-900 font-semibold">
-                  {localData.doctor.user?.name}
-                </p>
-                <p className="text-slate-600 text-sm">
-                  Specialization: {localData.doctor.specialization}
-                </p>
-              </div>
-            </div>
-          </InfoCard>
-        )}
-        {/* PAYMENT INFO */}
-        {localData.paymentOption === "PAY_AT_HOSPITAL" &&
-          effectivePaymentStatus !== "SUCCESS" && (
-            <div className="mt-6 p-4 rounded-xl border border-slate-200 bg-slate-50">
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                Payment Details
-              </h3>
-
-              <div className="flex justify-between py-1 text-sm">
-                <span className="text-slate-500">Mode</span>
-                <span className="font-medium">{localData.paymentOption}</span>
-              </div>
-
-              <div className="flex justify-between py-1 text-sm">
-                <span className="text-slate-500">Amount</span>
-                <span className="font-medium">₹ {effectiveAmount}</span>
-              </div>
-
-              <div className="flex justify-between py-1 text-sm">
-                <span className="text-slate-500">Status</span>
-                <span
-                  className={`font-semibold ${
-                    effectivePaymentStatus === "SUCCESS"
-                      ? "text-green-600"
-                      : "text-yellow-600"
+            {/* Status */}
+            <div className="relative">
+              <div className="flex justify-between items-center py-3 border-b border-slate-200/60">
+                <div className="flex items-center gap-2.5 text-slate-600">
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-purple-600"></div>
+                  <span className="font-semibold text-slate-700">Status</span>
+                </div>
+                <button
+                  onClick={() => setStatusOpen((v) => !v)}
+                  className={`px-4 py-1.5 text-sm font-bold rounded-xl border-2 flex items-center gap-2 shadow-sm transition-all hover:scale-105 ${
+                    badgeColor[localData.status]
                   }`}>
-                  {effectivePaymentStatus}
+                  {localData.status} <ChevronDown size={14} />
+                </button>
+              </div>
+
+              {statusOpen && (
+                <div className="absolute right-0 mt-2 bg-white border-2 border-slate-200 shadow-2xl rounded-xl z-20 w-48 overflow-hidden">
+                  {statusOptions.map((s) => (
+                    <div
+                      key={s}
+                      className="px-4 py-2.5 hover:bg-gradient-to-r hover:from-violet-50 hover:to-purple-50 cursor-pointer text-sm font-medium text-slate-700 transition-all border-b border-slate-100 last:border-0"
+                      onClick={() => {
+                        updateStatus(s);
+                        setStatusOpen(false);
+                      }}>
+                      {s}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Row label="Token Number" value={localData.tokenNumber} />
+            <Row label="Queue Position" value={localData.queuePosition} />
+
+            {/* Payment Status */}
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-2.5 text-slate-600">
+                <CreditCard size={17} className="text-violet-600" />
+                <span className="font-semibold text-slate-700">
+                  Payment Status
                 </span>
               </div>
-
-              {localData.paymentOption === "PAY_AT_HOSPITAL" &&
-                effectivePaymentStatus !== "SUCCESS" && (
-                  <button
-                    onClick={markPaid}
-                    disabled={loading}
-                    className="w-full mt-4 py-3 bg-emerald-600 text-white rounded-xl shadow hover:bg-emerald-700">
-                    Mark Payment as PAID
-                  </button>
-                )}
+              <span
+                className={`px-3 py-1.5 rounded-xl font-bold text-sm border-2 ${
+                  effectivePaymentStatus === "SUCCESS"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                    : effectivePaymentStatus === "PENDING"
+                    ? "bg-yellow-50 text-yellow-700 border-yellow-300"
+                    : effectivePaymentStatus === "FAILED"
+                    ? "bg-red-50 text-red-700 border-red-300"
+                    : "bg-slate-50 text-slate-700 border-slate-300"
+                }`}>
+                {effectivePaymentStatus || "PENDING"}
+              </span>
             </div>
+          </div>
+
+          {/* Patient */}
+          {localData.patient && (
+            <InfoCard title="Patient Details" icon={User}>
+              <div className="flex items-start gap-4">
+                <Avatar name={localData.patient.name} />
+                <div className="flex-1">
+                  <p className="text-slate-900 font-bold text-lg mb-1">
+                    {localData.patient.name}
+                  </p>
+                  <p className="text-slate-600 text-sm font-medium">
+                    📞{" "}
+                    {localData.patientPhone ||
+                      localData.user?.phone ||
+                      localData.patient?.phone ||
+                      "-"}
+                  </p>
+                </div>
+              </div>
+            </InfoCard>
           )}
 
-        {/* Actions */}
-        {/* <div className="mt-8 space-y-3">
-          {localData.tokenNumber == null && (
-            <button
-              onClick={checkIn}
-              disabled={loading}
-              className="w-full py-3 bg-green-600 text-white rounded-xl shadow hover:bg-green-700">
-              Check-In + Generate Token
-            </button>
+          {/* Doctor */}
+          {localData.doctor && (
+            <InfoCard title="Doctor Details" icon={Stethoscope}>
+              <div className="flex items-start gap-4">
+                <Avatar name={localData.doctor.user?.name} />
+                <div className="flex-1">
+                  <p className="text-slate-900 font-bold text-lg mb-1">
+                    {localData.doctor.user?.name}
+                  </p>
+                  <p className="text-slate-600 text-sm font-medium">
+                    🏥 {localData.doctor.specialization}
+                  </p>
+                </div>
+              </div>
+            </InfoCard>
           )}
+          {/* PAYMENT INFO */}
+          {localData.paymentOption === "PAY_AT_HOSPITAL" &&
+            effectivePaymentStatus !== "SUCCESS" && (
+              <div className="p-5 rounded-2xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg mb-6">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <CreditCard size={20} className="text-amber-600" />
+                  Payment Details
+                </h3>
 
-          {localData.tokenNumber == null && (
-            <button
-              onClick={generateToken}
-              disabled={loading}
-              className="w-full py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700">
-              Generate Token
-            </button>
-          )}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b border-amber-200/60">
+                    <span className="text-slate-600 font-semibold">Mode</span>
+                    <span className="font-bold text-slate-800">
+                      {localData.paymentOption}
+                    </span>
+                  </div>
 
+                  <div className="flex justify-between items-center py-2 border-b border-amber-200/60">
+                    <span className="text-slate-600 font-semibold">Amount</span>
+                    <span className="font-bold text-slate-800 text-lg">
+                      ₹{effectiveAmount}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-slate-600 font-semibold">Status</span>
+                    <span
+                      className={`px-3 py-1.5 rounded-xl font-bold text-sm border-2 ${
+                        effectivePaymentStatus === "SUCCESS"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                          : "bg-yellow-50 text-yellow-700 border-yellow-300"
+                      }`}>
+                      {effectivePaymentStatus}
+                    </span>
+                  </div>
+
+                  {localData.paymentOption === "PAY_AT_HOSPITAL" &&
+                    effectivePaymentStatus !== "SUCCESS" && (
+                      <button
+                        onClick={markPaid}
+                        disabled={loading}
+                        className="w-full mt-4 py-3.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl shadow-lg hover:shadow-xl font-bold transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed">
+                        {loading ? "Processing..." : "Mark Payment as PAID"}
+                      </button>
+                    )}
+                </div>
+              </div>
+            )}
+        </div>
+
+        {/* Fixed Premium Footer */}
+        <div className="flex-shrink-0 px-6 py-4 bg-gradient-to-r from-slate-50 to-white border-t border-slate-200/60 flex items-center justify-end gap-3">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-slate-800 text-white rounded-xl shadow hover:bg-slate-700">
+            className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition-all hover:scale-105 shadow-sm">
             Close
           </button>
-        </div> */}
+        </div>
       </div>
     </div>
   );

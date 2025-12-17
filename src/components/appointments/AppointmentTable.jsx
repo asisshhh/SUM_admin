@@ -9,6 +9,7 @@ const TABLE_HEADERS = [
   { key: "schedule", label: "Schedule" },
   { key: "status", label: "Status" },
   { key: "amount", label: "Amount" },
+  { key: "paymentStatus", label: "Payment Status" },
   { key: "actions", label: "Actions" }
 ];
 
@@ -76,7 +77,7 @@ function TableHeader({ loading }) {
 function EmptyState() {
   return (
     <tr>
-      <td colSpan={7} className="px-4 py-16 text-center">
+      <td colSpan={8} className="px-4 py-16 text-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
             <Calendar size={28} className="text-slate-400" />
@@ -90,4 +91,3 @@ function EmptyState() {
     </tr>
   );
 }
-

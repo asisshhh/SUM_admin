@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
   FolderTree,
   Search,
@@ -239,6 +240,7 @@ function CategoryFormModal({ category, onClose }) {
 export default function TestCategoriesPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [editing, setEditing] = useState(null);
 
   const [searchInput, setSearchInput] = useState("");
@@ -310,12 +312,14 @@ export default function TestCategoriesPage() {
             </p>
           </div>
         </div>
-        <button
-          className="btn bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2"
-          onClick={() => setEditing({})}>
-          <Plus size={18} />
-          Add Category
-        </button>
+        {canCreate && (
+          <button
+            className="btn bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2"
+            onClick={() => setEditing({})}>
+            <Plus size={18} />
+            Add Category
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -421,26 +425,35 @@ export default function TestCategoriesPage() {
                   </td>
                   <td className="p-3">
                     <div className="flex justify-center gap-2">
-                      <button
-                        className="p-2 hover:bg-slate-100 rounded-lg transition"
-                        onClick={() => setEditing(cat)}
-                        title="Edit">
-                        <Edit2 size={16} className="text-slate-600" />
-                      </button>
-                      <button
-                        className="p-2 hover:bg-red-50 rounded-lg transition"
-                        onClick={() => handleDelete(cat)}
-                        title="Delete"
-                        disabled={cat.testCount > 0}>
-                        <Trash2
-                          size={16}
-                          className={
-                            cat.testCount > 0
-                              ? "text-slate-300"
-                              : "text-red-500"
-                          }
-                        />
-                      </button>
+                      {canEdit && (
+                        <button
+                          className="p-2 hover:bg-slate-100 rounded-lg transition"
+                          onClick={() => setEditing(cat)}
+                          title="Edit">
+                          <Edit2 size={16} className="text-slate-600" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          className="p-2 hover:bg-red-50 rounded-lg transition"
+                          onClick={() => handleDelete(cat)}
+                          title="Delete"
+                          disabled={cat.testCount > 0}>
+                          <Trash2
+                            size={16}
+                            className={
+                              cat.testCount > 0
+                                ? "text-slate-300"
+                                : "text-red-500"
+                            }
+                          />
+                        </button>
+                      )}
+                      {!canEdit && !canDelete && (
+                        <span className="text-xs text-slate-400">
+                          View only
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>

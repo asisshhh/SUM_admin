@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import { Stethoscope, Search, Plus, Trash2 } from "lucide-react";
 
 // Components
@@ -33,6 +34,7 @@ const TABLE_COLUMNS = [
 export default function DoctorsPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
 
   // State
   const [selected, setSelected] = useState([]);
@@ -166,12 +168,14 @@ export default function DoctorsPage() {
             </p>
           </div>
         </div>
-        <button
-          className="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
-          onClick={() => setEditing({})}>
-          <Plus size={18} />
-          Add Doctor
-        </button>
+        {canCreate && (
+          <button
+            className="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+            onClick={() => setEditing({})}>
+            <Plus size={18} />
+            Add Doctor
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -304,6 +308,8 @@ export default function DoctorsPage() {
                   onSelect={() => toggleSelect(doctor.id)}
                   onEdit={() => setEditing(doctor)}
                   onDelete={() => handleDelete(doctor)}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
                 />
               ))}
             </tbody>

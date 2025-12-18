@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import BannerModal from "../components/banner/BannerModal";
 import api from "../api/client";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
   Image,
   Plus,
@@ -24,6 +25,7 @@ import { useConfirm } from "../contexts/ConfirmContext";
 export default function BannersPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
 
@@ -121,12 +123,14 @@ export default function BannersPage() {
               />
               Refresh
             </button>
-            <button
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-xl font-medium hover:from-pink-600 hover:to-pink-700 shadow-lg shadow-pink-200/50 transition-all"
-              onClick={() => setAdding(true)}>
-              <Plus size={18} />
-              Add Banner
-            </button>
+            {canCreate && (
+              <button
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-xl font-medium hover:from-pink-600 hover:to-pink-700 shadow-lg shadow-pink-200/50 transition-all"
+                onClick={() => setAdding(true)}>
+                <Plus size={18} />
+                Add Banner
+              </button>
+            )}
           </div>
         </div>
 
@@ -176,6 +180,7 @@ export default function BannersPage() {
               <Plus size={18} />
               Add Your First Banner
             </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -287,20 +292,26 @@ export default function BannersPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-                    <button
-                      onClick={() => setEditing(b)}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                      <Edit size={14} />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(b)}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
-                      <Trash2 size={14} />
-                      Delete
-                    </button>
-                  </div>
+                  {(canEdit || canDelete) && (
+                    <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                      {canEdit && (
+                        <button
+                          onClick={() => setEditing(b)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                          <Edit size={14} />
+                          Edit
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDelete(b)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

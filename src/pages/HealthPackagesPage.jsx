@@ -2,11 +2,16 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import { Package, Search, Plus } from "lucide-react";
 
 // Components
 import { Pagination } from "../components/shared";
-import { PackageFormModal, PackageTableRow, PackageViewModal } from "../components/packages";
+import {
+  PackageFormModal,
+  PackageTableRow,
+  PackageViewModal
+} from "../components/packages";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -32,6 +37,7 @@ const TABLE_COLUMNS = [
 export default function HealthPackagesPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
 
@@ -82,14 +88,17 @@ export default function HealthPackagesPage() {
     setFilters((f) => ({ ...f, page }));
   }, []);
 
-  const handleDelete = useCallback(async (pkg) => {
-    const ok = await confirm({
-      title: "Delete Package",
-      message: `Are you sure you want to delete "${pkg.name}"?`,
-      danger: true
-    });
-    if (ok) deleteMutation.mutate(pkg.id);
-  }, [confirm, deleteMutation]);
+  const handleDelete = useCallback(
+    async (pkg) => {
+      const ok = await confirm({
+        title: "Delete Package",
+        message: `Are you sure you want to delete "${pkg.name}"?`,
+        danger: true
+      });
+      if (ok) deleteMutation.mutate(pkg.id);
+    },
+    [confirm, deleteMutation]
+  );
 
   const handleView = useCallback((pkg) => {
     setViewing(pkg);
@@ -116,16 +125,22 @@ export default function HealthPackagesPage() {
             <Package className="text-blue-600" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Health Packages</h1>
-            <p className="text-sm text-slate-500">Manage health checkup packages and pricing</p>
+            <h1 className="text-2xl font-bold text-slate-800">
+              Health Packages
+            </h1>
+            <p className="text-sm text-slate-500">
+              Manage health checkup packages and pricing
+            </p>
           </div>
         </div>
-        <button
-          className="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
-          onClick={() => setEditing({})}>
-          <Plus size={18} />
-          Create Package
-        </button>
+        {canCreate && (
+          <button
+            className="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+            onClick={() => setEditing({})}>
+            <Plus size={18} />
+            Create Package
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -135,7 +150,10 @@ export default function HealthPackagesPage() {
           <div className="flex-1 min-w-[200px]">
             <label className="text-sm text-slate-600 mb-1 block">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
               <input
                 className="input pl-10 pr-8"
                 value={searchInput}
@@ -153,7 +171,11 @@ export default function HealthPackagesPage() {
           {/* Status */}
           <div className="min-w-[120px]">
             <label className="text-sm text-slate-600 mb-1 block">Status</label>
-            <select name="active" className="select" value={filters.active} onChange={handleFilterChange}>
+            <select
+              name="active"
+              className="select"
+              value={filters.active}
+              onChange={handleFilterChange}>
               <option value="all">All</option>
               <option value="true">Active</option>
               <option value="false">Inactive</option>
@@ -163,7 +185,11 @@ export default function HealthPackagesPage() {
           {/* Popular */}
           <div className="min-w-[120px]">
             <label className="text-sm text-slate-600 mb-1 block">Popular</label>
-            <select name="popular" className="select" value={filters.popular} onChange={handleFilterChange}>
+            <select
+              name="popular"
+              className="select"
+              value={filters.popular}
+              onChange={handleFilterChange}>
               <option value="all">All</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -172,8 +198,14 @@ export default function HealthPackagesPage() {
 
           {/* Featured */}
           <div className="min-w-[120px]">
-            <label className="text-sm text-slate-600 mb-1 block">Featured</label>
-            <select name="featured" className="select" value={filters.featured} onChange={handleFilterChange}>
+            <label className="text-sm text-slate-600 mb-1 block">
+              Featured
+            </label>
+            <select
+              name="featured"
+              className="select"
+              value={filters.featured}
+              onChange={handleFilterChange}>
               <option value="all">All</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -194,7 +226,9 @@ export default function HealthPackagesPage() {
             <Package className="mx-auto mb-2 text-slate-300" size={40} />
             <p>No packages found</p>
             <p className="text-sm mt-1">
-              {filters.search || filters.active !== "all" || filters.popular !== "all"
+              {filters.search ||
+              filters.active !== "all" ||
+              filters.popular !== "all"
                 ? "Try adjusting your filters."
                 : "Create a new package to get started."}
             </p>
@@ -204,7 +238,9 @@ export default function HealthPackagesPage() {
             <thead className="bg-slate-50 border-b">
               <tr>
                 {TABLE_COLUMNS.map(({ key, label, align }) => (
-                  <th key={key} className={`p-3 font-semibold text-${align || "left"}`}>
+                  <th
+                    key={key}
+                    className={`p-3 font-semibold text-${align || "left"}`}>
                     {label}
                   </th>
                 ))}
@@ -218,6 +254,8 @@ export default function HealthPackagesPage() {
                   onView={() => handleView(pkg)}
                   onEdit={() => handleEdit(pkg)}
                   onDelete={() => handleDelete(pkg)}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
                 />
               ))}
             </tbody>
@@ -234,12 +272,7 @@ export default function HealthPackagesPage() {
       />
 
       {/* View Modal */}
-      {viewing && (
-        <PackageViewModal
-          pkg={viewing}
-          onClose={handleCloseView}
-        />
-      )}
+      {viewing && <PackageViewModal pkg={viewing} onClose={handleCloseView} />}
 
       {/* Edit Modal */}
       {editing !== null && (

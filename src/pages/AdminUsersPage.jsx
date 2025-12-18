@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
   Users,
   Search,
@@ -359,6 +360,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
 export default function AdminUsersPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchInput, setSearchInput] = useState("");
@@ -478,12 +480,14 @@ export default function AdminUsersPage() {
             Manage admins, doctors, receptionists, and other staff members
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition flex items-center gap-2 shadow-sm">
-          <Plus size={18} />
-          Add Staff
-        </button>
+        {canCreate && (
+          <button
+            onClick={handleCreate}
+            className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition flex items-center gap-2 shadow-sm">
+            <Plus size={18} />
+            Add Staff
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -681,18 +685,27 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(user)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit Role">
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete">
-                          <Trash2 size={16} />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => handleEdit(user)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Role">
+                            <Edit size={16} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(user)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                        {!canEdit && !canDelete && (
+                          <span className="text-xs text-slate-400">
+                            View only
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>

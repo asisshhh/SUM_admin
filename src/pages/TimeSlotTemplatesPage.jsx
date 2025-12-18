@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
   Clock,
   Plus,
@@ -14,6 +15,7 @@ import {
 
 export default function TimeSlotTemplatesPage() {
   const qc = useQueryClient();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [formData, setFormData] = useState({
@@ -190,12 +192,14 @@ export default function TimeSlotTemplatesPage() {
               ? "Initializing..."
               : "Initialize Defaults"}
           </button>
-          <button
-            onClick={handleAdd}
-            className="btn bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-lg">
-            <Plus size={20} />
-            Add Template
-          </button>
+          {canCreate && (
+            <button
+              onClick={handleAdd}
+              className="btn bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-lg">
+              <Plus size={20} />
+              Add Template
+            </button>
+          )}
         </div>
       </div>
 
@@ -288,29 +292,35 @@ export default function TimeSlotTemplatesPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => handleEdit(template)}
-                    className="flex-1 btn bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold">
-                    <Edit size={16} />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Are you sure you want to ${
-                            template.active ? "deactivate" : "delete"
-                          } this template?`
-                        )
-                      ) {
-                        deleteTemplate.mutate(template.id);
-                      }
-                    }}
-                    className="btn bg-red-600 text-white hover:bg-red-700 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-semibold">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+                {(canEdit || canDelete) && (
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+                    {canEdit && (
+                      <button
+                        onClick={() => handleEdit(template)}
+                        className="flex-1 btn bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold">
+                        <Edit size={16} />
+                        Edit
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `Are you sure you want to ${
+                                template.active ? "deactivate" : "delete"
+                              } this template?`
+                            )
+                          ) {
+                            deleteTemplate.mutate(template.id);
+                          }
+                        }}
+                        className="btn bg-red-600 text-white hover:bg-red-700 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-semibold">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

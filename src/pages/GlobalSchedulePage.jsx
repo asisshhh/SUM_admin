@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import { Clock, Plus, Trash2, Save, X, AlertCircle } from "lucide-react";
 
 const DAY_NAMES = [
@@ -15,6 +16,7 @@ const DAY_NAMES = [
 
 export default function GlobalSchedulePage() {
   const qc = useQueryClient();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [editingDay, setEditingDay] = useState(null);
   const [formData, setFormData] = useState({
     isAvailable: true,
@@ -242,17 +244,19 @@ export default function GlobalSchedulePage() {
                         <X size={16} className="mr-1" />
                         Cancel
                       </button>
-                      <button
-                        onClick={() => handleSave(day)}
-                        className="btn bg-blue-600 text-white hover:bg-blue-700"
-                        disabled={saveSchedule.isPending}>
-                        <Save size={16} className="mr-1" />
-                        {saveSchedule.isPending ? "Saving..." : "Save"}
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => handleSave(day)}
+                          className="btn bg-blue-600 text-white hover:bg-blue-700"
+                          disabled={saveSchedule.isPending}>
+                          <Save size={16} className="mr-1" />
+                          {saveSchedule.isPending ? "Saving..." : "Save"}
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
-                      {schedule?.id && (
+                      {schedule?.id && canDelete && (
                         <button
                           onClick={() => deleteSchedule.mutate(day)}
                           className="btn bg-red-600 text-white hover:bg-red-700"
@@ -261,12 +265,14 @@ export default function GlobalSchedulePage() {
                           Delete
                         </button>
                       )}
-                      <button
-                        onClick={() => handleEdit(day)}
-                        className="btn bg-blue-600 text-white hover:bg-blue-700">
-                        <Clock size={16} className="mr-1" />
-                        {schedule?.id ? "Edit" : "Configure"}
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => handleEdit(day)}
+                          className="btn bg-blue-600 text-white hover:bg-blue-700">
+                          <Clock size={16} className="mr-1" />
+                          {schedule?.id ? "Edit" : "Configure"}
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -343,13 +349,15 @@ export default function GlobalSchedulePage() {
                           <label className="block text-sm font-medium text-gray-700">
                             Time Slots
                           </label>
-                          <button
-                            type="button"
-                            onClick={handleAddTimeSlot}
-                            className="btn bg-green-600 text-white hover:bg-green-700 text-sm">
-                            <Plus size={16} className="mr-1" />
-                            Add Slot
-                          </button>
+                          {canCreate && (
+                            <button
+                              type="button"
+                              onClick={handleAddTimeSlot}
+                              className="btn bg-green-600 text-white hover:bg-green-700 text-sm">
+                              <Plus size={16} className="mr-1" />
+                              Add Slot
+                            </button>
+                          )}
                         </div>
 
                         {formData.timeSlots.length === 0 ? (
@@ -398,12 +406,14 @@ export default function GlobalSchedulePage() {
                                     />
                                   </div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveTimeSlot(index)}
-                                  className="btn bg-red-600 text-white hover:bg-red-700 p-2">
-                                  <Trash2 size={16} />
-                                </button>
+                                {canDelete && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTimeSlot(index)}
+                                    className="btn bg-red-600 text-white hover:bg-red-700 p-2">
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
                               </div>
                             ))}
                           </div>

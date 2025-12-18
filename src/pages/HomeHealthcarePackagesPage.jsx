@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import { Package, Search, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -37,6 +38,7 @@ const TABLE_COLUMNS = [
 export default function HomeHealthcarePackagesPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
 
@@ -138,12 +140,14 @@ export default function HomeHealthcarePackagesPage() {
             </p>
           </div>
         </div>
-        <button
-          className="btn bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
-          onClick={() => setEditing({})}>
-          <Plus size={18} />
-          Create Package
-        </button>
+        {canCreate && (
+          <button
+            className="btn bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
+            onClick={() => setEditing({})}>
+            <Plus size={18} />
+            Create Package
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -257,6 +261,8 @@ export default function HomeHealthcarePackagesPage() {
                   onView={() => handleView(pkg)}
                   onEdit={() => handleEdit(pkg)}
                   onDelete={() => handleDelete(pkg)}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
                 />
               ))}
             </tbody>

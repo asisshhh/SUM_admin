@@ -1,14 +1,28 @@
-import React, { useState } from "react";
-import api from "../api/client";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { Lock, Mail, Phone, LogIn } from "lucide-react";
 import logo from "../assets/logo.webp";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const { login, user } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === "DOCTOR") {
+        navigate("/doctor-dashboard");
+      } else {
+        navigate("/");
+      }
+    }
+  }, [user, navigate]);
 
   const isEmail = (value) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -48,12 +62,18 @@ export default function LoginPage() {
         return;
       }
 
-      const { data } = await api.post("/auth/login", loginData);
-      localStorage.setItem("token", data.token);
-      window.location.href = "/";
+      const result = await login(loginData);
+
+      // Redirect based on role
+      if (result.user.role === "DOCTOR") {
+        navigate("/doctor-dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (e) {
       setError(
         e?.response?.data?.error ||
+          e.message ||
           "Login failed. Please check your credentials."
       );
     } finally {

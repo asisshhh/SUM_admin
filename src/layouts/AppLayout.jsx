@@ -229,6 +229,12 @@ const SidebarNav = ({ onNavClick }) => (
       label="Patients"
       onClick={onNavClick}
     />
+    <NavItem
+      to="/role-management"
+      icon={Settings}
+      label="Role Management"
+      onClick={onNavClick}
+    />
   </nav>
 );
 

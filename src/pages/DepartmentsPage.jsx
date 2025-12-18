@@ -35,6 +35,7 @@ const TABLE_COLUMNS = [
 export default function DepartmentsPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
 
   // State
   const [searchInput, setSearchInput] = useState("");

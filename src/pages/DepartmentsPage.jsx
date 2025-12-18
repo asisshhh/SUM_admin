@@ -5,8 +5,10 @@ import { useConfirm } from "../contexts/ConfirmContext";
 import { Building2, Search, Plus } from "lucide-react";
 
 // Components
-import { Pagination } from "../components/shared";
-import { DepartmentFormModal, DepartmentTableRow } from "../components/departments";
+import {
+  DepartmentFormModal,
+  DepartmentTableRow
+} from "../components/departments";
 
 // Custom hook for debounced value
 function useDebounce(value, delay = 300) {
@@ -39,15 +41,13 @@ export default function DepartmentsPage() {
   const [showForm, setShowForm] = useState(null);
 
   const [filters, setFilters] = useState({
-    page: 1,
-    pageSize: 10,
     search: "",
     active: ""
   });
 
   // Update search filter when debounced value changes
   useEffect(() => {
-    setFilters((f) => ({ ...f, search: debouncedSearch, page: 1 }));
+    setFilters((f) => ({ ...f, search: debouncedSearch }));
   }, [debouncedSearch]);
 
   // Queries
@@ -69,30 +69,28 @@ export default function DepartmentsPage() {
 
   // Derived state
   const items = data?.items || [];
-  const total = data?.total || 0;
 
   // Handlers
   const handleFilterChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFilters((f) => ({ ...f, [name]: value, page: 1 }));
+    setFilters((f) => ({ ...f, [name]: value }));
   }, []);
 
-  const handlePageChange = useCallback((page) => {
-    setFilters((f) => ({ ...f, page }));
-  }, []);
-
-  const handleDelete = useCallback(async (department) => {
-    const ok = await confirm({
-      title: "Confirm delete",
-      message: `Delete department "${department.name}"? ${
-        department.doctorCount > 0
-          ? `This department has ${department.doctorCount} doctor(s). They will need to be reassigned.`
-          : ""
-      }`,
-      danger: true
-    });
-    if (ok) deleteMutation.mutate(department.id);
-  }, [confirm, deleteMutation]);
+  const handleDelete = useCallback(
+    async (department) => {
+      const ok = await confirm({
+        title: "Confirm delete",
+        message: `Delete department "${department.name}"? ${
+          department.doctorCount > 0
+            ? `This department has ${department.doctorCount} doctor(s). They will need to be reassigned.`
+            : ""
+        }`,
+        danger: true
+      });
+      if (ok) deleteMutation.mutate(department.id);
+    },
+    [confirm, deleteMutation]
+  );
 
   const handleEdit = useCallback((department) => {
     setShowForm(department);
@@ -111,8 +109,12 @@ export default function DepartmentsPage() {
             <Building2 className="text-indigo-600" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Departments Management</h1>
-            <p className="text-sm text-slate-500">Organize hospital departments and specializations</p>
+            <h1 className="text-2xl font-bold text-slate-800">
+              Departments Management
+            </h1>
+            <p className="text-sm text-slate-500">
+              Organize hospital departments and specializations
+            </p>
           </div>
         </div>
         <button
@@ -130,7 +132,10 @@ export default function DepartmentsPage() {
           <div className="flex-1 min-w-[200px]">
             <label className="text-sm text-slate-600 mb-1 block">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
               <input
                 className="input pl-10 pr-8"
                 value={searchInput}
@@ -185,7 +190,9 @@ export default function DepartmentsPage() {
                 {TABLE_COLUMNS.map(({ key, label, center }) => (
                   <th
                     key={key}
-                    className={`p-3 font-semibold ${center ? "text-center" : "text-left"}`}>
+                    className={`p-3 font-semibold ${
+                      center ? "text-center" : "text-left"
+                    }`}>
                     {label}
                   </th>
                 ))}
@@ -204,14 +211,6 @@ export default function DepartmentsPage() {
           </table>
         )}
       </div>
-
-      {/* Pagination */}
-      <Pagination
-        page={data?.page || 1}
-        total={total}
-        pageSize={data?.pageSize || 10}
-        onPage={handlePageChange}
-      />
 
       {/* Modal */}
       {showForm !== null && (

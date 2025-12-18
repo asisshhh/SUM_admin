@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Lock, Mail, Phone, LogIn } from "lucide-react";
@@ -12,17 +12,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const hasNavigated = useRef(false);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
+    if (user?.id && !hasNavigated.current) {
+      hasNavigated.current = true;
       if (user.role === "DOCTOR") {
-        navigate("/doctor-dashboard");
+        navigate("/doctor-dashboard", { replace: true });
       } else {
-        navigate("/");
+        navigate("/", { replace: true });
       }
+    } else if (!user?.id) {
+      // Reset ref when user logs out
+      hasNavigated.current = false;
     }
-  }, [user, navigate]);
+  }, [user?.id, user?.role, navigate]);
 
   const isEmail = (value) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);

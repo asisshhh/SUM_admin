@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import api from "../api/client";
 import {
   CalendarCheck,
@@ -12,8 +14,14 @@ import StatCard from "../components/analytics/StatCard";
 import ChartCard from "../components/analytics/ChartCard";
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [summary, setSummary] = useState({});
   const [appointmentGraph, setAppointmentGraph] = useState([]);
+
+  // Redirect doctors to their specific dashboard
+  if (user?.role === "DOCTOR") {
+    return <Navigate to="/doctor-dashboard" replace />;
+  }
 
   useEffect(() => {
     loadSummary();

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   LayoutDashboard,
   Stethoscope,
@@ -22,7 +23,10 @@ import {
   Menu,
   X,
   Users,
-  HeartPulse
+  HeartPulse,
+  Shield,
+  User,
+  Crown
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -52,195 +56,221 @@ const NavItem = ({ to, icon: Icon, label, onClick }) => {
   );
 };
 
+// Default navigation structure
+const DEFAULT_NAV_ITEMS = [
+  { path: "/", label: "Dashboard", icon: LayoutDashboard, category: "Main" },
+  { path: "/orders", label: "Orders", icon: ListChecks, category: "Main" },
+  {
+    path: "/doctors",
+    label: "Doctors",
+    icon: Stethoscope,
+    category: "Clinical"
+  },
+  {
+    path: "/doctor-calendar",
+    label: "Doctor Calendar",
+    icon: Stethoscope,
+    category: "Clinical"
+  },
+  {
+    path: "/doctor-schedule",
+    label: "Doctor Schedule",
+    icon: Clock,
+    category: "Clinical"
+  },
+  {
+    path: "/global-schedule",
+    label: "Global Schedule",
+    icon: Clock,
+    category: "Clinical"
+  },
+  {
+    path: "/time-slot-templates",
+    label: "Time Slot Templates",
+    icon: Clock,
+    category: "Clinical"
+  },
+  {
+    path: "/departments",
+    label: "Departments",
+    icon: Building2,
+    category: "Clinical"
+  },
+  {
+    path: "/ambulance",
+    label: "Ambulances",
+    icon: Ambulance,
+    category: "Ambulance"
+  },
+  {
+    path: "/ambulance-types",
+    label: "Ambulance Types",
+    icon: Ambulance,
+    category: "Ambulance"
+  },
+  {
+    path: "/ambulance-features",
+    label: "Features",
+    icon: Settings,
+    category: "Ambulance"
+  },
+  {
+    path: "/drivers",
+    label: "Drivers",
+    icon: Ambulance,
+    category: "Ambulance"
+  },
+  {
+    path: "/ambulance-logs",
+    label: "Logs",
+    icon: Ambulance,
+    category: "Ambulance"
+  },
+  {
+    path: "/test-categories",
+    label: "Test Categories",
+    icon: FolderTree,
+    category: "Lab"
+  },
+  {
+    path: "/lab-tests",
+    label: "Lab Tests",
+    icon: FlaskConical,
+    category: "Lab"
+  },
+  {
+    path: "/health-packages",
+    label: "Health Packages",
+    icon: Gift,
+    category: "Lab"
+  },
+  {
+    path: "/home-healthcare-services",
+    label: "Services",
+    icon: Home,
+    category: "Home Healthcare"
+  },
+  {
+    path: "/home-healthcare-packages",
+    label: "Packages",
+    icon: Package,
+    category: "Home Healthcare"
+  },
+  {
+    path: "/feedback",
+    label: "Feedback",
+    icon: MessageSquare,
+    category: "Content"
+  },
+  {
+    path: "/grievances",
+    label: "Grievances",
+    icon: AlertCircle,
+    category: "Content"
+  },
+  { path: "/banners", label: "Banners", icon: Image, category: "Content" },
+  { path: "/reports", label: "Reports", icon: BarChart2, category: "Content" },
+  {
+    path: "/activity-logs",
+    label: "Activity Logs",
+    icon: Activity,
+    category: "Admin"
+  },
+  {
+    path: "/admin-users",
+    label: "Admin Users",
+    icon: Users,
+    category: "Admin"
+  },
+  { path: "/patients", label: "Patients", icon: HeartPulse, category: "Admin" },
+  {
+    path: "/role-management",
+    label: "Role Management",
+    icon: Shield,
+    category: "Admin"
+  }
+];
+
 // Sidebar Navigation Content
-const SidebarNav = ({ onNavClick }) => (
-  <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-    <NavItem
-      to="/"
-      icon={LayoutDashboard}
-      label="Dashboard"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/orders"
-      icon={ListChecks}
-      label="Orders"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/doctors"
-      icon={Stethoscope}
-      label="Doctors"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/doctor-calendar"
-      icon={Stethoscope}
-      label="Doctor Calendar"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/doctor-schedule"
-      icon={Clock}
-      label="Doctor Schedule"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/global-schedule"
-      icon={Clock}
-      label="Global Schedule"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/time-slot-templates"
-      icon={Clock}
-      label="Time Slot Templates"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/departments"
-      icon={Building2}
-      label="Departments"
-      onClick={onNavClick}
-    />
+const SidebarNav = ({ onNavClick, canAccess, isSuperAdmin, permissions }) => {
+  // Get accessible items
+  const getAccessibleItems = () => {
+    if (isSuperAdmin) {
+      return DEFAULT_NAV_ITEMS;
+    }
 
-    {/* Ambulance Section */}
-    <div className="mt-4 mb-2 px-4">
-      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-        Ambulance
-      </span>
-    </div>
-    <NavItem
-      to="/ambulance"
-      icon={Ambulance}
-      label="Ambulances"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/ambulance-types"
-      icon={Ambulance}
-      label="Ambulance Types"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/ambulance-features"
-      icon={Settings}
-      label="Features"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/drivers"
-      icon={Ambulance}
-      label="Drivers"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/ambulance-logs"
-      icon={Ambulance}
-      label="Logs"
-      onClick={onNavClick}
-    />
+    // Filter based on permissions
+    return DEFAULT_NAV_ITEMS.filter((item) => {
+      // Check if user has permission for this path
+      return canAccess(item.path);
+    });
+  };
 
-    {/* Lab & Packages Section */}
-    <div className="mt-4 mb-2 px-4">
-      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-        Lab & Packages
-      </span>
-    </div>
-    <NavItem
-      to="/test-categories"
-      icon={FolderTree}
-      label="Test Categories"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/lab-tests"
-      icon={FlaskConical}
-      label="Lab Tests"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/health-packages"
-      icon={Gift}
-      label="Health Packages"
-      onClick={onNavClick}
-    />
+  const accessibleItems = getAccessibleItems();
 
-    {/* Home Healthcare Section */}
-    <div className="mt-4 mb-2 px-4">
-      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-        Home Healthcare
-      </span>
-    </div>
-    <NavItem
-      to="/home-healthcare-services"
-      icon={Home}
-      label="Services"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/home-healthcare-packages"
-      icon={Package}
-      label="Packages"
-      onClick={onNavClick}
-    />
+  // Group by category
+  const groupedItems = accessibleItems.reduce((acc, item) => {
+    const category = item.category || "Other";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(item);
+    return acc;
+  }, {});
 
-    <NavItem
-      to="/feedback"
-      icon={MessageSquare}
-      label="Feedback"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/grievances"
-      icon={AlertCircle}
-      label="Grievances"
-      onClick={onNavClick}
-    />
-    <NavItem to="/banners" icon={Image} label="Banners" onClick={onNavClick} />
-    <NavItem
-      to="/reports"
-      icon={BarChart2}
-      label="Reports"
-      onClick={onNavClick}
-    />
+  const categoryOrder = [
+    "Main",
+    "Clinical",
+    "Ambulance",
+    "Lab",
+    "Home Healthcare",
+    "Content",
+    "Admin"
+  ];
 
-    {/* Admin Section */}
-    <div className="mt-4 mb-2 px-4">
-      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-        Admin
-      </span>
-    </div>
-    <NavItem
-      to="/activity-logs"
-      icon={Activity}
-      label="Activity Logs"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/admin-users"
-      icon={Users}
-      label="Admin Users"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/patients"
-      icon={HeartPulse}
-      label="Patients"
-      onClick={onNavClick}
-    />
-    <NavItem
-      to="/role-management"
-      icon={Settings}
-      label="Role Management"
-      onClick={onNavClick}
-    />
-  </nav>
-);
+  return (
+    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      {categoryOrder.map((category) => {
+        const items = groupedItems[category];
+        if (!items || items.length === 0) return null;
+
+        return (
+          <React.Fragment key={category}>
+            {category !== "Main" && (
+              <div className="mt-4 mb-2 px-4">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  {category}
+                </span>
+              </div>
+            )}
+            {items.map((item) => {
+              const Icon = item.icon || LayoutDashboard;
+              return (
+                <NavItem
+                  key={item.path}
+                  to={item.path}
+                  icon={Icon}
+                  label={item.label}
+                  onClick={onNavClick}
+                />
+              );
+            })}
+          </React.Fragment>
+        );
+      })}
+    </nav>
+  );
+};
 
 export default function AppLayout() {
   const nav = useNavigate();
   const location = useLocation();
+  const {
+    user,
+    logout: authLogout,
+    canAccess,
+    isSuperAdmin,
+    permissions,
+    loading
+  } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Scroll to top on route change
@@ -253,12 +283,43 @@ export default function AppLayout() {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const logout = () => {
-    localStorage.removeItem("token");
+  // Check access for current route
+  useEffect(() => {
+    if (!loading && !isSuperAdmin && permissions.length > 0) {
+      const currentPath = location.pathname;
+      // Allow access to doctor-specific routes
+      if (
+        currentPath.startsWith("/doctor/") ||
+        currentPath === "/doctor-dashboard"
+      ) {
+        return;
+      }
+      // Check if user can access this path
+      if (!canAccess(currentPath) && currentPath !== "/") {
+        // Redirect to dashboard or first accessible page
+        nav("/");
+      }
+    }
+  }, [location.pathname, permissions, isSuperAdmin, canAccess, nav, loading]);
+
+  const handleLogout = () => {
+    authLogout();
     nav("/login");
   };
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  // Role badge color
+  const getRoleBadgeColor = (role) => {
+    const colors = {
+      ADMIN: "bg-purple-100 text-purple-700",
+      DOCTOR: "bg-blue-100 text-blue-700",
+      RECEPTIONIST: "bg-yellow-100 text-yellow-700",
+      DEPARTMENT_HEAD: "bg-orange-100 text-orange-700",
+      NURSE: "bg-pink-100 text-pink-700"
+    };
+    return colors[role] || "bg-slate-100 text-slate-700";
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -308,11 +369,50 @@ export default function AppLayout() {
             <X size={20} />
           </button>
         </div>
-        <SidebarNav onNavClick={closeMobileMenu} />
+
+        {/* User Info */}
+        {user && (
+          <div className="px-5 py-3 border-b border-slate-200 bg-slate-50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                {isSuperAdmin ? (
+                  <Crown className="text-amber-500" size={20} />
+                ) : (
+                  <User className="text-blue-600" size={20} />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">
+                  {user.name}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(
+                      user.role
+                    )}`}>
+                    {user.role?.replace(/_/g, " ")}
+                  </span>
+                  {isSuperAdmin && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                      Super Admin
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <SidebarNav
+          onNavClick={closeMobileMenu}
+          canAccess={canAccess}
+          isSuperAdmin={isSuperAdmin}
+          permissions={permissions}
+        />
         {/* Mobile Logout */}
         <div className="p-4 border-t border-slate-200">
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition">
             <LogOut size={16} />
             Logout
@@ -329,11 +429,49 @@ export default function AppLayout() {
             App Admin
           </span>
         </div>
-        <SidebarNav />
+
+        {/* User Info */}
+        {user && (
+          <div className="px-5 py-3 border-b border-slate-200 bg-slate-50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                {isSuperAdmin ? (
+                  <Crown className="text-amber-500" size={20} />
+                ) : (
+                  <User className="text-blue-600" size={20} />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">
+                  {user.name}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(
+                      user.role
+                    )}`}>
+                    {user.role?.replace(/_/g, " ")}
+                  </span>
+                  {isSuperAdmin && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                      Super Admin
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <SidebarNav
+          canAccess={canAccess}
+          isSuperAdmin={isSuperAdmin}
+          permissions={permissions}
+        />
         {/* Logout Button */}
         <div className="p-4 border-t border-slate-200">
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition">
             <LogOut size={16} />
             Logout
@@ -350,9 +488,15 @@ export default function AppLayout() {
               Admin Dashboard
             </h1>
             <div className="flex items-center gap-4">
-              <div className="px-3 py-1.5 bg-white border rounded-full shadow-sm text-sm text-slate-600">
-                Admin Panel
-              </div>
+              {user && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border rounded-full shadow-sm text-sm">
+                  <User size={16} className="text-slate-400" />
+                  <span className="text-slate-600">{user.name}</span>
+                  {isSuperAdmin && (
+                    <Crown size={14} className="text-amber-500" />
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

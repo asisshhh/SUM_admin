@@ -1,13 +1,24 @@
 import React from "react";
 import { Package, Edit2, Trash2, Star, Sparkles, Eye } from "lucide-react";
 
-function PackageTableRow({ pkg, onView, onEdit, onDelete }) {
+function PackageTableRow({
+  pkg,
+  onView,
+  onEdit,
+  onDelete,
+  canEdit = true,
+  canDelete = true
+}) {
   return (
     <tr className="border-b hover:bg-slate-50 transition">
       <td className="p-3">
         <div className="flex items-center gap-3">
           {pkg.imageUrl ? (
-            <img src={pkg.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover" />
+            <img
+              src={pkg.imageUrl}
+              alt=""
+              className="w-12 h-12 rounded-lg object-cover"
+            />
           ) : (
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <Package size={20} className="text-blue-600" />
@@ -30,10 +41,14 @@ function PackageTableRow({ pkg, onView, onEdit, onDelete }) {
           </div>
         </div>
       </td>
-      <td className="p-3 text-right font-semibold">₹{pkg.price?.toLocaleString()}</td>
+      <td className="p-3 text-right font-semibold">
+        ₹{pkg.price?.toLocaleString()}
+      </td>
       <td className="p-3 text-right">
         {pkg.discountPrice ? (
-          <span className="text-green-600 font-medium">₹{pkg.discountPrice?.toLocaleString()}</span>
+          <span className="text-green-600 font-medium">
+            ₹{pkg.discountPrice?.toLocaleString()}
+          </span>
         ) : (
           "—"
         )}
@@ -47,9 +62,12 @@ function PackageTableRow({ pkg, onView, onEdit, onDelete }) {
         {pkg.validityDays ? `${pkg.validityDays} days` : "—"}
       </td>
       <td className="p-3 text-center">
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          pkg.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-        }`}>
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            pkg.active
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}>
           {pkg.active ? "Active" : "Inactive"}
         </span>
       </td>
@@ -61,18 +79,25 @@ function PackageTableRow({ pkg, onView, onEdit, onDelete }) {
             title="View Details">
             <Eye size={16} className="text-blue-500" />
           </button>
-          <button
-            className="p-2 hover:bg-slate-100 rounded-lg transition"
-            onClick={onEdit}
-            title="Edit">
-            <Edit2 size={16} className="text-slate-600" />
-          </button>
-          <button
-            className="p-2 hover:bg-red-50 rounded-lg transition"
-            onClick={onDelete}
-            title="Delete">
-            <Trash2 size={16} className="text-red-500" />
-          </button>
+          {canEdit && (
+            <button
+              className="p-2 hover:bg-slate-100 rounded-lg transition"
+              onClick={onEdit}
+              title="Edit">
+              <Edit2 size={16} className="text-slate-600" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              className="p-2 hover:bg-red-50 rounded-lg transition"
+              onClick={onDelete}
+              title="Delete">
+              <Trash2 size={16} className="text-red-500" />
+            </button>
+          )}
+          {!canEdit && !canDelete && (
+            <span className="text-xs text-slate-400">View only</span>
+          )}
         </div>
       </td>
     </tr>
@@ -80,4 +105,3 @@ function PackageTableRow({ pkg, onView, onEdit, onDelete }) {
 }
 
 export default React.memo(PackageTableRow);
-

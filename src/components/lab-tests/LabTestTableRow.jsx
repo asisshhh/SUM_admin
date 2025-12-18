@@ -1,11 +1,20 @@
 import React from "react";
 import { Edit2, Trash2, Home, Star, Eye } from "lucide-react";
 
-function LabTestTableRow({ test, onView, onEdit, onDelete }) {
+function LabTestTableRow({
+  test,
+  onView,
+  onEdit,
+  onDelete,
+  canEdit = true,
+  canDelete = true
+}) {
   return (
     <tr className="border-b hover:bg-slate-50 transition">
       <td className="p-3">
-        <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded">{test.code}</span>
+        <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded">
+          {test.code}
+        </span>
       </td>
       <td className="p-3">
         <div className="font-medium text-slate-800">{test.name}</div>
@@ -23,19 +32,28 @@ function LabTestTableRow({ test, onView, onEdit, onDelete }) {
         </div>
       </td>
       <td className="p-3 text-slate-600">{test.category?.name || "—"}</td>
-      <td className="p-3 text-right font-semibold">₹{test.price?.toLocaleString()}</td>
+      <td className="p-3 text-right font-semibold">
+        ₹{test.price?.toLocaleString()}
+      </td>
       <td className="p-3 text-right">
         {test.discountPrice ? (
-          <span className="text-emerald-600 font-medium">₹{test.discountPrice?.toLocaleString()}</span>
+          <span className="text-emerald-600 font-medium">
+            ₹{test.discountPrice?.toLocaleString()}
+          </span>
         ) : (
           "—"
         )}
       </td>
-      <td className="p-3 text-center text-slate-600">{test.turnaroundTime || "—"}</td>
+      <td className="p-3 text-center text-slate-600">
+        {test.turnaroundTime || "—"}
+      </td>
       <td className="p-3 text-center">
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          test.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-        }`}>
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            test.active
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}>
           {test.active ? "Active" : "Inactive"}
         </span>
       </td>
@@ -47,18 +65,25 @@ function LabTestTableRow({ test, onView, onEdit, onDelete }) {
             title="View Details">
             <Eye size={16} className="text-blue-500" />
           </button>
-          <button
-            className="p-2 hover:bg-slate-100 rounded-lg transition"
-            onClick={onEdit}
-            title="Edit">
-            <Edit2 size={16} className="text-slate-600" />
-          </button>
-          <button
-            className="p-2 hover:bg-red-50 rounded-lg transition"
-            onClick={onDelete}
-            title="Delete">
-            <Trash2 size={16} className="text-red-500" />
-          </button>
+          {canEdit && (
+            <button
+              className="p-2 hover:bg-slate-100 rounded-lg transition"
+              onClick={onEdit}
+              title="Edit">
+              <Edit2 size={16} className="text-slate-600" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              className="p-2 hover:bg-red-50 rounded-lg transition"
+              onClick={onDelete}
+              title="Delete">
+              <Trash2 size={16} className="text-red-500" />
+            </button>
+          )}
+          {!canEdit && !canDelete && (
+            <span className="text-xs text-slate-400">View only</span>
+          )}
         </div>
       </td>
     </tr>
@@ -66,4 +91,3 @@ function LabTestTableRow({ test, onView, onEdit, onDelete }) {
 }
 
 export default React.memo(LabTestTableRow);
-

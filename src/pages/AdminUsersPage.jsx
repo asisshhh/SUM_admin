@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
   Users,
   Search,
@@ -55,12 +56,27 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     email: user?.email || "",
     phone: user?.phone || "",
     password: "",
-    role: user?.role || "ADMIN"
+    role: user?.role || "ADMIN",
+    departmentId: user?.doctorProfile?.departmentId || ""
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
 
   const isEdit = !!user;
+
+  // Fetch departments for doctor role
+  const { data: departmentsData } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const response = await api.get("/admin/departments", {
+        params: { active: true }
+      });
+      return response.data;
+    },
+    enabled: formData.role === "DOCTOR"
+  });
+
+  const departments = departmentsData?.items || [];
 
   const createMutation = useMutation({
     mutationFn: (data) => api.post("/users", data),
@@ -98,6 +114,10 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
+    // Validate department for doctors
+    if (formData.role === "DOCTOR" && !formData.departmentId) {
+      newErrors.departmentId = "Department is required for doctors";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -109,13 +129,31 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     if (isEdit) {
       updateMutation.mutate({ role: formData.role });
     } else {
-      createMutation.mutate(formData);
+      // Prepare data for creation, converting departmentId to number if present
+      const createData = {
+        ...formData,
+        departmentId: formData.departmentId
+          ? parseInt(formData.departmentId)
+          : undefined
+      };
+      // Remove departmentId if role is not DOCTOR
+      if (createData.role !== "DOCTOR") {
+        delete createData.departmentId;
+      }
+      createMutation.mutate(createData);
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const updatedFormData = { ...formData, [name]: value };
+
+    // Reset departmentId if role changes away from DOCTOR
+    if (name === "role" && value !== "DOCTOR") {
+      updatedFormData.departmentId = "";
+    }
+
+    setFormData(updatedFormData);
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
@@ -254,6 +292,40 @@ const UserModal = ({ user, onClose, onSuccess }) => {
             </p>
           </div>
 
+          {/* Department (only for doctors) */}
+          {formData.role === "DOCTOR" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Department *
+              </label>
+              <select
+                name="departmentId"
+                value={formData.departmentId}
+                onChange={handleChange}
+                disabled={isEdit}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  errors.departmentId ? "border-red-500" : "border-slate-300"
+                } ${isEdit ? "bg-slate-100" : ""}`}>
+                <option value="">Select Department</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+              {errors.departmentId && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.departmentId}
+                </p>
+              )}
+              {departments.length === 0 && !isEdit && (
+                <p className="text-xs text-amber-600 mt-1">
+                  No departments available. Please create departments first.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 pt-4">
             <button
@@ -288,6 +360,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
 export default function AdminUsersPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchInput, setSearchInput] = useState("");
@@ -407,12 +480,14 @@ export default function AdminUsersPage() {
             Manage admins, doctors, receptionists, and other staff members
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition flex items-center gap-2 shadow-sm">
-          <Plus size={18} />
-          Add Staff
-        </button>
+        {canCreate && (
+          <button
+            onClick={handleCreate}
+            className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition flex items-center gap-2 shadow-sm">
+            <Plus size={18} />
+            Add Staff
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -610,18 +685,27 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(user)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit Role">
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete">
-                          <Trash2 size={16} />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => handleEdit(user)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Role">
+                            <Edit size={16} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(user)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                        {!canEdit && !canDelete && (
+                          <span className="text-xs text-slate-400">
+                            View only
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>

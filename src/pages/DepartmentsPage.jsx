@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import { Building2, Search, Plus } from "lucide-react";
 
 // Components
@@ -117,12 +118,14 @@ export default function DepartmentsPage() {
             </p>
           </div>
         </div>
-        <button
-          className="btn bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
-          onClick={() => setShowForm({})}>
-          <Plus size={18} />
-          Add Department
-        </button>
+        {canCreate && (
+          <button
+            className="btn bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
+            onClick={() => setShowForm({})}>
+            <Plus size={18} />
+            Add Department
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -205,6 +208,8 @@ export default function DepartmentsPage() {
                   department={department}
                   onEdit={() => handleEdit(department)}
                   onDelete={() => handleDelete(department)}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
                 />
               ))}
             </tbody>

@@ -2,7 +2,15 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Stethoscope, Edit2, Trash2, UserCheck, UserX } from "lucide-react";
 
-function DoctorTableRow({ doctor, isSelected, onSelect, onEdit, onDelete }) {
+function DoctorTableRow({
+  doctor,
+  isSelected,
+  onSelect,
+  onEdit,
+  onDelete,
+  canEdit = true,
+  canDelete = true
+}) {
   return (
     <tr className="border-b hover:bg-slate-50 transition">
       <td className="p-3">
@@ -15,7 +23,9 @@ function DoctorTableRow({ doctor, isSelected, onSelect, onEdit, onDelete }) {
       </td>
 
       <td className="p-3">
-        <Link className="flex items-center gap-3 group" to={`/doctors/${doctor.id}`}>
+        <Link
+          className="flex items-center gap-3 group"
+          to={`/doctors/${doctor.id}`}>
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
             <Stethoscope size={18} className="text-blue-600" />
           </div>
@@ -35,7 +45,9 @@ function DoctorTableRow({ doctor, isSelected, onSelect, onEdit, onDelete }) {
           <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs">
             {doctor.department.name}
           </span>
-        ) : "—"}
+        ) : (
+          "—"
+        )}
       </td>
 
       <td className="p-3 text-slate-600">
@@ -47,9 +59,12 @@ function DoctorTableRow({ doctor, isSelected, onSelect, onEdit, onDelete }) {
       </td>
 
       <td className="p-3">
-        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-          doctor.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-        }`}>
+        <span
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+            doctor.available
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}>
           {doctor.available ? <UserCheck size={12} /> : <UserX size={12} />}
           {doctor.available ? "Available" : "Unavailable"}
         </span>
@@ -57,18 +72,25 @@ function DoctorTableRow({ doctor, isSelected, onSelect, onEdit, onDelete }) {
 
       <td className="p-3">
         <div className="flex justify-center gap-2">
-          <button
-            className="p-2 hover:bg-slate-100 rounded-lg transition"
-            onClick={onEdit}
-            title="Edit">
-            <Edit2 size={16} className="text-slate-600" />
-          </button>
-          <button
-            className="p-2 hover:bg-red-50 rounded-lg transition"
-            onClick={onDelete}
-            title="Delete">
-            <Trash2 size={16} className="text-red-500" />
-          </button>
+          {canEdit && (
+            <button
+              className="p-2 hover:bg-slate-100 rounded-lg transition"
+              onClick={onEdit}
+              title="Edit">
+              <Edit2 size={16} className="text-slate-600" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              className="p-2 hover:bg-red-50 rounded-lg transition"
+              onClick={onDelete}
+              title="Delete">
+              <Trash2 size={16} className="text-red-500" />
+            </button>
+          )}
+          {!canEdit && !canDelete && (
+            <span className="text-xs text-slate-400">View only</span>
+          )}
         </div>
       </td>
     </tr>
@@ -76,4 +98,3 @@ function DoctorTableRow({ doctor, isSelected, onSelect, onEdit, onDelete }) {
 }
 
 export default React.memo(DoctorTableRow);
-

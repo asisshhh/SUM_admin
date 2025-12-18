@@ -2,7 +2,13 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Building2, Edit2, Trash2, Users } from "lucide-react";
 
-function DepartmentTableRow({ department, onEdit, onDelete }) {
+function DepartmentTableRow({
+  department,
+  onEdit,
+  onDelete,
+  canEdit = true,
+  canDelete = true
+}) {
   return (
     <tr className="border-b hover:bg-slate-50 transition">
       <td className="p-3">
@@ -49,18 +55,25 @@ function DepartmentTableRow({ department, onEdit, onDelete }) {
 
       <td className="p-3">
         <div className="flex justify-center gap-2">
-          <button
-            className="p-2 hover:bg-slate-100 rounded-lg transition"
-            onClick={onEdit}
-            title="Edit">
-            <Edit2 size={16} className="text-slate-600" />
-          </button>
-          <button
-            className="p-2 hover:bg-red-50 rounded-lg transition"
-            onClick={onDelete}
-            title="Delete">
-            <Trash2 size={16} className="text-red-500" />
-          </button>
+          {canEdit && (
+            <button
+              className="p-2 hover:bg-slate-100 rounded-lg transition"
+              onClick={onEdit}
+              title="Edit">
+              <Edit2 size={16} className="text-slate-600" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              className="p-2 hover:bg-red-50 rounded-lg transition"
+              onClick={onDelete}
+              title="Delete">
+              <Trash2 size={16} className="text-red-500" />
+            </button>
+          )}
+          {!canEdit && !canDelete && (
+            <span className="text-xs text-slate-400">View only</span>
+          )}
         </div>
       </td>
     </tr>

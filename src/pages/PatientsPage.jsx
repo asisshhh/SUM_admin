@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
   HeartPulse,
   Search,
@@ -653,7 +654,10 @@ const PatientRow = ({
   onDelete,
   onAddProfile,
   onEditProfile,
-  onDeleteProfile
+  onDeleteProfile,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true
 }) => {
   const [expanded, setExpanded] = useState(false);
   const profiles = patient.patientProfiles || [];
@@ -709,24 +713,33 @@ const PatientRow = ({
         </td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => onAddProfile(patient)}
-              className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg transition"
-              title="Add Family Member">
-              <UserPlus size={16} />
-            </button>
-            <button
-              onClick={() => onEdit(patient)}
-              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-              title="Edit Patient">
-              <Edit size={16} />
-            </button>
-            <button
-              onClick={() => onDelete(patient)}
-              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-              title="Delete Patient">
-              <Trash2 size={16} />
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => onAddProfile(patient)}
+                className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg transition"
+                title="Add Family Member">
+                <UserPlus size={16} />
+              </button>
+            )}
+            {canEdit && (
+              <button
+                onClick={() => onEdit(patient)}
+                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                title="Edit Patient">
+                <Edit size={16} />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={() => onDelete(patient)}
+                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
+                title="Delete Patient">
+                <Trash2 size={16} />
+              </button>
+            )}
+            {!canCreate && !canEdit && !canDelete && (
+              <span className="text-xs text-slate-400">View only</span>
+            )}
           </div>
         </td>
       </tr>
@@ -791,20 +804,24 @@ const PatientRow = ({
                     </div>
                   </div>
                   {/* Only show edit/delete for non-primary profiles */}
-                  {!profile.isPrimary && (
+                  {!profile.isPrimary && (canEdit || canDelete) && (
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => onEditProfile(patient, profile)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                        title="Edit Profile">
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={() => onDeleteProfile(patient, profile)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-                        title="Delete Profile">
-                        <Trash2 size={14} />
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => onEditProfile(patient, profile)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          title="Edit Profile">
+                          <Edit size={14} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => onDeleteProfile(patient, profile)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Delete Profile">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -820,6 +837,7 @@ const PatientRow = ({
 export default function PatientsPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 400);
 
@@ -954,12 +972,14 @@ export default function PatientsPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleAddPatient}
-          className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center gap-2 shadow-sm">
-          <Plus size={18} />
-          Add Patient
-        </button>
+        {canCreate && (
+          <button
+            onClick={handleAddPatient}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center gap-2 shadow-sm">
+            <Plus size={18} />
+            Add Patient
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -1033,11 +1053,13 @@ export default function PatientsPage() {
                       <p className="text-sm text-slate-500">
                         No patients found
                       </p>
-                      <button
-                        onClick={handleAddPatient}
-                        className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm">
-                        Add Your First Patient
-                      </button>
+                      {canCreate && (
+                        <button
+                          onClick={handleAddPatient}
+                          className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm">
+                          Add Your First Patient
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1051,6 +1073,9 @@ export default function PatientsPage() {
                     onAddProfile={handleAddProfile}
                     onEditProfile={handleEditProfile}
                     onDeleteProfile={handleDeleteProfile}
+                    canCreate={canCreate}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
                   />
                 ))
               )}

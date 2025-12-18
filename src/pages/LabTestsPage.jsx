@@ -2,11 +2,16 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import { FlaskConical, Search, Plus } from "lucide-react";
 
 // Components
 import { Pagination } from "../components/shared";
-import { LabTestFormModal, LabTestTableRow, LabTestViewModal } from "../components/lab-tests";
+import {
+  LabTestFormModal,
+  LabTestTableRow,
+  LabTestViewModal
+} from "../components/lab-tests";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -33,6 +38,7 @@ const TABLE_COLUMNS = [
 export default function LabTestsPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
 
@@ -58,11 +64,15 @@ export default function LabTestsPage() {
   // Fetch categories
   const { data: categoriesData } = useQuery({
     queryKey: ["test-categories-all"],
-    queryFn: async () => (await api.get("/test-categories", { params: { pageSize: 100 } })).data,
+    queryFn: async () =>
+      (await api.get("/test-categories", { params: { pageSize: 100 } })).data,
     staleTime: 5 * 60 * 1000
   });
 
-  const categories = useMemo(() => categoriesData?.items || [], [categoriesData]);
+  const categories = useMemo(
+    () => categoriesData?.items || [],
+    [categoriesData]
+  );
 
   // Fetch lab tests
   const { data, isLoading } = useQuery({
@@ -93,14 +103,17 @@ export default function LabTestsPage() {
     setFilters((f) => ({ ...f, page }));
   }, []);
 
-  const handleDelete = useCallback(async (test) => {
-    const ok = await confirm({
-      title: "Delete Lab Test",
-      message: `Are you sure you want to delete "${test.name}"?`,
-      danger: true
-    });
-    if (ok) deleteMutation.mutate(test.id);
-  }, [confirm, deleteMutation]);
+  const handleDelete = useCallback(
+    async (test) => {
+      const ok = await confirm({
+        title: "Delete Lab Test",
+        message: `Are you sure you want to delete "${test.name}"?`,
+        danger: true
+      });
+      if (ok) deleteMutation.mutate(test.id);
+    },
+    [confirm, deleteMutation]
+  );
 
   const handleView = useCallback((test) => {
     setViewing(test);
@@ -127,16 +140,22 @@ export default function LabTestsPage() {
             <FlaskConical className="text-emerald-600" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Lab Tests Management</h1>
-            <p className="text-sm text-slate-500">Manage lab tests, pricing, and categories</p>
+            <h1 className="text-2xl font-bold text-slate-800">
+              Lab Tests Management
+            </h1>
+            <p className="text-sm text-slate-500">
+              Manage lab tests, pricing, and categories
+            </p>
           </div>
         </div>
-        <button
-          className="btn bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2"
-          onClick={() => setEditing({})}>
-          <Plus size={18} />
-          Add Lab Test
-        </button>
+        {canCreate && (
+          <button
+            className="btn bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2"
+            onClick={() => setEditing({})}>
+            <Plus size={18} />
+            Add Lab Test
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -146,7 +165,10 @@ export default function LabTestsPage() {
           <div className="flex-1 min-w-[200px]">
             <label className="text-sm text-slate-600 mb-1 block">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
               <input
                 className="input pl-10 pr-8"
                 value={searchInput}
@@ -163,11 +185,19 @@ export default function LabTestsPage() {
 
           {/* Category */}
           <div className="min-w-[160px]">
-            <label className="text-sm text-slate-600 mb-1 block">Category</label>
-            <select name="categoryId" className="select" value={filters.categoryId} onChange={handleFilterChange}>
+            <label className="text-sm text-slate-600 mb-1 block">
+              Category
+            </label>
+            <select
+              name="categoryId"
+              className="select"
+              value={filters.categoryId}
+              onChange={handleFilterChange}>
               <option value="">All Categories</option>
               {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
           </div>
@@ -175,7 +205,11 @@ export default function LabTestsPage() {
           {/* Status */}
           <div className="min-w-[120px]">
             <label className="text-sm text-slate-600 mb-1 block">Status</label>
-            <select name="active" className="select" value={filters.active} onChange={handleFilterChange}>
+            <select
+              name="active"
+              className="select"
+              value={filters.active}
+              onChange={handleFilterChange}>
               <option value="all">All</option>
               <option value="true">Active</option>
               <option value="false">Inactive</option>
@@ -185,7 +219,11 @@ export default function LabTestsPage() {
           {/* Popular */}
           <div className="min-w-[120px]">
             <label className="text-sm text-slate-600 mb-1 block">Popular</label>
-            <select name="popular" className="select" value={filters.popular} onChange={handleFilterChange}>
+            <select
+              name="popular"
+              className="select"
+              value={filters.popular}
+              onChange={handleFilterChange}>
               <option value="all">All</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -216,7 +254,9 @@ export default function LabTestsPage() {
             <thead className="bg-slate-50 border-b">
               <tr>
                 {TABLE_COLUMNS.map(({ key, label, align }) => (
-                  <th key={key} className={`p-3 font-semibold text-${align || "left"}`}>
+                  <th
+                    key={key}
+                    className={`p-3 font-semibold text-${align || "left"}`}>
                     {label}
                   </th>
                 ))}
@@ -230,6 +270,8 @@ export default function LabTestsPage() {
                   onView={() => handleView(test)}
                   onEdit={() => handleEdit(test)}
                   onDelete={() => handleDelete(test)}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
                 />
               ))}
             </tbody>
@@ -246,12 +288,7 @@ export default function LabTestsPage() {
       />
 
       {/* View Modal */}
-      {viewing && (
-        <LabTestViewModal
-          test={viewing}
-          onClose={handleCloseView}
-        />
-      )}
+      {viewing && <LabTestViewModal test={viewing} onClose={handleCloseView} />}
 
       {/* Edit Modal */}
       {editing !== null && (

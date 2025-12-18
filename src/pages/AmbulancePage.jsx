@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
   Ambulance,
   Search,
@@ -30,6 +31,7 @@ function useDebounce(value, delay = 400) {
 export default function AmbulancePage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
 
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 400);
@@ -148,12 +150,14 @@ export default function AmbulancePage() {
             Manage ambulance fleet and assignments
           </p>
         </div>
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-          <Plus size={18} />
-          Add Ambulance
-        </button>
+        {canCreate && (
+          <button
+            onClick={handleAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            <Plus size={18} />
+            Add Ambulance
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -338,16 +342,25 @@ export default function AmbulancePage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
-                            <Trash2 size={16} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                              <Edit size={16} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(item)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                          {!canEdit && !canDelete && (
+                            <span className="text-xs text-slate-400">
+                              View only
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>

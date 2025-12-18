@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { usePagePermissions } from "../hooks/usePagePermissions";
 import { DollarSign, Search, Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { Pagination } from "../components/shared";
@@ -19,6 +20,7 @@ function useDebounce(value, delay = 400) {
 export default function AmbulanceChargesPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { canCreate, canEdit, canDelete } = usePagePermissions();
   const [editing, setEditing] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -41,7 +43,8 @@ export default function AmbulanceChargesPage() {
   // Fetch ambulance types for filter
   const { data: typesData } = useQuery({
     queryKey: ["ambulance-types-all"],
-    queryFn: async () => (await api.get("/ambulance-types", { params: { pageSize: 100 } })).data,
+    queryFn: async () =>
+      (await api.get("/ambulance-types", { params: { pageSize: 100 } })).data,
     staleTime: 5 * 60 * 1000
   });
 
@@ -82,14 +85,17 @@ export default function AmbulanceChargesPage() {
     setFilters((f) => ({ ...f, page }));
   }, []);
 
-  const handleDelete = useCallback(async (charge) => {
-    const ok = await confirm({
-      title: "Delete Charge",
-      message: `Are you sure you want to delete "${charge.name}"?`,
-      danger: true
-    });
-    if (ok) deleteMutation.mutate(charge.id);
-  }, [confirm, deleteMutation]);
+  const handleDelete = useCallback(
+    async (charge) => {
+      const ok = await confirm({
+        title: "Delete Charge",
+        message: `Are you sure you want to delete "${charge.name}"?`,
+        danger: true
+      });
+      if (ok) deleteMutation.mutate(charge.id);
+    },
+    [confirm, deleteMutation]
+  );
 
   const handleEdit = useCallback((charge) => {
     setEditing(charge);
@@ -115,21 +121,28 @@ export default function AmbulanceChargesPage() {
             <DollarSign className="text-blue-600" size={32} />
             Ambulance Charges
           </h1>
-          <p className="text-slate-500 mt-1">Manage pricing and charges for ambulance types</p>
+          <p className="text-slate-500 mt-1">
+            Manage pricing and charges for ambulance types
+          </p>
         </div>
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-          <Plus size={18} />
-          Add Charge
-        </button>
+        {canCreate && (
+          <button
+            onClick={handleAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            <Plus size={18} />
+            Add Charge
+          </button>
+        )}
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search charges..."
@@ -158,10 +171,18 @@ export default function AmbulanceChargesPage() {
             <option value="">All Charge Types</option>
             <option value="BASE_FARE_UPTO_30KM">Base Fare (Up to 30 KM)</option>
             <option value="PER_KM_ABOVE_30KM">Per KM (Above 30 KM)</option>
-            <option value="PARAMEDIC_UPTO_100KM">Paramedic (Up to 100 KM)</option>
-            <option value="PARAMEDIC_100_TO_500KM">Paramedic (100-500 KM)</option>
-            <option value="PARAMEDIC_ABOVE_500KM">Paramedic (Above 500 KM)</option>
-            <option value="ATTENDANT_SUPPORT_WITHIN_30KM">Attendant Support</option>
+            <option value="PARAMEDIC_UPTO_100KM">
+              Paramedic (Up to 100 KM)
+            </option>
+            <option value="PARAMEDIC_100_TO_500KM">
+              Paramedic (100-500 KM)
+            </option>
+            <option value="PARAMEDIC_ABOVE_500KM">
+              Paramedic (Above 500 KM)
+            </option>
+            <option value="ATTENDANT_SUPPORT_WITHIN_30KM">
+              Attendant Support
+            </option>
           </select>
           <select
             name="active"
@@ -180,46 +201,75 @@ export default function AmbulanceChargesPage() {
         {isLoading ? (
           <div className="p-12 text-center text-slate-500">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">No charges found</div>
+          <div className="p-12 text-center text-slate-500">
+            No charges found
+          </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[140px]">Type</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[180px]">Charge Type</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase min-w-[200px]">Name</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[120px]">Distance</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 uppercase w-[100px]">Amount</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[80px]">Unit</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[90px]">Status</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[100px]">Actions</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[140px]">
+                      Type
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[180px]">
+                      Charge Type
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase min-w-[200px]">
+                      Name
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase w-[120px]">
+                      Distance
+                    </th>
+                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 uppercase w-[100px]">
+                      Amount
+                    </th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[80px]">
+                      Unit
+                    </th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[90px]">
+                      Status
+                    </th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 uppercase w-[100px]">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
                       <td className="px-3 py-3">
-                        <div className="font-medium text-slate-800 text-xs">{item.ambulanceType?.name || "-"}</div>
-                        <div className="text-xs text-slate-500">{item.ambulanceType?.code || ""}</div>
+                        <div className="font-medium text-slate-800 text-xs">
+                          {item.ambulanceType?.name || "-"}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {item.ambulanceType?.code || ""}
+                        </div>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="text-xs text-slate-600 truncate block max-w-[160px]" title={item.chargeType}>
+                        <span
+                          className="text-xs text-slate-600 truncate block max-w-[160px]"
+                          title={item.chargeType}>
                           {item.chargeType}
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        <div className="font-medium text-slate-800 text-sm">{item.name}</div>
+                        <div className="font-medium text-slate-800 text-sm">
+                          {item.name}
+                        </div>
                         {item.description && (
-                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1 max-w-[180px]" title={item.description}>
+                          <div
+                            className="text-xs text-slate-500 mt-0.5 line-clamp-1 max-w-[180px]"
+                            title={item.description}>
                             {item.description}
                           </div>
                         )}
                       </td>
                       <td className="px-3 py-3">
                         <div className="text-xs text-slate-600">
-                          {item.distanceFrom !== null && item.distanceTo !== null
+                          {item.distanceFrom !== null &&
+                          item.distanceTo !== null
                             ? `${item.distanceFrom}-${item.distanceTo} km`
                             : item.distanceFrom !== null
                             ? `>${item.distanceFrom} km`
@@ -227,7 +277,9 @@ export default function AmbulanceChargesPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3 text-right">
-                        <span className="font-semibold text-slate-800">₹{item.amount}</span>
+                        <span className="font-semibold text-slate-800">
+                          ₹{item.amount}
+                        </span>
                       </td>
                       <td className="px-3 py-3 text-center">
                         <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
@@ -246,18 +298,27 @@ export default function AmbulanceChargesPage() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                            title="Edit">
-                            <Edit size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                            title="Delete">
-                            <Trash2 size={14} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                              title="Edit">
+                              <Edit size={14} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(item)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                              title="Delete">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                          {!canEdit && !canDelete && (
+                            <span className="text-xs text-slate-400">
+                              View only
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -343,7 +404,9 @@ function ChargeFormModal({ editing, ambulanceTypes, onClose, onSuccess }) {
       return api.post("/ambulance-charges", payload);
     },
     onSuccess: () => {
-      toast.success(editing ? "Charge updated successfully" : "Charge created successfully");
+      toast.success(
+        editing ? "Charge updated successfully" : "Charge created successfully"
+      );
       onSuccess();
     },
     onError: (err) => {
@@ -360,10 +423,12 @@ function ChargeFormModal({ editing, ambulanceTypes, onClose, onSuccess }) {
 
     // Validation
     const newErrors = {};
-    if (!formData.ambulanceTypeId) newErrors.ambulanceTypeId = "Ambulance type is required";
+    if (!formData.ambulanceTypeId)
+      newErrors.ambulanceTypeId = "Ambulance type is required";
     if (!formData.chargeType) newErrors.chargeType = "Charge type is required";
     if (!formData.name) newErrors.name = "Name is required";
-    if (!formData.amount || Number(formData.amount) <= 0) newErrors.amount = "Valid amount is required";
+    if (!formData.amount || Number(formData.amount) <= 0)
+      newErrors.amount = "Valid amount is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -384,10 +449,14 @@ function ChargeFormModal({ editing, ambulanceTypes, onClose, onSuccess }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Ambulance Type *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Ambulance Type *
+              </label>
               <select
                 value={formData.ambulanceTypeId}
-                onChange={(e) => setFormData({ ...formData, ambulanceTypeId: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, ambulanceTypeId: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="">Select Type</option>
                 {ambulanceTypes.map((type) => (
@@ -396,41 +465,71 @@ function ChargeFormModal({ editing, ambulanceTypes, onClose, onSuccess }) {
                   </option>
                 ))}
               </select>
-              {errors.ambulanceTypeId && <p className="text-red-500 text-sm mt-1">{errors.ambulanceTypeId}</p>}
+              {errors.ambulanceTypeId && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.ambulanceTypeId}
+                </p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Charge Type *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Charge Type *
+              </label>
               <select
                 value={formData.chargeType}
-                onChange={(e) => setFormData({ ...formData, chargeType: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, chargeType: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="">Select Charge Type</option>
-                <option value="BASE_FARE_UPTO_30KM">Base Fare (Up to 30 KM)</option>
+                <option value="BASE_FARE_UPTO_30KM">
+                  Base Fare (Up to 30 KM)
+                </option>
                 <option value="PER_KM_ABOVE_30KM">Per KM (Above 30 KM)</option>
-                <option value="PARAMEDIC_UPTO_100KM">Paramedic (Up to 100 KM)</option>
-                <option value="PARAMEDIC_100_TO_500KM">Paramedic (100-500 KM)</option>
-                <option value="PARAMEDIC_ABOVE_500KM">Paramedic (Above 500 KM)</option>
-                <option value="ATTENDANT_SUPPORT_WITHIN_30KM">Attendant Support</option>
+                <option value="PARAMEDIC_UPTO_100KM">
+                  Paramedic (Up to 100 KM)
+                </option>
+                <option value="PARAMEDIC_100_TO_500KM">
+                  Paramedic (100-500 KM)
+                </option>
+                <option value="PARAMEDIC_ABOVE_500KM">
+                  Paramedic (Above 500 KM)
+                </option>
+                <option value="ATTENDANT_SUPPORT_WITHIN_30KM">
+                  Attendant Support
+                </option>
               </select>
-              {errors.chargeType && <p className="text-red-500 text-sm mt-1">{errors.chargeType}</p>}
+              {errors.chargeType && (
+                <p className="text-red-500 text-sm mt-1">{errors.chargeType}</p>
+              )}
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Name *
+            </label>
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g., Base Fare (Up to 30 KMs)"
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Description
+            </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows={2}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Description of the charge..."
@@ -438,11 +537,15 @@ function ChargeFormModal({ editing, ambulanceTypes, onClose, onSuccess }) {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Distance From (km)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Distance From (km)
+              </label>
               <input
                 type="number"
                 value={formData.distanceFrom}
-                onChange={(e) => setFormData({ ...formData, distanceFrom: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, distanceFrom: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0"
                 min="0"
@@ -450,11 +553,15 @@ function ChargeFormModal({ editing, ambulanceTypes, onClose, onSuccess }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Distance To (km)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Distance To (km)
+              </label>
               <input
                 type="number"
                 value={formData.distanceTo}
-                onChange={(e) => setFormData({ ...formData, distanceTo: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, distanceTo: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="30"
                 min="0"
@@ -462,45 +569,69 @@ function ChargeFormModal({ editing, ambulanceTypes, onClose, onSuccess }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Amount (₹) *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Amount (₹) *
+              </label>
               <input
                 type="number"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="1500"
                 min="0"
                 step="0.01"
               />
-              {errors.amount && <p className="text-red-500 text-sm mt-1">{errors.amount}</p>}
+              {errors.amount && (
+                <p className="text-red-500 text-sm mt-1">{errors.amount}</p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Unit</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Unit
+              </label>
               <select
                 value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, unit: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="FIXED">Fixed</option>
                 <option value="PER_KM">Per KM</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Display Order</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Display Order
+              </label>
               <input
                 type="number"
                 value={formData.displayOrder}
-                onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    displayOrder: parseInt(e.target.value) || 0
+                  })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Status
+              </label>
               <select
                 value={formData.active}
-                onChange={(e) => setFormData({ ...formData, active: e.target.value === "true" })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    active: e.target.value === "true"
+                  })
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value={true}>Active</option>
                 <option value={false}>Inactive</option>
@@ -526,4 +657,3 @@ function ChargeFormModal({ editing, ambulanceTypes, onClose, onSuccess }) {
     </div>
   );
 }
-

@@ -20,7 +20,9 @@ import {
   Activity,
   Clock,
   Menu,
-  X
+  X,
+  Users,
+  HeartPulse
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -213,6 +215,18 @@ const SidebarNav = ({ onNavClick }) => (
       to="/activity-logs"
       icon={Activity}
       label="Activity Logs"
+      onClick={onNavClick}
+    />
+    <NavItem
+      to="/admin-users"
+      icon={Users}
+      label="Admin Users"
+      onClick={onNavClick}
+    />
+    <NavItem
+      to="/patients"
+      icon={HeartPulse}
+      label="Patients"
       onClick={onNavClick}
     />
   </nav>

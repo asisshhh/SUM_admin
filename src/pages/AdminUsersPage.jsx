@@ -32,7 +32,6 @@ const RoleBadge = ({ role }) => {
   const styles = {
     ADMIN: "bg-purple-100 text-purple-700 border-purple-200",
     DOCTOR: "bg-blue-100 text-blue-700 border-blue-200",
-    PATIENT: "bg-green-100 text-green-700 border-green-200",
     RECEPTIONIST: "bg-yellow-100 text-yellow-700 border-yellow-200",
     DEPARTMENT_HEAD: "bg-orange-100 text-orange-700 border-orange-200",
     NURSE: "bg-pink-100 text-pink-700 border-pink-200"
@@ -130,7 +129,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-purple-600 to-indigo-600">
           <h2 className="text-lg font-semibold text-white">
-            {isEdit ? "Edit User Role" : "Create Admin User"}
+            {isEdit ? "Edit User Role" : "Create Staff User"}
           </h2>
           <button
             onClick={onClose}
@@ -245,12 +244,13 @@ const UserModal = ({ user, onClose, onSuccess }) => {
               onChange={handleChange}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
               <option value="ADMIN">Admin</option>
+              <option value="DOCTOR">Doctor</option>
               <option value="RECEPTIONIST">Receptionist</option>
               <option value="DEPARTMENT_HEAD">Department Head</option>
               <option value="NURSE">Nurse</option>
             </select>
             <p className="text-xs text-slate-500 mt-1">
-              Admin users can access the admin portal and manage all resources
+              Staff users can access the admin portal based on their role
             </p>
           </div>
 
@@ -304,13 +304,12 @@ export default function AdminUsersPage() {
     setFilters((f) => ({ ...f, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
 
-  // Fetch users
+  // Fetch staff users (excluding patients)
   const { data, isLoading } = useQuery({
     queryKey: ["admin-users", filters],
     queryFn: async () => {
       const params = {
         ...filters,
-        // Filter to show only admin-type roles by default
         role: filters.role || undefined
       };
       Object.keys(params).forEach(
@@ -318,7 +317,19 @@ export default function AdminUsersPage() {
           (params[key] === "" || params[key] === undefined) &&
           delete params[key]
       );
-      return (await api.get("/users", { params })).data;
+      const response = await api.get("/users", { params });
+      // Filter out patients on client side
+      const filteredUsers = (response.data.users || []).filter(
+        (u) => u.role !== "PATIENT"
+      );
+      return {
+        ...response.data,
+        users: filteredUsers,
+        pagination: {
+          ...response.data.pagination,
+          total: filteredUsers.length
+        }
+      };
     }
   });
 
@@ -383,36 +394,35 @@ export default function AdminUsersPage() {
   const receptionistCount = users.filter(
     (u) => u.role === "RECEPTIONIST"
   ).length;
-  const deptHeadCount = users.filter(
-    (u) => u.role === "DEPARTMENT_HEAD"
-  ).length;
+  const doctorCount = users.filter((u) => u.role === "DOCTOR").length;
+  const nurseCount = users.filter((u) => u.role === "NURSE").length;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Admin Users</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Staff Users</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Manage users who can access the admin portal
+            Manage admins, doctors, receptionists, and other staff members
           </p>
         </div>
         <button
           onClick={handleCreate}
           className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition flex items-center gap-2 shadow-sm">
           <Plus size={18} />
-          Add User
+          Add Staff
         </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Total Users</p>
+              <p className="text-sm text-slate-500">Total Staff</p>
               <p className="text-2xl font-bold text-slate-800 mt-1">
-                {pagination.total || 0}
+                {users.length}
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
@@ -438,6 +448,20 @@ export default function AdminUsersPage() {
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
+              <p className="text-sm text-slate-500">Doctors</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">
+                {doctorCount}
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+              <UserCheck className="text-blue-600" size={24} />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm text-slate-500">Receptionists</p>
               <p className="text-2xl font-bold text-yellow-600 mt-1">
                 {receptionistCount}
@@ -452,13 +476,13 @@ export default function AdminUsersPage() {
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Dept. Heads</p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">
-                {deptHeadCount}
+              <p className="text-sm text-slate-500">Nurses</p>
+              <p className="text-2xl font-bold text-pink-600 mt-1">
+                {nurseCount}
               </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
-              <Shield className="text-orange-600" size={24} />
+            <div className="w-12 h-12 rounded-xl bg-pink-100 flex items-center justify-center">
+              <UserCheck className="text-pink-600" size={24} />
             </div>
           </div>
         </div>
@@ -470,7 +494,7 @@ export default function AdminUsersPage() {
           {/* Search */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Search
+              Search Staff
             </label>
             <div className="relative">
               <Search
@@ -499,17 +523,16 @@ export default function AdminUsersPage() {
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
               <option value="">All Roles</option>
               <option value="ADMIN">Admin</option>
+              <option value="DOCTOR">Doctor</option>
               <option value="RECEPTIONIST">Receptionist</option>
               <option value="DEPARTMENT_HEAD">Department Head</option>
               <option value="NURSE">Nurse</option>
-              <option value="DOCTOR">Doctor</option>
-              <option value="PATIENT">Patient</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Staff Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -541,7 +564,7 @@ export default function AdminUsersPage() {
                   <td colSpan="6" className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                      <p className="text-sm text-slate-500">Loading users...</p>
+                      <p className="text-sm text-slate-500">Loading staff...</p>
                     </div>
                   </td>
                 </tr>
@@ -550,7 +573,7 @@ export default function AdminUsersPage() {
                   <td colSpan="6" className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Users className="text-slate-400" size={48} />
-                      <p className="text-sm text-slate-500">No users found</p>
+                      <p className="text-sm text-slate-500">No staff found</p>
                     </div>
                   </td>
                 </tr>

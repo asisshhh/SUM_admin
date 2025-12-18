@@ -46,6 +46,8 @@ import GrievancesPage from "./pages/GrievancesPage.jsx";
 import AdminActivityLogsPage from "./pages/AdminActivityLogsPage.jsx";
 // Admin Users Management
 import AdminUsersPage from "./pages/AdminUsersPage.jsx";
+// Patients Management
+import PatientsPage from "./pages/PatientsPage.jsx";
 // Global Schedule Management
 import GlobalSchedulePage from "./pages/GlobalSchedulePage.jsx";
 // Doctor Schedule Management
@@ -136,6 +138,7 @@ createRoot(document.getElementById("root")).render(
               />
               <Route path="activity-logs" element={<AdminActivityLogsPage />} />
               <Route path="admin-users" element={<AdminUsersPage />} />
+              <Route path="patients" element={<PatientsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -1,5 +1,6 @@
 // HomeHealthcareOrders.jsx — Home Healthcare Orders UI
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useConfirm } from "../contexts/ConfirmContext";
@@ -13,7 +14,9 @@ import {
   CreditCard,
   CheckCircle2,
   RefreshCw,
-  Package
+  Package,
+  UserPlus,
+  X
 } from "lucide-react";
 
 // Import shared components
@@ -34,6 +37,93 @@ const STATUS_OPTIONS = [
   { value: "COMPLETED", label: "Completed" },
   { value: "CANCELLED", label: "Cancelled" }
 ];
+
+// Assign Modal Component
+const AssignModal = ({ order, assignableUsers, onClose, onAssign }) => {
+  const [selectedUserId, setSelectedUserId] = useState(
+    order?.assignedTo?.toString() || ""
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      await onAssign(order.id, selectedUserId || null);
+      onClose();
+    } catch (err) {
+      // Error handled in parent
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-800">Assign Order</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          <div>
+            <p className="text-sm text-slate-600 mb-2">
+              Order: <span className="font-semibold">{order?.orderNumber}</span>
+            </p>
+            <p className="text-sm text-slate-600 mb-4">
+              Package:{" "}
+              <span className="font-semibold">
+                {order?.packageName || order?.package?.name}
+              </span>
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Assign To
+            </label>
+            <select
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+              <option value="">-- Unassigned --</option>
+              {assignableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.role}) - {user.phone || user.email}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 p-4 border-t border-slate-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+            {isSubmitting ? (
+              <>
+                <RefreshCw size={16} className="animate-spin" />
+                Assigning...
+              </>
+            ) : (
+              <>
+                <UserPlus size={16} />
+                {selectedUserId ? "Assign" : "Remove Assignment"}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function HomeHealthcareOrders() {
   // ═══════════════════════════════════════════════════════════════════
@@ -61,9 +151,19 @@ export default function HomeHealthcareOrders() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [viewingOrder, setViewingOrder] = useState(null);
+  const [assigningOrder, setAssigningOrder] = useState(null);
 
   const currentController = useRef(null);
   const confirm = useConfirm();
+
+  // Fetch assignable users
+  const { data: assignableUsersData } = useQuery({
+    queryKey: ["assignable-users"],
+    queryFn: async () => (await api.get("/users/assignable")).data,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const assignableUsers = assignableUsersData?.users || [];
 
   // ═══════════════════════════════════════════════════════════════════
   // DATA FETCHING
@@ -200,6 +300,26 @@ export default function HomeHealthcareOrders() {
     }
   };
 
+  const handleAssignOrder = (row) => {
+    setAssigningOrder(row);
+  };
+
+  const handleAssign = async (orderId, assignedTo) => {
+    try {
+      await api.post(`/orders/${orderId}/assign`, {
+        type: "homecare-package",
+        assignedTo: assignedTo ? parseInt(assignedTo) : null
+      });
+      toast.success(
+        assignedTo ? "Order assigned successfully" : "Assignment removed"
+      );
+      load(page);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to assign order");
+      throw err;
+    }
+  };
+
   // ═══════════════════════════════════════════════════════════════════
   // COMPUTED
   // ═══════════════════════════════════════════════════════════════════
@@ -268,6 +388,7 @@ export default function HomeHealthcareOrders() {
                     <th className="p-3 text-left font-semibold">Amount</th>
                     <th className="p-3 text-center font-semibold">Payment</th>
                     <th className="p-3 text-center font-semibold">Status</th>
+                    <th className="p-3 text-left font-semibold">Assigned To</th>
                     <th className="p-3 text-center font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -334,12 +455,34 @@ export default function HomeHealthcareOrders() {
                         <OrderStatusBadge status={row.status} />
                       </td>
                       <td className="p-3">
+                        {row.assignee ? (
+                          <div>
+                            <div className="font-medium text-sm">
+                              {row.assignee.name}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {row.assignee.role}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-slate-400">
+                            Unassigned
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3">
                         <div className="flex justify-center gap-1">
                           <button
                             className="p-2 hover:bg-blue-50 rounded-lg transition"
                             onClick={() => handleViewOrder(row)}
                             title="View Details">
                             <Eye size={16} className="text-blue-500" />
+                          </button>
+                          <button
+                            className="p-2 hover:bg-purple-50 rounded-lg transition"
+                            onClick={() => handleAssignOrder(row)}
+                            title="Assign">
+                            <UserPlus size={16} className="text-purple-500" />
                           </button>
                           {row.paymentOption === "PAY_AT_HOSPITAL" &&
                             row.paymentStatus !== "SUCCESS" && (
@@ -412,6 +555,17 @@ export default function HomeHealthcareOrders() {
                     option={viewingOrder.paymentOption}
                   />
                 </div>
+                <div>
+                  <p className="text-sm text-slate-500">Assigned To</p>
+                  <p className="font-semibold">
+                    {viewingOrder.assignee?.name || "Unassigned"}
+                  </p>
+                  {viewingOrder.assignee?.role && (
+                    <p className="text-xs text-slate-500">
+                      {viewingOrder.assignee.role}
+                    </p>
+                  )}
+                </div>
               </div>
               {viewingOrder.notes && (
                 <div>
@@ -422,6 +576,16 @@ export default function HomeHealthcareOrders() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Assign Modal */}
+      {assigningOrder && (
+        <AssignModal
+          order={assigningOrder}
+          assignableUsers={assignableUsers}
+          onClose={() => setAssigningOrder(null)}
+          onAssign={handleAssign}
+        />
       )}
     </div>
   );

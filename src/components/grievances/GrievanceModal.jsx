@@ -40,7 +40,9 @@ const StatusBadge = ({ status }) => {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${styles[status] || styles.OPEN}`}>
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${
+        styles[status] || styles.OPEN
+      }`}>
       <Icon size={14} />
       {label}
     </span>
@@ -58,7 +60,9 @@ const PriorityBadge = ({ priority }) => {
 
   return (
     <span
-      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${styles[priority] || styles.MEDIUM}`}>
+      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+        styles[priority] || styles.MEDIUM
+      }`}>
       {priority}
     </span>
   );
@@ -78,10 +82,20 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
     assignedTo: null
   });
 
+  // Fetch assignable users (admin staff)
+  const { data: assignableUsersData } = useQuery({
+    queryKey: ["assignable-users"],
+    queryFn: async () => (await api.get("/users/assignable")).data,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const assignableUsers = assignableUsersData?.users || [];
+
   // Fetch full grievance details
   const { data: fullGrievance, isLoading } = useQuery({
     queryKey: ["grievance", grievance?.id],
-    queryFn: async () => (await api.get(`/grievances/${grievance.id}`)).data.grievance,
+    queryFn: async () =>
+      (await api.get(`/grievances/${grievance.id}`)).data.grievance,
     enabled: !!grievance?.id
   });
 
@@ -123,9 +137,11 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
   // Assign mutation
   const assignMutation = useMutation({
     mutationFn: async (userId) => {
-      return (await api.post(`/grievances/${grievance.id}/assign`, {
-        assignedTo: Number(userId)
-      })).data;
+      return (
+        await api.post(`/grievances/${grievance.id}/assign`, {
+          assignedTo: Number(userId)
+        })
+      ).data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["grievances"] });
@@ -184,8 +200,12 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
                 <AlertCircle className="text-white" size={20} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-800">Grievance Details</h2>
-                <p className="text-sm text-slate-500">ID: #{grievanceData?.id}</p>
+                <h2 className="text-xl font-bold text-slate-800">
+                  Grievance Details
+                </h2>
+                <p className="text-sm text-slate-500">
+                  ID: #{grievanceData?.id}
+                </p>
               </div>
             </div>
             <button
@@ -343,15 +363,21 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Assigned To (User ID)
+                    Assigned To
                   </label>
-                  <input
-                    type="number"
+                  <select
                     value={form.assignedTo || ""}
-                    onChange={(e) => update("assignedTo", e.target.value || null)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter user ID"
-                  />
+                    onChange={(e) =>
+                      update("assignedTo", e.target.value || null)
+                    }
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">-- Unassigned --</option>
+                    {assignableUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} ({user.role}) - {user.phone || user.email}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -377,7 +403,9 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
                   </p>
                   <p className="text-sm font-medium text-slate-900">
                     {grievanceData?.createdAt
-                      ? new Date(grievanceData.createdAt).toLocaleString("en-IN")
+                      ? new Date(grievanceData.createdAt).toLocaleString(
+                          "en-IN"
+                        )
                       : "N/A"}
                   </p>
                 </div>
@@ -388,7 +416,9 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
                   </p>
                   <p className="text-sm font-medium text-slate-900">
                     {grievanceData?.updatedAt
-                      ? new Date(grievanceData.updatedAt).toLocaleString("en-IN")
+                      ? new Date(grievanceData.updatedAt).toLocaleString(
+                          "en-IN"
+                        )
                       : "N/A"}
                   </p>
                 </div>
@@ -399,7 +429,9 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
                       Resolved At
                     </p>
                     <p className="text-sm font-medium text-slate-900">
-                      {new Date(grievanceData.resolvedAt).toLocaleString("en-IN")}
+                      {new Date(grievanceData.resolvedAt).toLocaleString(
+                        "en-IN"
+                      )}
                     </p>
                   </div>
                 )}
@@ -423,7 +455,9 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
               </button>
               <button
                 onClick={handleSave}
-                disabled={updateMutation.isPending || !form.subject || !form.description}
+                disabled={
+                  updateMutation.isPending || !form.subject || !form.description
+                }
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {updateMutation.isPending ? (
                   <>
@@ -447,7 +481,9 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm grid place-items-center z-[60] p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-800">Assign Grievance</h3>
+              <h3 className="text-lg font-semibold text-slate-800">
+                Assign Grievance
+              </h3>
               <button
                 onClick={() => setShowAssignModal(false)}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
@@ -457,17 +493,21 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
             <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  User ID <span className="text-red-500">*</span>
+                  Assign To <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   value={assignUserId}
                   onChange={(e) => setAssignUserId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter user ID"
-                />
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="">-- Select User --</option>
+                  {assignableUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.role}) - {user.phone || user.email}
+                    </option>
+                  ))}
+                </select>
                 <p className="text-xs text-slate-500 mt-1">
-                  Enter the ID of the user to assign this grievance to
+                  Select an admin user to assign this grievance to
                 </p>
               </div>
             </div>
@@ -490,4 +530,3 @@ export default function GrievanceModal({ grievance, onClose, onSuccess }) {
     </>
   );
 }
-

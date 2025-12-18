@@ -180,7 +180,6 @@ export default function BannersPage() {
               <Plus size={18} />
               Add Your First Banner
             </button>
-            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

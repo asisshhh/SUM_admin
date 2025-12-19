@@ -391,18 +391,8 @@ export default function AdminUsersPage() {
           delete params[key]
       );
       const response = await api.get("/users", { params });
-      // Filter out patients on client side
-      const filteredUsers = (response.data.users || []).filter(
-        (u) => u.role !== "PATIENT"
-      );
-      return {
-        ...response.data,
-        users: filteredUsers,
-        pagination: {
-          ...response.data.pagination,
-          total: filteredUsers.length
-        }
-      };
+      // Backend now excludes PATIENT role by default, so no need to filter on client side
+      return response.data;
     }
   });
 

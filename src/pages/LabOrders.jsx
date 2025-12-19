@@ -13,7 +13,9 @@ import {
   CreditCard,
   CheckCircle2,
   RefreshCw,
-  FileText
+  FileText,
+  Settings,
+  ChevronDown
 } from "lucide-react";
 
 // Import shared components
@@ -21,22 +23,63 @@ import {
   OrderStatusBadge,
   PaymentBadge,
   OrderFilterCard,
-  OrderPagination,
   OrderPageHeader,
   LabOrderViewModal
 } from "../components/orders";
+import Pagination from "../components/appointments/Pagination";
+import PaymentModal from "../components/health-package/PaymentModal";
 
 const DEFAULT_LIMIT = 20;
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
   { value: "PENDING", label: "Pending" },
-  { value: "CONFIRMED", label: "Confirmed" },
+  { value: "CONFIRMED", label: "Order Confirmed" },
   { value: "SAMPLE_COLLECTED", label: "Sample Collected" },
-  { value: "PROCESSING", label: "Processing" },
+  { value: "PROCESSING", label: "Test in Progress" },
   { value: "COMPLETED", label: "Completed" },
   { value: "CANCELLED", label: "Cancelled" }
 ];
+
+// Valid status transitions for lab test orders
+// Note: LabTestOrder uses OrderStatus enum
+// Valid values: PENDING, CONFIRMED, SAMPLE_COLLECTED, PROCESSING, PAYMENT_COMPLETED, PAY_AT_HOSPITAL, COMPLETED, CANCELLED
+// User-friendly workflow: PENDING → CONFIRMED → SAMPLE_COLLECTED → PROCESSING → COMPLETED
+// CANCELLED can be set from any status except COMPLETED
+const STATUS_TRANSITIONS = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["SAMPLE_COLLECTED", "COMPLETED", "CANCELLED"],
+  SAMPLE_COLLECTED: ["PROCESSING", "COMPLETED", "CANCELLED"],
+  PROCESSING: ["COMPLETED", "CANCELLED"],
+  PAYMENT_COMPLETED: [
+    "CONFIRMED",
+    "SAMPLE_COLLECTED",
+    "PROCESSING",
+    "COMPLETED",
+    "CANCELLED"
+  ],
+  PAY_AT_HOSPITAL: [
+    "CONFIRMED",
+    "SAMPLE_COLLECTED",
+    "PROCESSING",
+    "COMPLETED",
+    "CANCELLED"
+  ],
+  COMPLETED: [], // No transitions from COMPLETED
+  CANCELLED: [] // No transitions from CANCELLED
+};
+
+// User-friendly status labels
+const STATUS_LABELS = {
+  PENDING: "Pending",
+  CONFIRMED: "Order Confirmed",
+  SAMPLE_COLLECTED: "Sample Collected",
+  PROCESSING: "Test in Progress",
+  PAYMENT_COMPLETED: "Payment Completed",
+  PAY_AT_HOSPITAL: "Pay at Hospital",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled"
+};
 
 export default function LabOrders() {
   // ═══════════════════════════════════════════════════════════════════
@@ -64,6 +107,8 @@ export default function LabOrders() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [viewingOrder, setViewingOrder] = useState(null);
+  const [paymentOrder, setPaymentOrder] = useState(null);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(null);
 
   const currentController = useRef(null);
   const confirm = useConfirm();
@@ -160,6 +205,20 @@ export default function LabOrders() {
     setTimeout(() => load(1), 100);
   };
 
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await api.post(`/orders/${orderId}/update-status?type=lab`, {
+        status: newStatus
+      });
+      toast.success(
+        `Status updated to ${STATUS_LABELS[newStatus] || newStatus}`
+      );
+      load(page);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update status");
+    }
+  };
+
   // ═══════════════════════════════════════════════════════════════════
   // COMPUTED
   // ═══════════════════════════════════════════════════════════════════
@@ -238,7 +297,10 @@ export default function LabOrders() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Schedule
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Payment
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -249,7 +311,7 @@ export default function LabOrders() {
               <tbody>
                 {rows.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-16 text-center">
+                    <td colSpan={7} className="px-4 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
                           <FlaskConical size={28} className="text-slate-400" />
@@ -270,6 +332,12 @@ export default function LabOrders() {
                     order={r}
                     index={(page - 1) * limit + i + 1}
                     onView={() => setViewingOrder(r)}
+                    onMarkPaid={() =>
+                      setPaymentOrder({ ...r, orderType: "LAB_TEST" })
+                    }
+                    onStatusChange={handleStatusChange}
+                    statusDropdownOpen={statusDropdownOpen}
+                    setStatusDropdownOpen={setStatusDropdownOpen}
                   />
                 ))}
               </tbody>
@@ -277,9 +345,9 @@ export default function LabOrders() {
           </div>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination - Match appointment orders design */}
         {rows.length > 0 && (
-          <OrderPagination
+          <Pagination
             page={page}
             limit={limit}
             total={total}
@@ -296,6 +364,18 @@ export default function LabOrders() {
         />
       )}
 
+      {/* Payment Modal */}
+      {paymentOrder && (
+        <PaymentModal
+          order={paymentOrder}
+          onClose={() => setPaymentOrder(null)}
+          onSuccess={() => {
+            setPaymentOrder(null);
+            load(page);
+          }}
+        />
+      )}
+
       <ToastContainer position="top-right" />
     </div>
   );
@@ -305,8 +385,17 @@ export default function LabOrders() {
 // ROW COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
-function LabOrderRow({ order, index, onView }) {
+function LabOrderRow({
+  order,
+  index,
+  onView,
+  onMarkPaid,
+  onStatusChange,
+  statusDropdownOpen,
+  setStatusDropdownOpen
+}) {
   const r = order;
+  const confirm = useConfirm();
 
   // For pathology reports (type=lab in backend)
   const patientName = r.patient?.name || r.user?.name || "-";
@@ -369,14 +458,26 @@ function LabOrderRow({ order, index, onView }) {
         )}
       </td>
 
+      {/* Payment */}
+      <td className="px-4 py-3.5 text-center">
+        <div className="flex justify-center">
+          <PaymentBadge
+            status={r.paymentStatus || "PENDING"}
+            amount={r.paymentAmount || r.totalAmount || 0}
+          />
+        </div>
+      </td>
+
       {/* Status */}
-      <td className="px-4 py-3.5">
-        <OrderStatusBadge status={r.status} />
+      <td className="px-4 py-3.5 text-center">
+        <div className="flex justify-center">
+          <OrderStatusBadge status={r.status} />
+        </div>
       </td>
 
       {/* Actions */}
       <td className="px-4 py-3.5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-center">
           <button
             type="button"
             className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
@@ -388,6 +489,25 @@ function LabOrderRow({ order, index, onView }) {
             title="View Details">
             <Eye size={16} />
           </button>
+          {/* Mark as Paid button - only show for orders that can be marked as paid and not cancelled */}
+          {r.paymentStatus !== "SUCCESS" && r.status !== "CANCELLED" && (
+            <button
+              type="button"
+              className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onMarkPaid();
+              }}
+              title="Mark as Paid">
+              <CreditCard size={16} />
+            </button>
+          )}
+          {r.paymentStatus === "SUCCESS" && (
+            <span className="p-2">
+              <CheckCircle2 size={16} className="text-emerald-500" />
+            </span>
+          )}
           {r.reportUrl && (
             <a
               href={r.reportUrl}
@@ -398,11 +518,80 @@ function LabOrderRow({ order, index, onView }) {
               <FileText size={16} />
             </a>
           )}
-          {r.status === "COMPLETED" && (
-            <span className="p-2">
-              <CheckCircle2 size={16} className="text-emerald-500" />
-            </span>
-          )}
+          {/* Status Change Dropdown */}
+          {(() => {
+            const allowedStatuses = STATUS_TRANSITIONS[r.status] || [];
+            // CANCELLED is always available except from COMPLETED or if already CANCELLED
+            const canCancel =
+              r.status !== "COMPLETED" && r.status !== "CANCELLED";
+            const hasOptions = allowedStatuses.length > 0 || canCancel;
+            // Don't show dropdown if status is CANCELLED and has no other transitions
+            if (
+              !hasOptions ||
+              (r.status === "CANCELLED" && allowedStatuses.length === 0)
+            )
+              return null;
+
+            const isOpen = statusDropdownOpen === r.id;
+
+            return (
+              <div
+                className="relative"
+                style={{ zIndex: isOpen ? 1000 : "auto" }}>
+                <button
+                  className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatusDropdownOpen(isOpen ? null : r.id);
+                  }}
+                  title="Change Status">
+                  <Settings size={16} />
+                  <ChevronDown
+                    size={12}
+                    className={`transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {isOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-[999]"
+                      onClick={() => setStatusDropdownOpen(null)}
+                    />
+                    <div
+                      className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-[1000] min-w-[150px]"
+                      style={{
+                        position: "absolute",
+                        zIndex: 1000
+                      }}
+                      onClick={(e) => e.stopPropagation()}>
+                      {allowedStatuses.map((status) => (
+                        <button
+                          key={status}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setStatusDropdownOpen(null);
+                            const ok = await confirm({
+                              title: "Change Status",
+                              message: `Change status from ${
+                                STATUS_LABELS[r.status] || r.status
+                              } to ${STATUS_LABELS[status] || status}?`
+                            });
+                            if (ok) {
+                              onStatusChange(r.id, status);
+                            }
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                          {STATUS_LABELS[status] || status}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </td>
     </tr>

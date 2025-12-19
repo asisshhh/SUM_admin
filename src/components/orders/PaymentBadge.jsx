@@ -29,12 +29,11 @@ export default function PaymentBadge({ status, amount }) {
 
   return (
     <div
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold ${
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
         COLOR_CLASSES[config.color]
       }`}>
-      <Icon size={14} />
+      <Icon size={12} />
       <span>₹{amount ?? "-"}</span>
     </div>
   );
 }
-

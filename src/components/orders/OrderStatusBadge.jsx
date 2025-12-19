@@ -16,9 +16,17 @@ const STATUS_CONFIG = {
   CONFIRMED: { color: "blue", icon: CheckCircle2, label: "Confirmed" },
   COMPLETED: { color: "emerald", icon: CheckCircle2, label: "Completed" },
   CANCELLED: { color: "red", icon: XCircle, label: "Cancelled" },
-  PROCESSING: { color: "violet", icon: Clock, label: "Processing" },
-  SAMPLE_COLLECTED: { color: "cyan", icon: FlaskConical, label: "Sample Collected" },
-  PAYMENT_COMPLETED: { color: "emerald", icon: CheckCircle2, label: "Payment Done" },
+  PROCESSING: { color: "violet", icon: Clock, label: "Test in Progress" },
+  SAMPLE_COLLECTED: {
+    color: "cyan",
+    icon: FlaskConical,
+    label: "Sample Collected"
+  },
+  PAYMENT_COMPLETED: {
+    color: "emerald",
+    icon: CheckCircle2,
+    label: "Payment Done"
+  },
   PAY_AT_HOSPITAL: { color: "orange", icon: Timer, label: "Pay at Hospital" },
   REQUESTED: { color: "amber", icon: Timer, label: "Requested" },
   ASSIGNED: { color: "blue", icon: Truck, label: "Assigned" },
@@ -55,4 +63,3 @@ export default function OrderStatusBadge({ status }) {
     </span>
   );
 }
-

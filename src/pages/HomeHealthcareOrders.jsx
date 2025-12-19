@@ -16,7 +16,9 @@ import {
   RefreshCw,
   Package,
   UserPlus,
-  X
+  X,
+  ChevronDown,
+  Settings
 } from "lucide-react";
 
 // Import shared components
@@ -24,19 +26,48 @@ import {
   OrderStatusBadge,
   PaymentBadge,
   OrderFilterCard,
-  OrderPagination,
   OrderPageHeader
 } from "../components/orders";
+import Pagination from "../components/appointments/Pagination";
+import PaymentModal from "../components/health-package/PaymentModal";
 
 const DEFAULT_LIMIT = 20;
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
-  { value: "PENDING", label: "Pending" },
+  { value: "REQUESTED", label: "Requested" },
+  { value: "PENDING", label: "Pending" }, // Legacy support
   { value: "CONFIRMED", label: "Confirmed" },
+  { value: "ASSIGNED", label: "Assigned" },
+  { value: "IN_PROGRESS", label: "In Transit" },
   { value: "COMPLETED", label: "Completed" },
   { value: "CANCELLED", label: "Cancelled" }
 ];
+
+// Valid status transitions for homecare packages
+// Note: HomeHealthcarePackageOrder uses BookingStatus enum
+// Valid values: REQUESTED, CONFIRMED, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
+// Workflow: REQUESTED → CONFIRMED → ASSIGNED → IN_PROGRESS → COMPLETED
+// CANCELLED can be set from any status except COMPLETED
+const STATUS_TRANSITIONS = {
+  REQUESTED: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["ASSIGNED", "CANCELLED"],
+  ASSIGNED: ["IN_PROGRESS", "CANCELLED"],
+  IN_PROGRESS: ["COMPLETED", "CANCELLED"],
+  COMPLETED: [],
+  CANCELLED: []
+};
+
+// User-friendly status labels
+const STATUS_LABELS = {
+  REQUESTED: "Requested",
+  PENDING: "Pending", // Legacy support
+  CONFIRMED: "Confirmed",
+  ASSIGNED: "Assigned",
+  IN_PROGRESS: "In Transit",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled"
+};
 
 // Assign Modal Component
 const AssignModal = ({ order, assignableUsers, onClose, onAssign }) => {
@@ -150,8 +181,10 @@ export default function HomeHealthcareOrders() {
   const [limit] = useState(DEFAULT_LIMIT);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
   const [assigningOrder, setAssigningOrder] = useState(null);
+  const [paymentOrder, setPaymentOrder] = useState(null);
 
   const currentController = useRef(null);
   const confirm = useConfirm();
@@ -247,35 +280,9 @@ export default function HomeHealthcareOrders() {
   // HANDLERS
   // ═══════════════════════════════════════════════════════════════════
 
-  const markPaid = useCallback(
-    async (row) => {
-      try {
-        await api.post("/payments/mark-paid", {
-          orderType: "HOME_HEALTHCARE_PACKAGE",
-          orderId: row.id,
-          amount: row.totalAmount || 0,
-          method: "CASH"
-        });
-        toast.success("Payment marked as PAID");
-        load(page);
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to mark payment");
-      }
-    },
-    [load, page]
-  );
-
-  const onMarkPaidClick = useCallback(
-    async (row) => {
-      const ok = await confirm({
-        title: "Confirm Payment",
-        message: `Mark payment for ${row.user?.name || "this user"} as PAID?`
-      });
-      if (!ok) return;
-      await markPaid(row);
-    },
-    [confirm, markPaid]
-  );
+  const onMarkPaidClick = useCallback((row) => {
+    setPaymentOrder({ ...row, orderType: "HOME_HEALTHCARE_PACKAGE" });
+  }, []);
 
   const handleResetFilters = () => {
     setSearch("");
@@ -306,17 +313,36 @@ export default function HomeHealthcareOrders() {
 
   const handleAssign = async (orderId, assignedTo) => {
     try {
-      await api.post(`/orders/${orderId}/assign`, {
+      const res = await api.post(`/orders/${orderId}/assign`, {
         type: "homecare-package",
         assignedTo: assignedTo ? parseInt(assignedTo) : null
       });
       toast.success(
-        assignedTo ? "Order assigned successfully" : "Assignment removed"
+        assignedTo
+          ? "Order assigned successfully. Status updated to ASSIGNED."
+          : "Assignment removed. Status reverted to CONFIRMED."
       );
       load(page);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to assign order");
       throw err;
+    }
+  };
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await api.post(
+        `/orders/${orderId}/update-status?type=homecare&orderType=packages`,
+        {
+          status: newStatus
+        }
+      );
+      toast.success(
+        `Status updated to ${STATUS_LABELS[newStatus] || newStatus}`
+      );
+      load(page);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update status");
     }
   };
 
@@ -357,12 +383,32 @@ export default function HomeHealthcareOrders() {
         onIncludeFutureChange={setIncludeFuture}
         onReset={handleResetFilters}
         onAllTime={handleAllTime}
+        onToday={handleResetFilters}
         isShowingToday={isShowingToday}
         isAllTime={isAllTime}
+        rowCount={rows.length}
+        total={total}
       />
 
       {/* Table */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <div
+        className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 w-full"
+        style={{ overflow: "visible", position: "relative" }}>
+        {/* Table Header */}
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-slate-700">
+              Home Healthcare Package Orders
+            </h3>
+            {loading && (
+              <div className="flex items-center gap-2 text-sm text-purple-600">
+                <RefreshCw size={14} className="animate-spin" />
+                Loading...
+              </div>
+            )}
+          </div>
+        </div>
+
         {loading ? (
           <div className="p-8 text-center">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto text-purple-600 mb-2" />
@@ -375,44 +421,84 @@ export default function HomeHealthcareOrders() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b">
+            <div
+              style={{ overflow: "visible", position: "relative", zIndex: 1 }}>
+              <table
+                className="w-full text-xs"
+                style={{ tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "7%" }} />
+                  <col style={{ width: "6%" }} />
+                  <col style={{ width: "7%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "16%" }} />
+                </colgroup>
+                <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="p-3 text-left font-semibold">Order #</th>
-                    <th className="p-3 text-left font-semibold">User</th>
-                    <th className="p-3 text-left font-semibold">Package</th>
-                    <th className="p-3 text-left font-semibold">Patient</th>
-                    <th className="p-3 text-left font-semibold">Date</th>
-                    <th className="p-3 text-left font-semibold">Time</th>
-                    <th className="p-3 text-left font-semibold">Amount</th>
-                    <th className="p-3 text-center font-semibold">Payment</th>
-                    <th className="p-3 text-center font-semibold">Status</th>
-                    <th className="p-3 text-left font-semibold">Assigned To</th>
-                    <th className="p-3 text-center font-semibold">Actions</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Order #
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Package
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Patient
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Time
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Payment
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Assigned To
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, i) => (
-                    <tr key={row.id} className="border-b hover:bg-slate-50">
-                      <td className="p-3">
-                        <span className="font-mono text-xs">
-                          {row.orderNumber || `HHS${row.id}`}
+                    <tr
+                      key={row.id}
+                      className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <td className="px-3 py-3">
+                        <span className="font-mono text-xs text-slate-500 truncate block">
+                          {row.orderNumber || `HHP0${row.id}`}
                         </span>
                       </td>
-                      <td className="p-3">
-                        <div>
-                          <div className="font-medium">
+                      <td className="px-3 py-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-slate-800 text-xs truncate">
                             {row.user?.name || "-"}
                           </div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-slate-500 truncate">
                             {row.user?.phone || ""}
                           </div>
                         </div>
                       </td>
-                      <td className="p-3">
-                        <div>
-                          <div className="font-medium">
+                      <td className="px-3 py-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-slate-700 text-xs truncate">
                             {row.packageName || row.package?.name || "-"}
                           </div>
                           {row.serviceCount && (
@@ -422,114 +508,189 @@ export default function HomeHealthcareOrders() {
                           )}
                         </div>
                       </td>
-                      <td className="p-3">
-                        <div>
-                          <div className="font-medium">
+                      <td className="px-3 py-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-slate-800 text-xs truncate">
                             {row.patient?.name || "-"}
                           </div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-slate-500 truncate">
                             {row.patient?.relation || ""}
                           </div>
                         </div>
                       </td>
-                      <td className="p-3">
+                      <td className="px-3 py-3 text-xs">
                         {row.scheduledDate
                           ? new Date(row.scheduledDate).toLocaleDateString(
-                              "en-IN"
+                              "en-IN",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit"
+                              }
                             )
                           : "-"}
                       </td>
-                      <td className="p-3">
+                      <td className="px-3 py-3 text-xs">
                         {row.scheduledTime || row.timeSlot || "-"}
                       </td>
-                      <td className="p-3 font-semibold">
+                      <td className="px-3 py-3 font-semibold text-slate-800 text-xs">
                         ₹{row.totalAmount || 0}
                       </td>
-                      <td className="p-3 text-center">
-                        <PaymentBadge
-                          status={row.paymentStatus || "PENDING"}
-                          option={row.paymentOption}
-                        />
+                      <td className="px-3 py-3 text-center">
+                        <div className="flex justify-center">
+                          <PaymentBadge
+                            status={row.paymentStatus || "PENDING"}
+                            amount={row.paymentAmount || row.totalAmount || 0}
+                          />
+                        </div>
                       </td>
-                      <td className="p-3 text-center">
-                        <OrderStatusBadge status={row.status} />
+                      <td className="px-3 py-3 text-center">
+                        <div className="flex justify-center">
+                          <OrderStatusBadge status={row.status} />
+                        </div>
                       </td>
-                      <td className="p-3">
+                      <td className="px-3 py-3">
                         {row.assignee ? (
-                          <div>
-                            <div className="font-medium text-sm">
+                          <div className="min-w-0">
+                            <div className="font-medium text-xs text-slate-800 truncate">
                               {row.assignee.name}
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-slate-500 truncate">
                               {row.assignee.role}
                             </div>
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-400">
+                          <span className="text-xs text-slate-400">
                             Unassigned
                           </span>
                         )}
                       </td>
-                      <td className="p-3">
-                        <div className="flex justify-center gap-1">
+                      <td
+                        className="px-3 py-3"
+                        style={{ position: "relative", zIndex: "auto" }}>
+                        <div
+                          className="flex justify-center gap-1 flex-wrap items-center"
+                          style={{ position: "relative" }}>
                           <button
-                            className="p-2 hover:bg-blue-50 rounded-lg transition"
+                            className="p-1.5 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
                             onClick={() => handleViewOrder(row)}
                             title="View Details">
-                            <Eye size={16} className="text-blue-500" />
+                            <Eye size={14} />
                           </button>
                           <button
-                            className="p-2 hover:bg-purple-50 rounded-lg transition"
+                            className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
                             onClick={() => handleAssignOrder(row)}
                             title="Assign">
-                            <UserPlus size={16} className="text-purple-500" />
+                            <UserPlus size={14} />
                           </button>
-                          {row.paymentOption === "PAY_AT_HOSPITAL" &&
-                            row.paymentStatus !== "SUCCESS" && (
+                          {row.paymentStatus !== "SUCCESS" &&
+                            row.status !== "CANCELLED" && (
                               <button
-                                className="p-2 hover:bg-green-50 rounded-lg transition"
+                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
                                 onClick={() => onMarkPaidClick(row)}
-                                title="Mark Paid">
-                                <CheckCircle2
-                                  size={16}
-                                  className="text-green-500"
-                                />
+                                title="Mark as Paid">
+                                <CreditCard size={14} />
                               </button>
                             )}
-                          {/* ✅ STEP 5: Mark as Completed button - only for ASSIGNED or IN_PROGRESS orders */}
-                          {row.status === "ASSIGNED" ||
-                          row.status === "IN_PROGRESS" ? (
-                            <button
-                              className="p-2 hover:bg-blue-50 rounded-lg transition"
-                              onClick={async () => {
-                                const ok = await confirm({
-                                  title: "Mark as Completed",
-                                  message: `Mark order ${row.orderNumber} as completed? This action cannot be undone.`
-                                });
-                                if (!ok) return;
-                                try {
-                                  await api.post(
-                                    `/orders/${row.id}/update-status?type=homecare&orderType=packages`,
-                                    {
-                                      status: "COMPLETED"
-                                    }
-                                  );
-                                  toast.success("Order marked as completed");
-                                  load(page);
-                                } catch (err) {
-                                  toast.error(
-                                    err.response?.data?.error ||
-                                      "Failed to mark as completed"
-                                  );
-                                }
-                              }}
-                              title="Mark as Completed">
+                          {/* Show checkmark if already paid */}
+                          {row.paymentStatus === "SUCCESS" && (
+                            <span className="p-1.5">
                               <CheckCircle2
-                                size={16}
-                                className="text-blue-500"
+                                size={14}
+                                className="text-emerald-500"
                               />
-                            </button>
-                          ) : null}
+                            </span>
+                          )}
+                          {/* Status Change Dropdown */}
+                          {(() => {
+                            const allowedStatuses =
+                              STATUS_TRANSITIONS[row.status] || [];
+                            // CANCELLED is always available except from COMPLETED or if already CANCELLED
+                            // Don't show cancel option if status is already CANCELLED
+                            const canCancel =
+                              row.status !== "COMPLETED" &&
+                              row.status !== "CANCELLED";
+                            const hasOptions =
+                              allowedStatuses.length > 0 || canCancel;
+                            // Don't show dropdown at all if no options available
+                            if (!hasOptions) return null;
+                            // Don't show dropdown if status is CANCELLED and has no other transitions
+                            if (
+                              row.status === "CANCELLED" &&
+                              allowedStatuses.length === 0
+                            )
+                              return null;
+
+                            const isOpen = statusDropdownOpen === row.id;
+
+                            return (
+                              <div
+                                className="relative"
+                                style={{ zIndex: isOpen ? 1000 : "auto" }}>
+                                <button
+                                  className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setStatusDropdownOpen(
+                                      isOpen ? null : row.id
+                                    );
+                                  }}
+                                  title="Change Status">
+                                  <Settings size={14} />
+                                  <ChevronDown
+                                    size={10}
+                                    className={`transition-transform ${
+                                      isOpen ? "rotate-180" : ""
+                                    }`}
+                                  />
+                                </button>
+                                {isOpen && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-[999]"
+                                      onClick={() =>
+                                        setStatusDropdownOpen(null)
+                                      }
+                                    />
+                                    <div
+                                      className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-[1000] min-w-[150px]"
+                                      style={{
+                                        position: "absolute",
+                                        zIndex: 1000
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}>
+                                      {allowedStatuses.map((status) => (
+                                        <button
+                                          key={status}
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            setStatusDropdownOpen(null);
+                                            const ok = await confirm({
+                                              title: "Change Status",
+                                              message: `Change status from ${
+                                                STATUS_LABELS[row.status] ||
+                                                row.status
+                                              } to ${
+                                                STATUS_LABELS[status] || status
+                                              }?`
+                                            });
+                                            if (ok) {
+                                              handleStatusChange(
+                                                row.id,
+                                                status
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                          {STATUS_LABELS[status] || status}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </td>
                     </tr>
@@ -538,16 +699,18 @@ export default function HomeHealthcareOrders() {
               </table>
             </div>
 
-            {/* Pagination */}
-            <OrderPagination
-              page={page}
-              total={total}
-              limit={limit}
-              onPageChange={(p) => {
-                setPage(p);
-                load(p);
-              }}
-            />
+            {/* Pagination - Match appointment orders design */}
+            {rows.length > 0 && (
+              <Pagination
+                page={page}
+                limit={limit}
+                total={total}
+                onPageChange={(p) => {
+                  setPage(p);
+                  load(p);
+                }}
+              />
+            )}
           </>
         )}
       </div>
@@ -586,7 +749,11 @@ export default function HomeHealthcareOrders() {
                   <p className="text-sm text-slate-500">Payment Status</p>
                   <PaymentBadge
                     status={viewingOrder.paymentStatus || "PENDING"}
-                    option={viewingOrder.paymentOption}
+                    amount={
+                      viewingOrder.paymentAmount ||
+                      viewingOrder.totalAmount ||
+                      0
+                    }
                   />
                 </div>
                 <div>
@@ -619,6 +786,18 @@ export default function HomeHealthcareOrders() {
           assignableUsers={assignableUsers}
           onClose={() => setAssigningOrder(null)}
           onAssign={handleAssign}
+        />
+      )}
+
+      {/* Payment Modal */}
+      {paymentOrder && (
+        <PaymentModal
+          order={paymentOrder}
+          onClose={() => setPaymentOrder(null)}
+          onSuccess={() => {
+            setPaymentOrder(null);
+            load(page);
+          }}
         />
       )}
     </div>

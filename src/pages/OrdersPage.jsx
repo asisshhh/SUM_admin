@@ -9,6 +9,7 @@ import useDateRange from "../hooks/useDateRange";
 import OrderDetailsModal from "../components/OrderDetailsModal";
 import LabOrderViewModal from "../components/orders/LabOrderViewModal";
 import PackageOrderViewModal from "../components/orders/PackageOrderViewModal";
+import PaymentModal from "../components/health-package/PaymentModal";
 import { printReceipt } from "../components/ReceiptPrint";
 import Socket from "../utils/SocketManager";
 import {
@@ -331,26 +332,38 @@ export default function OrdersPage() {
     setGenLoading(false);
   };
 
-  const handleMarkPaid = async (row, orderType) => {
-    const ok = await confirm({
-      title: "Confirm Payment",
-      message: `Mark payment for ${
-        row.user?.name || row.patient?.name || "this user"
-      } as PAID?`
-    });
-    if (!ok) return;
+  const [paymentOrder, setPaymentOrder] = useState(null);
 
-    try {
-      await api.post("/payments/mark-paid", {
-        orderType: orderType === "packages" ? "HEALTH_PACKAGE" : "APPOINTMENT",
-        orderId: row.id,
-        amount: row.totalAmount || row.paymentAmount || row.billing?.amount,
-        method: "CASH"
+  const handleMarkPaid = (row, orderType) => {
+    if (orderType === "packages") {
+      // Use payment modal for health packages
+      setPaymentOrder({
+        ...row,
+        orderType: "HEALTH_PACKAGE"
       });
-      toast.success("Payment marked as PAID");
-      load(page);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to mark payment");
+    } else {
+      // For appointments, use simple confirm (or can be updated later)
+      const ok = confirm(
+        `Mark payment for ${
+          row.user?.name || row.patient?.name || "this user"
+        } as PAID?`
+      );
+      if (!ok) return;
+
+      api
+        .post("/payments/mark-paid", {
+          orderType: "APPOINTMENT",
+          orderId: row.id,
+          amount: row.totalAmount || row.paymentAmount || row.billing?.amount,
+          method: "CASH"
+        })
+        .then(() => {
+          toast.success("Payment marked as PAID");
+          load(page);
+        })
+        .catch((err) => {
+          toast.error(err.response?.data?.message || "Failed to mark payment");
+        });
     }
   };
 
@@ -773,6 +786,18 @@ export default function OrdersPage() {
         />
       )}
 
+      {/* Payment Modal */}
+      {paymentOrder && (
+        <PaymentModal
+          order={paymentOrder}
+          onClose={() => setPaymentOrder(null)}
+          onSuccess={() => {
+            setPaymentOrder(null);
+            load(page);
+          }}
+        />
+      )}
+
       <ToastContainer position="top-right" />
     </div>
   );
@@ -968,7 +993,7 @@ export default function OrdersPage() {
                   title="View Details">
                   <Eye size={16} />
                 </button>
-                {r.paymentStatus !== "SUCCESS" && (
+                {r.paymentStatus !== "SUCCESS" && r.status !== "CANCELLED" && (
                   <button
                     className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
                     onClick={() => handleMarkPaid(r, "packages")}>

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Clock,
   Calendar,
@@ -34,6 +35,7 @@ const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export default function DoctorSchedulePage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const doctorIdFromUrl = searchParams.get("doctorId");
 
@@ -42,6 +44,15 @@ export default function DoctorSchedulePage() {
   const [showExceptionModal, setShowExceptionModal] = useState(false);
   const [activeTab, setActiveTab] = useState("weekly"); // weekly, exceptions, preview
   const [preselectedDay, setPreselectedDay] = useState(undefined);
+
+  // Auto-set selectedDoctor if user is a doctor
+  useEffect(() => {
+    if (user?.role === "DOCTOR" && user?.doctorProfile?.id && !selectedDoctor) {
+      const doctorId = user.doctorProfile.id.toString();
+      setSelectedDoctor(doctorId);
+      navigate(`/doctor-schedule?doctorId=${doctorId}`, { replace: true });
+    }
+  }, [user, selectedDoctor, navigate]);
 
   // Fetch doctors
   const { data: doctors } = useQuery({
@@ -161,23 +172,30 @@ export default function DoctorSchedulePage() {
       {/* Doctor Selection Card */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-sm">
         <label className="block text-sm font-semibold text-gray-700 mb-3">
-          Select Doctor
+          {user?.role === "DOCTOR" ? "Doctor" : "Select Doctor"}
         </label>
         <div className="flex gap-4 items-center">
-          <select
-            className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium"
-            value={selectedDoctor}
-            onChange={(e) => {
-              setSelectedDoctor(e.target.value);
-              navigate(`/doctor-schedule?doctorId=${e.target.value}`);
-            }}>
-            <option value="">Choose a doctor...</option>
-            {doctors?.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.user.name} — {d.specialization}
-              </option>
-            ))}
-          </select>
+          {user?.role !== "DOCTOR" ? (
+            <select
+              className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium"
+              value={selectedDoctor}
+              onChange={(e) => {
+                setSelectedDoctor(e.target.value);
+                navigate(`/doctor-schedule?doctorId=${e.target.value}`);
+              }}>
+              <option value="">Choose a doctor...</option>
+              {doctors?.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.user.name} — {d.specialization}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="flex-1 px-4 py-3 bg-slate-50 border border-gray-300 rounded-lg text-gray-700 font-medium">
+              {selectedDoctorData?.user?.name || "Loading..."} —{" "}
+              {selectedDoctorData?.specialization || "General"}
+            </div>
+          )}
           {selectedDoctorData && (
             <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-lg border border-gray-200">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">

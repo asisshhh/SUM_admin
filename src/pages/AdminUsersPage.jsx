@@ -398,6 +398,14 @@ export default function AdminUsersPage() {
 
   const users = data?.users || [];
   const pagination = data?.pagination || {};
+  const stats = data?.stats || {
+    total: 0,
+    admin: 0,
+    doctor: 0,
+    receptionist: 0,
+    nurse: 0,
+    departmentHead: 0
+  };
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -452,13 +460,12 @@ export default function AdminUsersPage() {
     qc.invalidateQueries({ queryKey: ["admin-users"] });
   }, [qc]);
 
-  // Stats
-  const adminCount = users.filter((u) => u.role === "ADMIN").length;
-  const receptionistCount = users.filter(
-    (u) => u.role === "RECEPTIONIST"
-  ).length;
-  const doctorCount = users.filter((u) => u.role === "DOCTOR").length;
-  const nurseCount = users.filter((u) => u.role === "NURSE").length;
+  // Stats from backend (total counts, not just current page)
+  const adminCount = stats.admin || 0;
+  const receptionistCount = stats.receptionist || 0;
+  const doctorCount = stats.doctor || 0;
+  const nurseCount = stats.nurse || 0;
+  const totalStaff = stats.total || 0;
 
   return (
     <div className="space-y-6">
@@ -487,7 +494,7 @@ export default function AdminUsersPage() {
             <div>
               <p className="text-sm text-slate-500">Total Staff</p>
               <p className="text-2xl font-bold text-slate-800 mt-1">
-                {users.length}
+                {totalStaff}
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">

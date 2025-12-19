@@ -496,6 +496,40 @@ export default function HomeHealthcareOrders() {
                                 />
                               </button>
                             )}
+                          {/* ✅ STEP 5: Mark as Completed button - only for ASSIGNED or IN_PROGRESS orders */}
+                          {row.status === "ASSIGNED" ||
+                          row.status === "IN_PROGRESS" ? (
+                            <button
+                              className="p-2 hover:bg-blue-50 rounded-lg transition"
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: "Mark as Completed",
+                                  message: `Mark order ${row.orderNumber} as completed? This action cannot be undone.`
+                                });
+                                if (!ok) return;
+                                try {
+                                  await api.post(
+                                    `/orders/${row.id}/update-status?type=homecare&orderType=packages`,
+                                    {
+                                      status: "COMPLETED"
+                                    }
+                                  );
+                                  toast.success("Order marked as completed");
+                                  load(page);
+                                } catch (err) {
+                                  toast.error(
+                                    err.response?.data?.error ||
+                                      "Failed to mark as completed"
+                                  );
+                                }
+                              }}
+                              title="Mark as Completed">
+                              <CheckCircle2
+                                size={16}
+                                className="text-blue-500"
+                              />
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

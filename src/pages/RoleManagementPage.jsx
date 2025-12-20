@@ -544,7 +544,7 @@ export default function RoleManagementPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <button
             onClick={() => seedMutation.mutate()}
             disabled={seedMutation.isPending}
@@ -557,7 +557,7 @@ export default function RoleManagementPage() {
             className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg flex items-center gap-1">
             <RefreshCw size={16} /> Init Permissions
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Tabs */}

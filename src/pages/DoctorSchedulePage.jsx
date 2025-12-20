@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
+import { SearchableDropdown } from "../components/shared";
 import {
   Clock,
   Calendar,
@@ -176,20 +177,24 @@ export default function DoctorSchedulePage() {
         </label>
         <div className="flex gap-4 items-center">
           {user?.role !== "DOCTOR" ? (
-            <select
-              className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium"
-              value={selectedDoctor}
-              onChange={(e) => {
-                setSelectedDoctor(e.target.value);
-                navigate(`/doctor-schedule?doctorId=${e.target.value}`);
-              }}>
-              <option value="">Choose a doctor...</option>
-              {doctors?.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.user.name} — {d.specialization}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1">
+              <SearchableDropdown
+                value={selectedDoctor || ""}
+                options={[
+                  { value: "", label: "Choose a doctor..." },
+                  ...(doctors || []).map((d) => ({
+                    value: String(d.id),
+                    label: `${d.user.name} — ${d.specialization}`
+                  }))
+                ]}
+                onChange={(value) => {
+                  setSelectedDoctor(value);
+                  navigate(`/doctor-schedule?doctorId=${value}`);
+                }}
+                placeholder="Choose a doctor..."
+                className=""
+              />
+            </div>
           ) : (
             <div className="flex-1 px-4 py-3 bg-slate-50 border border-gray-300 rounded-lg text-gray-700 font-medium">
               {selectedDoctorData?.user?.name || "Loading..."} —{" "}

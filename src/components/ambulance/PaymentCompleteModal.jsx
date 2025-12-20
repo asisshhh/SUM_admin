@@ -2,6 +2,7 @@ import React from "react";
 import { DollarSign, XCircle } from "lucide-react";
 import { toast } from "react-toastify";
 import api from "../../api/client";
+import { SearchableDropdown } from "../shared";
 
 const PaymentCompleteModal = React.memo(function PaymentCompleteModal({
   booking,
@@ -69,36 +70,34 @@ const PaymentCompleteModal = React.memo(function PaymentCompleteModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Payment Method
-            </label>
-            <select
+            <SearchableDropdown
+              label="Payment Method"
               value={form.paymentMethod}
-              onChange={(e) =>
-                setForm({ ...form, paymentMethod: e.target.value })
-              }
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="CASH">Cash</option>
-              <option value="CARD">Card</option>
-              <option value="UPI">UPI</option>
-              <option value="NETBANKING">Net Banking</option>
-            </select>
+              options={[
+                { value: "CASH", label: "Cash" },
+                { value: "CARD", label: "Card" },
+                { value: "UPI", label: "UPI" },
+                { value: "NETBANKING", label: "Net Banking" }
+              ]}
+              onChange={(value) => setForm({ ...form, paymentMethod: value })}
+              placeholder="Select Payment Method"
+              className=""
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Payment Status
-            </label>
-            <select
+            <SearchableDropdown
+              label="Payment Status"
               value={form.paymentStatus}
-              onChange={(e) =>
-                setForm({ ...form, paymentStatus: e.target.value })
-              }
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="SUCCESS">Success (Paid)</option>
-              <option value="PENDING">Pending</option>
-              <option value="FAILED">Failed</option>
-            </select>
+              options={[
+                { value: "SUCCESS", label: "Success (Paid)" },
+                { value: "PENDING", label: "Pending" },
+                { value: "FAILED", label: "Failed" }
+              ]}
+              onChange={(value) => setForm({ ...form, paymentStatus: value })}
+              placeholder="Select Payment Status"
+              className=""
+            />
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">

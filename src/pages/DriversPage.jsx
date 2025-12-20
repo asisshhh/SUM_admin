@@ -5,7 +5,7 @@ import { useConfirm } from "../contexts/ConfirmContext";
 import { usePagePermissions } from "../hooks/usePagePermissions";
 import { UserCircle, Search, Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { Pagination } from "../components/shared";
+import { Pagination, SearchableDropdown } from "../components/shared";
 
 // Debounce hook
 function useDebounce(value, delay = 400) {
@@ -138,24 +138,32 @@ export default function DriversPage() {
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <select
-            name="available"
-            value={filters.available}
-            onChange={handleFilterChange}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="all">All Availability</option>
-            <option value="true">Available</option>
-            <option value="false">Unavailable</option>
-          </select>
-          <select
-            name="active"
-            value={filters.active}
-            onChange={handleFilterChange}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="all">All Status</option>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
-          </select>
+          <SearchableDropdown
+            value={filters.available || "all"}
+            options={[
+              { value: "all", label: "All Availability" },
+              { value: "true", label: "Available" },
+              { value: "false", label: "Unavailable" }
+            ]}
+            onChange={(value) =>
+              setFilters((f) => ({ ...f, available: value, page: 1 }))
+            }
+            placeholder="All Availability"
+            className=""
+          />
+          <SearchableDropdown
+            value={filters.active || "all"}
+            options={[
+              { value: "all", label: "All Status" },
+              { value: "true", label: "Active" },
+              { value: "false", label: "Inactive" }
+            ]}
+            onChange={(value) =>
+              setFilters((f) => ({ ...f, active: value, page: 1 }))
+            }
+            placeholder="All Status"
+            className=""
+          />
         </div>
       </div>
 
@@ -532,38 +540,40 @@ function DriverFormModal({ editing, onClose, onSuccess }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Availability
-              </label>
-              <select
-                value={formData.available}
-                onChange={(e) =>
+              <SearchableDropdown
+                label="Availability"
+                value={String(formData.available)}
+                options={[
+                  { value: "true", label: "Available" },
+                  { value: "false", label: "Unavailable" }
+                ]}
+                onChange={(value) =>
                   setFormData({
                     ...formData,
-                    available: e.target.value === "true"
+                    available: value === "true"
                   })
                 }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value={true}>Available</option>
-                <option value={false}>Unavailable</option>
-              </select>
+                placeholder="Select"
+                className=""
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Status
-              </label>
-              <select
-                value={formData.active}
-                onChange={(e) =>
+              <SearchableDropdown
+                label="Status"
+                value={String(formData.active)}
+                options={[
+                  { value: "true", label: "Active" },
+                  { value: "false", label: "Inactive" }
+                ]}
+                onChange={(value) =>
                   setFormData({
                     ...formData,
-                    active: e.target.value === "true"
+                    active: value === "true"
                   })
                 }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value={true}>Active</option>
-                <option value={false}>Inactive</option>
-              </select>
+                placeholder="Select"
+                className=""
+              />
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">

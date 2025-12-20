@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import SlotBookingModal from "../components/schedule/SlotBookingModal";
+import { SearchableDropdown } from "../components/shared";
 import {
   Calendar,
   Stethoscope,
@@ -239,26 +240,30 @@ export default function DoctorCalendarPage() {
             {/* Doctor Selection */}
             {user?.role !== "DOCTOR" && (
               <div className="flex-1 min-w-[250px]">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  <Stethoscope size={12} className="inline mr-1" />
-                  Select Doctor
-                </label>
-                <div className="relative">
-                  <select
-                    value={doctorId}
-                    onChange={(e) => {
-                      setDoctorId(e.target.value);
-                      setEvents([]);
-                    }}
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-                    <option value="">Choose a doctor...</option>
-                    {doctors?.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.user?.name} — {d.specialization || "General"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SearchableDropdown
+                  label={
+                    <span>
+                      <Stethoscope size={12} className="inline mr-1" />
+                      Select Doctor
+                    </span>
+                  }
+                  value={doctorId || ""}
+                  options={[
+                    { value: "", label: "Choose a doctor..." },
+                    ...(doctors || []).map((d) => ({
+                      value: String(d.id),
+                      label: `${d.user?.name} — ${
+                        d.specialization || "General"
+                      }`
+                    }))
+                  ]}
+                  onChange={(value) => {
+                    setDoctorId(value);
+                    setEvents([]);
+                  }}
+                  placeholder="Choose a doctor..."
+                  className=""
+                />
               </div>
             )}
             {user?.role === "DOCTOR" && doctorId && (

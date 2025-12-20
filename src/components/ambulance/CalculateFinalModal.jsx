@@ -10,6 +10,7 @@ import {
   X
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { SearchableDropdown } from "../shared";
 
 const CalculateFinalModal = React.memo(function CalculateFinalModal({
   booking,
@@ -653,15 +654,19 @@ const CalculateFinalModal = React.memo(function CalculateFinalModal({
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Payment Method
                   </label>
-                  <select
+                  <SearchableDropdown
+                    label="Payment Method"
                     value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="CASH">Cash</option>
-                    <option value="CARD">Card</option>
-                    <option value="UPI">UPI</option>
-                    <option value="NETBANKING">Net Banking</option>
-                  </select>
+                    options={[
+                      { value: "CASH", label: "Cash" },
+                      { value: "CARD", label: "Card" },
+                      { value: "UPI", label: "UPI" },
+                      { value: "NETBANKING", label: "Net Banking" }
+                    ]}
+                    onChange={(value) => setPaymentMethod(value)}
+                    placeholder="Select Payment Method"
+                    className=""
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">

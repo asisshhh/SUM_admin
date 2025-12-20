@@ -8,6 +8,7 @@ import {
   Upload,
   Image as ImageIcon
 } from "lucide-react";
+import { SearchableDropdown } from "../shared";
 
 const INITIAL_FORM = {
   name: "",
@@ -340,25 +341,29 @@ function DoctorFormModal({ doc, departments, onClose }) {
 
             {/* Department */}
             <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Department <span className="text-red-500">*</span>
-              </label>
-              <select
-                className={`select ${
+              <SearchableDropdown
+                label={
+                  <>
+                    Department <span className="text-red-500">*</span>
+                  </>
+                }
+                value={form.departmentId || ""}
+                options={[
+                  { value: "", label: "Select Department" },
+                  ...deptList.map((d) => ({
+                    value: String(d.id),
+                    label: d.name
+                  }))
+                ]}
+                onChange={(value) => updateField("departmentId", value)}
+                onBlur={() => handleBlur("departmentId")}
+                placeholder="Select Department"
+                className={
                   touched.departmentId && errors.departmentId
                     ? "border-red-500"
                     : ""
-                }`}
-                value={form.departmentId}
-                onChange={(e) => updateField("departmentId", e.target.value)}
-                onBlur={() => handleBlur("departmentId")}>
-                <option value="">Select Department</option>
-                {deptList.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+                }
+              />
               {touched.departmentId && errors.departmentId && (
                 <p className="text-xs text-red-500">{errors.departmentId}</p>
               )}
@@ -369,16 +374,19 @@ function DoctorFormModal({ doc, departments, onClose }) {
           <div className="grid md:grid-cols-3 gap-4">
             {/* Gender */}
             <div className="space-y-1">
-              <label className="text-sm font-medium">Gender</label>
-              <select
-                className="select"
-                value={form.gender}
-                onChange={(e) => updateField("gender", e.target.value)}>
-                <option value="">Select</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
-              </select>
+              <SearchableDropdown
+                label="Gender"
+                value={form.gender || ""}
+                options={[
+                  { value: "", label: "Select" },
+                  { value: "MALE", label: "Male" },
+                  { value: "FEMALE", label: "Female" },
+                  { value: "OTHER", label: "Other" }
+                ]}
+                onChange={(value) => updateField("gender", value)}
+                placeholder="Select"
+                className=""
+              />
             </div>
 
             {/* Date of Birth */}
@@ -435,16 +443,17 @@ function DoctorFormModal({ doc, departments, onClose }) {
 
             {/* Available */}
             <div className="space-y-1">
-              <label className="text-sm font-medium">Available</label>
-              <select
-                className="select"
+              <SearchableDropdown
+                label="Available"
                 value={String(form.available)}
-                onChange={(e) =>
-                  updateField("available", e.target.value === "true")
-                }>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
+                options={[
+                  { value: "true", label: "Yes" },
+                  { value: "false", label: "No" }
+                ]}
+                onChange={(value) => updateField("available", value === "true")}
+                placeholder="Select"
+                className=""
+              />
             </div>
           </div>
 

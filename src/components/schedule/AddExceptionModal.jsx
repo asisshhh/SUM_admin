@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/client";
 import { X, Calendar, AlertCircle, Clock, FileText } from "lucide-react";
+import { SearchableDropdown } from "../shared";
 
 export default function AddExceptionModal({ doctorId, onClose }) {
   const qc = useQueryClient();
@@ -136,13 +137,16 @@ export default function AddExceptionModal({ doctorId, onClose }) {
               <AlertCircle className="inline mr-2" size={16} />
               Exception Type <span className="text-red-500">*</span>
             </label>
-            <select
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 font-medium"
+            <SearchableDropdown
               value={form.exceptionType}
-              onChange={(e) => update("exceptionType", e.target.value)}>
-              <option value="UNAVAILABLE">Unavailable (Whole Day)</option>
-              <option value="CUSTOM_HOURS">Custom Hours</option>
-            </select>
+              options={[
+                { value: "UNAVAILABLE", label: "Unavailable (Whole Day)" },
+                { value: "CUSTOM_HOURS", label: "Custom Hours" }
+              ]}
+              onChange={(value) => update("exceptionType", value)}
+              placeholder="Select Exception Type"
+              className=""
+            />
             <p className="text-xs text-gray-500 mt-2">
               {form.exceptionType === "UNAVAILABLE"
                 ? "Doctor will be unavailable for the entire day"

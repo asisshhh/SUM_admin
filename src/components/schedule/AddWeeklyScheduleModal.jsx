@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/client";
 import { X, Calendar, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { SearchableDropdown } from "../shared";
 
 const DAY_NAMES = [
   "Sunday",
@@ -158,23 +159,22 @@ export default function AddWeeklyScheduleModal({
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Day of Week <span className="text-red-500">*</span>
             </label>
-            <select
-              data-day-select
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium ${
-                errors.dayOfWeek ? "border-red-300" : "border-gray-300"
-              }`}
-              value={dayOfWeek}
-              onChange={(e) => {
-                setDayOfWeek(e.target.value);
+            <SearchableDropdown
+              value={dayOfWeek !== "" ? String(dayOfWeek) : ""}
+              options={[
+                { value: "", label: "Choose a day..." },
+                ...DAY_NAMES.map((day, index) => ({
+                  value: String(index),
+                  label: day
+                }))
+              ]}
+              onChange={(value) => {
+                setDayOfWeek(value);
                 setErrors({ ...errors, dayOfWeek: "" });
-              }}>
-              <option value="">Choose a day...</option>
-              {DAY_NAMES.map((day, index) => (
-                <option key={index} value={index}>
-                  {day}
-                </option>
-              ))}
-            </select>
+              }}
+              placeholder="Choose a day..."
+              className={errors.dayOfWeek ? "border-red-300" : ""}
+            />
             {errors.dayOfWeek && (
               <p className="text-red-600 text-sm mt-1">{errors.dayOfWeek}</p>
             )}
@@ -213,22 +213,22 @@ export default function AddWeeklyScheduleModal({
               </div>
             ) : (
               <>
-                <select
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium ${
-                    errors.templateId ? "border-red-300" : "border-gray-300"
-                  }`}
-                  value={templateId}
-                  onChange={(e) => {
-                    setTemplateId(e.target.value);
+                <SearchableDropdown
+                  value={templateId || ""}
+                  options={[
+                    { value: "", label: "Choose a template..." },
+                    ...(templates || []).map((t) => ({
+                      value: String(t.id),
+                      label: `${t.name} — ${t.startTime} to ${t.endTime}`
+                    }))
+                  ]}
+                  onChange={(value) => {
+                    setTemplateId(value);
                     setErrors({ ...errors, templateId: "" });
-                  }}>
-                  <option value="">Choose a template...</option>
-                  {templates?.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} — {t.startTime} to {t.endTime}
-                    </option>
-                  ))}
-                </select>
+                  }}
+                  placeholder="Choose a template..."
+                  className={errors.templateId ? "border-red-300" : ""}
+                />
                 {errors.templateId && (
                   <p className="text-red-600 text-sm mt-1">
                     {errors.templateId}

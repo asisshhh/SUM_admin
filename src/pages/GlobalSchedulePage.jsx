@@ -195,24 +195,24 @@ export default function GlobalSchedulePage() {
             configured.
           </p>
         </div>
-        <button
+        {/* <button
           onClick={() => initializeSchedule.mutate()}
           className="btn bg-green-600 text-white hover:bg-green-700"
           disabled={initializeSchedule.isPending}>
           {initializeSchedule.isPending
             ? "Initializing..."
             : "Initialize Defaults"}
-        </button>
+        </button> */}
       </div>
 
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+      {/* <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
         <AlertCircle className="text-yellow-600 mt-0.5" size={20} />
         <div className="text-sm text-yellow-800">
           <strong>Note:</strong> Default schedule is 9AM-1PM and 2PM-4PM for all
           days. Click "Initialize Defaults" to set this up, or configure each
           day individually.
         </div>
-      </div>
+      </div> */}
 
       <div className="grid gap-4">
         {[0, 1, 2, 3, 4, 5, 6].map((day) => {

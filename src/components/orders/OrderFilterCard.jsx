@@ -1,5 +1,6 @@
 import React from "react";
-import { Search, Filter, Calendar, ChevronDown } from "lucide-react";
+import { Search, Filter, Calendar } from "lucide-react";
+import { SearchableDropdown } from "../shared";
 
 export default function OrderFilterCard({
   // Search
@@ -90,27 +91,14 @@ export default function OrderFilterCard({
 
           {/* Status */}
           {statusOptions.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Status
-              </label>
-              <div className="relative">
-                <select
-                  value={status}
-                  onChange={(e) => onStatusChange(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-                  {statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                />
-              </div>
-            </div>
+            <SearchableDropdown
+              label="Status"
+              value={status || ""}
+              options={statusOptions}
+              onChange={onStatusChange}
+              placeholder="All Status"
+              className=""
+            />
           )}
 
           {/* Custom filters */}
@@ -174,4 +162,3 @@ export default function OrderFilterCard({
     </div>
   );
 }
-

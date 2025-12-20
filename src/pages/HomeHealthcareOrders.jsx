@@ -30,6 +30,7 @@ import {
 } from "../components/orders";
 import Pagination from "../components/appointments/Pagination";
 import PaymentModal from "../components/health-package/PaymentModal";
+import { SearchableDropdown } from "../components/shared";
 
 const DEFAULT_LIMIT = 20;
 
@@ -112,20 +113,22 @@ const AssignModal = ({ order, assignableUsers, onClose, onAssign }) => {
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Assign To
-            </label>
-            <select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-              <option value="">-- Unassigned --</option>
-              {assignableUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role}) - {user.phone || user.email}
-                </option>
-              ))}
-            </select>
+            <SearchableDropdown
+              label="Assign To"
+              value={selectedUserId || ""}
+              options={[
+                { value: "", label: "-- Unassigned --" },
+                ...assignableUsers.map((user) => ({
+                  value: String(user.id),
+                  label: `${user.name} (${user.role}) - ${
+                    user.phone || user.email
+                  }`
+                }))
+              ]}
+              onChange={(value) => setSelectedUserId(value)}
+              placeholder="-- Unassigned --"
+              className=""
+            />
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 p-4 border-t border-slate-200">

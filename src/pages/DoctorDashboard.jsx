@@ -142,7 +142,7 @@ export default function DoctorDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
         <Link
           to={`/doctor/actions/${doctorId}`}
           className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition group">
@@ -160,46 +160,6 @@ export default function DoctorDashboard() {
             </div>
             <ArrowRight
               className="text-slate-400 group-hover:text-blue-600 transition"
-              size={20}
-            />
-          </div>
-        </Link>
-
-        <Link
-          to={`/doctor/queue-monitor/${doctorId}`}
-          className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition group">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                <Users className="text-green-600" size={24} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-800">Queue Monitor</h3>
-                <p className="text-sm text-slate-500">View live queue status</p>
-              </div>
-            </div>
-            <ArrowRight
-              className="text-slate-400 group-hover:text-green-600 transition"
-              size={20}
-            />
-          </div>
-        </Link>
-
-        <Link
-          to="/doctor-schedule"
-          className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition group">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                <Calendar className="text-purple-600" size={24} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-800">My Schedule</h3>
-                <p className="text-sm text-slate-500">Manage availability</p>
-              </div>
-            </div>
-            <ArrowRight
-              className="text-slate-400 group-hover:text-purple-600 transition"
               size={20}
             />
           </div>

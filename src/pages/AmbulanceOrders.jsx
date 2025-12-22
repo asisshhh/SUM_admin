@@ -16,11 +16,10 @@ import {
   User,
   Truck,
   RefreshCw,
-  Filter,
-  ChevronDown
+  Filter
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { Pagination } from "../components/shared";
+import { Pagination, SearchableDropdown } from "../components/shared";
 import useDateRange from "../hooks/useDateRange";
 import useDebounce from "../hooks/useDebounce";
 import AmbulanceOrderDetailsModal from "../components/ambulance/AmbulanceOrderDetailsModal";
@@ -389,100 +388,87 @@ export default function AmbulanceOrders() {
 
               {/* Ambulance Type Select */}
               <div className="flex-1 min-w-[180px]">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Ambulance Type
-                </label>
-                <div className="relative">
-                  <select
-                    name="ambulanceTypeId"
-                    value={filters.ambulanceTypeId}
-                    onChange={handleFilterChange}
-                    className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-                    <option value="">All Ambulance Types</option>
-                    {ambulanceTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name} ({type.code})
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  />
-                </div>
+                <SearchableDropdown
+                  label="Ambulance Type"
+                  value={filters.ambulanceTypeId || ""}
+                  options={[
+                    { value: "", label: "All Ambulance Types" },
+                    ...ambulanceTypes.map((type) => ({
+                      value: String(type.id),
+                      label: `${type.name} (${type.code})`
+                    }))
+                  ]}
+                  onChange={(value) =>
+                    setFilters((f) => ({
+                      ...f,
+                      ambulanceTypeId: value,
+                      page: 1
+                    }))
+                  }
+                  placeholder="All Ambulance Types"
+                  className=""
+                />
               </div>
 
               {/* Status Select */}
               <div className="flex-1 min-w-[150px]">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Status
-                </label>
-                <div className="relative">
-                  <select
-                    name="status"
-                    value={filters.status}
-                    onChange={handleFilterChange}
-                    className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-                    <option value="">All Status</option>
-                    <option value="REQUESTED">Requested</option>
-                    <option value="CONFIRMED">Confirmed</option>
-                    <option value="ASSIGNED">Assigned</option>
-                    <option value="DISPATCHED">Dispatched</option>
-                    <option value="ARRIVED">Arrived</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="CANCELLED">Cancelled</option>
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  />
-                </div>
+                <SearchableDropdown
+                  label="Status"
+                  value={filters.status || ""}
+                  options={[
+                    { value: "", label: "All Status" },
+                    { value: "REQUESTED", label: "Requested" },
+                    { value: "CONFIRMED", label: "Confirmed" },
+                    { value: "ASSIGNED", label: "Assigned" },
+                    { value: "DISPATCHED", label: "Dispatched" },
+                    { value: "ARRIVED", label: "Arrived" },
+                    { value: "IN_PROGRESS", label: "In Progress" },
+                    { value: "COMPLETED", label: "Completed" },
+                    { value: "CANCELLED", label: "Cancelled" }
+                  ]}
+                  onChange={(value) =>
+                    setFilters((f) => ({ ...f, status: value, page: 1 }))
+                  }
+                  placeholder="All Status"
+                  className=""
+                />
               </div>
 
               {/* Approval Select */}
               <div className="flex-1 min-w-[150px]">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Approval
-                </label>
-                <div className="relative">
-                  <select
-                    name="approved"
-                    value={filters.approved}
-                    onChange={handleFilterChange}
-                    className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-                    <option value="">All Approval</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="declined">Declined</option>
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  />
-                </div>
+                <SearchableDropdown
+                  label="Approval"
+                  value={filters.approved || ""}
+                  options={[
+                    { value: "", label: "All Approval" },
+                    { value: "pending", label: "Pending" },
+                    { value: "approved", label: "Approved" },
+                    { value: "declined", label: "Declined" }
+                  ]}
+                  onChange={(value) =>
+                    setFilters((f) => ({ ...f, approved: value, page: 1 }))
+                  }
+                  placeholder="All Approval"
+                  className=""
+                />
               </div>
 
               {/* Emergency Type Select */}
               <div className="flex-1 min-w-[150px]">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Type
-                </label>
-                <div className="relative">
-                  <select
-                    name="emergency"
-                    value={filters.emergency}
-                    onChange={handleFilterChange}
-                    className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-                    <option value="all">All Types</option>
-                    <option value="true">Emergency</option>
-                    <option value="false">Non-Emergency</option>
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  />
-                </div>
+                <SearchableDropdown
+                  label="Type"
+                  value={filters.emergency || "all"}
+                  options={[
+                    { value: "all", label: "All Types" },
+                    { value: "true", label: "Emergency" },
+                    { value: "false", label: "Non-Emergency" }
+                  ]}
+                  onChange={(value) =>
+                    setFilters((f) => ({ ...f, emergency: value, page: 1 }))
+                  }
+                  placeholder="All Types"
+                  className=""
+                />
               </div>
             </div>
 

@@ -15,7 +15,7 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
-import { Pagination } from "../components/shared";
+import { Pagination, SearchableDropdown } from "../components/shared";
 import { toast } from "react-toastify";
 
 // Debounce hook
@@ -273,20 +273,22 @@ const UserModal = ({ user, onClose, onSuccess }) => {
 
           {/* Role */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Role *
-            </label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-              <option value="ADMIN">Admin</option>
-              <option value="DOCTOR">Doctor</option>
-              <option value="RECEPTIONIST">Receptionist</option>
-              <option value="DEPARTMENT_HEAD">Department Head</option>
-              <option value="NURSE">Nurse</option>
-            </select>
+            <SearchableDropdown
+              label="Role *"
+              value={formData.role || ""}
+              options={[
+                { value: "ADMIN", label: "Admin" },
+                { value: "DOCTOR", label: "Doctor" },
+                { value: "RECEPTIONIST", label: "Receptionist" },
+                { value: "DEPARTMENT_HEAD", label: "Department Head" },
+                { value: "NURSE", label: "Nurse" }
+              ]}
+              onChange={(value) =>
+                handleChange({ target: { name: "role", value } })
+              }
+              placeholder="Select Role"
+              className=""
+            />
             <p className="text-xs text-slate-500 mt-1">
               Staff users can access the admin portal based on their role
             </p>
@@ -295,24 +297,23 @@ const UserModal = ({ user, onClose, onSuccess }) => {
           {/* Department (only for doctors) */}
           {formData.role === "DOCTOR" && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Department *
-              </label>
-              <select
-                name="departmentId"
-                value={formData.departmentId}
-                onChange={handleChange}
+              <SearchableDropdown
+                label="Department *"
+                value={formData.departmentId || ""}
+                options={[
+                  { value: "", label: "Select Department" },
+                  ...departments.map((dept) => ({
+                    value: String(dept.id),
+                    label: dept.name
+                  }))
+                ]}
+                onChange={(value) =>
+                  handleChange({ target: { name: "departmentId", value } })
+                }
+                placeholder="Select Department"
                 disabled={isEdit}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.departmentId ? "border-red-500" : "border-slate-300"
-                } ${isEdit ? "bg-slate-100" : ""}`}>
-                <option value="">Select Department</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
+                className={errors.departmentId ? "border-red-500" : ""}
+              />
               {errors.departmentId && (
                 <p className="text-red-500 text-xs mt-1">
                   {errors.departmentId}
@@ -391,23 +392,21 @@ export default function AdminUsersPage() {
           delete params[key]
       );
       const response = await api.get("/users", { params });
-      // Filter out patients on client side
-      const filteredUsers = (response.data.users || []).filter(
-        (u) => u.role !== "PATIENT"
-      );
-      return {
-        ...response.data,
-        users: filteredUsers,
-        pagination: {
-          ...response.data.pagination,
-          total: filteredUsers.length
-        }
-      };
+      // Backend now excludes PATIENT role by default, so no need to filter on client side
+      return response.data;
     }
   });
 
   const users = data?.users || [];
   const pagination = data?.pagination || {};
+  const stats = data?.stats || {
+    total: 0,
+    admin: 0,
+    doctor: 0,
+    receptionist: 0,
+    nurse: 0,
+    departmentHead: 0
+  };
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -462,13 +461,12 @@ export default function AdminUsersPage() {
     qc.invalidateQueries({ queryKey: ["admin-users"] });
   }, [qc]);
 
-  // Stats
-  const adminCount = users.filter((u) => u.role === "ADMIN").length;
-  const receptionistCount = users.filter(
-    (u) => u.role === "RECEPTIONIST"
-  ).length;
-  const doctorCount = users.filter((u) => u.role === "DOCTOR").length;
-  const nurseCount = users.filter((u) => u.role === "NURSE").length;
+  // Stats from backend (total counts, not just current page)
+  const adminCount = stats.admin || 0;
+  const receptionistCount = stats.receptionist || 0;
+  const doctorCount = stats.doctor || 0;
+  const nurseCount = stats.nurse || 0;
+  const totalStaff = stats.total || 0;
 
   return (
     <div className="space-y-6">
@@ -497,7 +495,7 @@ export default function AdminUsersPage() {
             <div>
               <p className="text-sm text-slate-500">Total Staff</p>
               <p className="text-2xl font-bold text-slate-800 mt-1">
-                {users.length}
+                {totalStaff}
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
@@ -588,21 +586,23 @@ export default function AdminUsersPage() {
 
           {/* Role Filter */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Role
-            </label>
-            <select
-              name="role"
-              value={filters.role}
-              onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-              <option value="">All Roles</option>
-              <option value="ADMIN">Admin</option>
-              <option value="DOCTOR">Doctor</option>
-              <option value="RECEPTIONIST">Receptionist</option>
-              <option value="DEPARTMENT_HEAD">Department Head</option>
-              <option value="NURSE">Nurse</option>
-            </select>
+            <SearchableDropdown
+              label="Role"
+              value={filters.role || ""}
+              options={[
+                { value: "", label: "All Roles" },
+                { value: "ADMIN", label: "Admin" },
+                { value: "DOCTOR", label: "Doctor" },
+                { value: "RECEPTIONIST", label: "Receptionist" },
+                { value: "DEPARTMENT_HEAD", label: "Department Head" },
+                { value: "NURSE", label: "Nurse" }
+              ]}
+              onChange={(value) =>
+                setFilters((f) => ({ ...f, role: value, page: 1 }))
+              }
+              placeholder="All Roles"
+              className=""
+            />
           </div>
         </div>
       </div>

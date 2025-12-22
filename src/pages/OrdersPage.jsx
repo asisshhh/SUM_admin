@@ -9,6 +9,7 @@ import useDateRange from "../hooks/useDateRange";
 import OrderDetailsModal from "../components/OrderDetailsModal";
 import LabOrderViewModal from "../components/orders/LabOrderViewModal";
 import PackageOrderViewModal from "../components/orders/PackageOrderViewModal";
+import PaymentModal from "../components/health-package/PaymentModal";
 import { printReceipt } from "../components/ReceiptPrint";
 import Socket from "../utils/SocketManager";
 import {
@@ -19,7 +20,6 @@ import {
   RefreshCw,
   Search,
   Filter,
-  ChevronDown,
   Eye,
   Printer,
   CreditCard,
@@ -32,6 +32,7 @@ import {
   AlertCircle,
   Sparkles
 } from "lucide-react";
+import { SearchableDropdown } from "../components/shared";
 
 const DEFAULT_LIMIT = 20;
 
@@ -331,26 +332,38 @@ export default function OrdersPage() {
     setGenLoading(false);
   };
 
-  const handleMarkPaid = async (row, orderType) => {
-    const ok = await confirm({
-      title: "Confirm Payment",
-      message: `Mark payment for ${
-        row.user?.name || row.patient?.name || "this user"
-      } as PAID?`
-    });
-    if (!ok) return;
+  const [paymentOrder, setPaymentOrder] = useState(null);
 
-    try {
-      await api.post("/payments/mark-paid", {
-        orderType: orderType === "packages" ? "HEALTH_PACKAGE" : "APPOINTMENT",
-        orderId: row.id,
-        amount: row.totalAmount || row.paymentAmount || row.billing?.amount,
-        method: "CASH"
+  const handleMarkPaid = (row, orderType) => {
+    if (orderType === "packages") {
+      // Use payment modal for health packages
+      setPaymentOrder({
+        ...row,
+        orderType: "HEALTH_PACKAGE"
       });
-      toast.success("Payment marked as PAID");
-      load(page);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to mark payment");
+    } else {
+      // For appointments, use simple confirm (or can be updated later)
+      const ok = confirm(
+        `Mark payment for ${
+          row.user?.name || row.patient?.name || "this user"
+        } as PAID?`
+      );
+      if (!ok) return;
+
+      api
+        .post("/payments/mark-paid", {
+          orderType: "APPOINTMENT",
+          orderId: row.id,
+          amount: row.totalAmount || row.paymentAmount || row.billing?.amount,
+          method: "CASH"
+        })
+        .then(() => {
+          toast.success("Payment marked as PAID");
+          load(page);
+        })
+        .catch((err) => {
+          toast.error(err.response?.data?.message || "Failed to mark payment");
+        });
     }
   };
 
@@ -515,82 +528,53 @@ export default function OrdersPage() {
               </div>
 
               {/* Status */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Status
-                </label>
-                <div className="relative">
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-                    {(STATUS_OPTIONS[activeType] || []).map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  />
-                </div>
-              </div>
+              <SearchableDropdown
+                label="Status"
+                value={status || ""}
+                options={STATUS_OPTIONS[activeType] || []}
+                onChange={(value) => setStatus(value)}
+                placeholder="All Status"
+                className=""
+              />
 
               {/* Department (appointments only) */}
               {activeType === "appointments" && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Department
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={department}
-                      onChange={(e) => {
-                        setDepartment(e.target.value);
-                        setDoctor("");
-                      }}
-                      className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-                      <option value="">All Departments</option>
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={16}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-                  </div>
-                </div>
+                <SearchableDropdown
+                  label="Department"
+                  value={department || ""}
+                  options={[
+                    { value: "", label: "All Departments" },
+                    ...departments.map((d) => ({
+                      value: String(d.id),
+                      label: d.name
+                    }))
+                  ]}
+                  onChange={(value) => {
+                    setDepartment(value);
+                    setDoctor("");
+                  }}
+                  placeholder="All Departments"
+                  className=""
+                />
               )}
 
               {/* Doctor (appointments only) */}
               {activeType === "appointments" && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Doctor
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={doctor}
-                      disabled={!department}
-                      onChange={(e) => setDoctor(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all disabled:opacity-50">
-                      <option value="">All Doctors</option>
-                      {doctors.map((doc) => (
-                        <option key={doc.id} value={doc.id}>
-                          {doc.user?.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={16}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-                  </div>
-                </div>
+                <SearchableDropdown
+                  label="Doctor"
+                  value={doctor || ""}
+                  options={[
+                    { value: "", label: "All Doctors" },
+                    ...doctors.map((doc) => ({
+                      value: String(doc.id),
+                      label: doc.user?.name || `Doctor #${doc.id}`
+                    }))
+                  ]}
+                  onChange={(value) => setDoctor(value)}
+                  placeholder="All Doctors"
+                  disabled={!department}
+                  className=""
+                />
               )}
             </div>
 
@@ -770,6 +754,18 @@ export default function OrdersPage() {
         <PackageOrderViewModal
           order={viewingPackageOrder}
           onClose={() => setViewingPackageOrder(null)}
+        />
+      )}
+
+      {/* Payment Modal */}
+      {paymentOrder && (
+        <PaymentModal
+          order={paymentOrder}
+          onClose={() => setPaymentOrder(null)}
+          onSuccess={() => {
+            setPaymentOrder(null);
+            load(page);
+          }}
         />
       )}
 
@@ -968,7 +964,7 @@ export default function OrdersPage() {
                   title="View Details">
                   <Eye size={16} />
                 </button>
-                {r.paymentStatus !== "SUCCESS" && (
+                {r.paymentStatus !== "SUCCESS" && r.status !== "CANCELLED" && (
                   <button
                     className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
                     onClick={() => handleMarkPaid(r, "packages")}>

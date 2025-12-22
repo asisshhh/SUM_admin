@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/client";
 import { toast } from "react-toastify";
 import { X } from "lucide-react";
+import { SearchableDropdown } from "../shared";
 
 export default function AmbulanceFormModal({
   data,
@@ -223,22 +224,24 @@ export default function AmbulanceFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Ambulance Type *
-              </label>
-              <select
-                value={form.ambulanceTypeId}
-                onChange={(e) => update("ambulanceTypeId", e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.ambulanceTypeId ? "border-red-300" : "border-slate-300"
-                }`}>
-                <option value="">Select Type</option>
-                {allTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name} ({type.code})
-                  </option>
-                ))}
-              </select>
+              <SearchableDropdown
+                label={
+                  <>
+                    Ambulance Type <span className="text-red-500">*</span>
+                  </>
+                }
+                value={form.ambulanceTypeId || ""}
+                options={[
+                  { value: "", label: "Select Type" },
+                  ...allTypes.map((type) => ({
+                    value: String(type.id),
+                    label: `${type.name} (${type.code})`
+                  }))
+                ]}
+                onChange={(value) => update("ambulanceTypeId", value)}
+                placeholder="Select Type"
+                className={errors.ambulanceTypeId ? "border-red-300" : ""}
+              />
               {errors.ambulanceTypeId && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.ambulanceTypeId}
@@ -247,20 +250,20 @@ export default function AmbulanceFormModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Driver
-              </label>
-              <select
-                value={form.driverId}
-                onChange={(e) => update("driverId", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">No Driver</option>
-                {drivers.map((driver) => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.name} - {driver.phone}
-                  </option>
-                ))}
-              </select>
+              <SearchableDropdown
+                label="Driver"
+                value={form.driverId || ""}
+                options={[
+                  { value: "", label: "No Driver" },
+                  ...drivers.map((driver) => ({
+                    value: String(driver.id),
+                    label: `${driver.name} - ${driver.phone}`
+                  }))
+                ]}
+                onChange={(value) => update("driverId", value)}
+                placeholder="No Driver"
+                className=""
+              />
             </div>
           </div>
 
@@ -308,29 +311,31 @@ export default function AmbulanceFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Availability
-              </label>
-              <select
-                value={form.available}
-                onChange={(e) => update("available", e.target.value === "true")}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value={true}>Available</option>
-                <option value={false}>Unavailable</option>
-              </select>
+              <SearchableDropdown
+                label="Availability"
+                value={String(form.available)}
+                options={[
+                  { value: "true", label: "Available" },
+                  { value: "false", label: "Unavailable" }
+                ]}
+                onChange={(value) => update("available", value === "true")}
+                placeholder="Select"
+                className=""
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Status
-              </label>
-              <select
-                value={form.active}
-                onChange={(e) => update("active", e.target.value === "true")}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value={true}>Active</option>
-                <option value={false}>Inactive</option>
-              </select>
+              <SearchableDropdown
+                label="Status"
+                value={String(form.active)}
+                options={[
+                  { value: "true", label: "Active" },
+                  { value: "false", label: "Inactive" }
+                ]}
+                onChange={(value) => update("active", value === "true")}
+                placeholder="Select"
+                className=""
+              />
             </div>
           </div>
 

@@ -9,7 +9,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  ChevronDown,
   ChevronRight,
   User,
   Heart,
@@ -20,7 +19,7 @@ import {
   UserPlus,
   MapPin
 } from "lucide-react";
-import { Pagination } from "../components/shared";
+import { Pagination, SearchableDropdown } from "../components/shared";
 import { toast } from "react-toastify";
 
 // Debounce hook
@@ -255,19 +254,21 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Gender
-                </label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                  <option value="">Select</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+                <SearchableDropdown
+                  label="Gender"
+                  value={formData.gender || ""}
+                  options={[
+                    { value: "", label: "Select" },
+                    { value: "Male", label: "Male" },
+                    { value: "Female", label: "Female" },
+                    { value: "Other", label: "Other" }
+                  ]}
+                  onChange={(value) =>
+                    handleChange({ target: { name: "gender", value } })
+                  }
+                  placeholder="Select"
+                  className=""
+                />
               </div>
 
               <div>
@@ -284,24 +285,26 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Blood Group
-                </label>
-                <select
-                  name="bloodGroup"
-                  value={formData.bloodGroup}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                  <option value="">Select</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
+                <SearchableDropdown
+                  label="Blood Group"
+                  value={formData.bloodGroup || ""}
+                  options={[
+                    { value: "", label: "Select" },
+                    { value: "A+", label: "A+" },
+                    { value: "A-", label: "A-" },
+                    { value: "B+", label: "B+" },
+                    { value: "B-", label: "B-" },
+                    { value: "AB+", label: "AB+" },
+                    { value: "AB-", label: "AB-" },
+                    { value: "O+", label: "O+" },
+                    { value: "O-", label: "O-" }
+                  ]}
+                  onChange={(value) =>
+                    handleChange({ target: { name: "bloodGroup", value } })
+                  }
+                  placeholder="Select"
+                  className=""
+                />
               </div>
 
               <div>
@@ -505,21 +508,24 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Relation *
                 </label>
-                <select
-                  name="relation"
-                  value={formData.relation}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent ${
-                    errors.relation ? "border-red-500" : "border-slate-300"
-                  }`}>
-                  <option value="">Select relation</option>
-                  <option value="Spouse">Spouse</option>
-                  <option value="Father">Father</option>
-                  <option value="Mother">Mother</option>
-                  <option value="Child">Child</option>
-                  <option value="Sibling">Sibling</option>
-                  <option value="Other">Other</option>
-                </select>
+                <SearchableDropdown
+                  label="Relation *"
+                  value={formData.relation || ""}
+                  options={[
+                    { value: "", label: "Select relation" },
+                    { value: "Spouse", label: "Spouse" },
+                    { value: "Father", label: "Father" },
+                    { value: "Mother", label: "Mother" },
+                    { value: "Child", label: "Child" },
+                    { value: "Sibling", label: "Sibling" },
+                    { value: "Other", label: "Other" }
+                  ]}
+                  onChange={(value) =>
+                    handleChange({ target: { name: "relation", value } })
+                  }
+                  placeholder="Select relation"
+                  className={errors.relation ? "border-red-500" : ""}
+                />
                 {errors.relation && (
                   <p className="text-red-500 text-xs mt-1">{errors.relation}</p>
                 )}
@@ -530,16 +536,21 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Gender
               </label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-                <option value="">Select</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
+              <SearchableDropdown
+                label="Gender"
+                value={formData.gender || ""}
+                options={[
+                  { value: "", label: "Select" },
+                  { value: "Male", label: "Male" },
+                  { value: "Female", label: "Female" },
+                  { value: "Other", label: "Other" }
+                ]}
+                onChange={(value) =>
+                  handleChange({ target: { name: "gender", value } })
+                }
+                placeholder="Select"
+                className=""
+              />
             </div>
 
             <div>
@@ -559,21 +570,26 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Blood Group
               </label>
-              <select
-                name="bloodGroup"
-                value={formData.bloodGroup}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
-                <option value="">Select</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-              </select>
+              <SearchableDropdown
+                label="Blood Group"
+                value={formData.bloodGroup || ""}
+                options={[
+                  { value: "", label: "Select" },
+                  { value: "A+", label: "A+" },
+                  { value: "A-", label: "A-" },
+                  { value: "B+", label: "B+" },
+                  { value: "B-", label: "B-" },
+                  { value: "AB+", label: "AB+" },
+                  { value: "AB-", label: "AB-" },
+                  { value: "O+", label: "O+" },
+                  { value: "O-", label: "O-" }
+                ]}
+                onChange={(value) =>
+                  handleChange({ target: { name: "bloodGroup", value } })
+                }
+                placeholder="Select"
+                className=""
+              />
             </div>
 
             <div>

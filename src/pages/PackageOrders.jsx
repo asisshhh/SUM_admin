@@ -24,6 +24,7 @@ import {
   OrderPageHeader,
   PackageOrderViewModal
 } from "../components/orders";
+import PaymentModal from "../components/health-package/PaymentModal";
 
 const DEFAULT_LIMIT = 20;
 
@@ -61,6 +62,7 @@ export default function PackageOrders() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [viewingOrder, setViewingOrder] = useState(null);
+  const [paymentOrder, setPaymentOrder] = useState(null);
 
   const currentController = useRef(null);
   const confirm = useConfirm();
@@ -145,35 +147,9 @@ export default function PackageOrders() {
   // HANDLERS
   // ═══════════════════════════════════════════════════════════════════
 
-  const markPaid = useCallback(
-    async (row) => {
-      try {
-        await api.post("/payments/mark-paid", {
-          orderType: "HEALTH_PACKAGE",
-          orderId: row.id,
-          amount: row.totalAmount,
-          method: "CASH"
-        });
-        toast.success("Payment marked as PAID");
-        load(page);
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to mark payment");
-      }
-    },
-    [load, page]
-  );
-
-  const onMarkPaidClick = useCallback(
-    async (row) => {
-      const ok = await confirm({
-        title: "Confirm Payment",
-        message: `Mark payment for ${row.user?.name || "this user"} as PAID?`
-      });
-      if (!ok) return;
-      await markPaid(row);
-    },
-    [confirm, markPaid]
-  );
+  const onMarkPaidClick = useCallback((row) => {
+    setPaymentOrder({ ...row, orderType: "HEALTH_PACKAGE" });
+  }, []);
 
   const handleResetFilters = () => {
     setSearch("");
@@ -327,6 +303,18 @@ export default function PackageOrders() {
         />
       )}
 
+      {/* Payment Modal */}
+      {paymentOrder && (
+        <PaymentModal
+          order={paymentOrder}
+          onClose={() => setPaymentOrder(null)}
+          onSuccess={() => {
+            setPaymentOrder(null);
+            load(page);
+          }}
+        />
+      )}
+
       <ToastContainer position="top-right" />
     </div>
   );
@@ -413,7 +401,7 @@ function PackageOrderRow({ order, index, onMarkPaid, onView }) {
             title="View Details">
             <Eye size={16} />
           </button>
-          {r.paymentStatus !== "SUCCESS" && (
+          {r.paymentStatus !== "SUCCESS" && r.status !== "CANCELLED" && (
             <button
               className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
               onClick={onMarkPaid}

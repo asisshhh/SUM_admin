@@ -1,4 +1,5 @@
 import React from "react";
+import { SearchableDropdown } from "./shared";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All" },
@@ -12,17 +13,12 @@ const STATUS_OPTIONS = [
 
 export default function StatusFilter({ value, onChange }) {
   return (
-    <div>
-      <select
-        className="w-full border p-2 rounded-lg"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}>
-        {STATUS_OPTIONS.map((s) => (
-          <option key={s.value} value={s.value}>
-            {s.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <SearchableDropdown
+      value={value || ""}
+      options={STATUS_OPTIONS}
+      onChange={onChange}
+      placeholder="All"
+      className=""
+    />
   );
 }

@@ -6,7 +6,7 @@ import { usePagePermissions } from "../hooks/usePagePermissions";
 import { Stethoscope, Search, Plus, Trash2 } from "lucide-react";
 
 // Components
-import { Pagination } from "../components/shared";
+import { Pagination, SearchableDropdown } from "../components/shared";
 import { DoctorFormModal, DoctorTableRow } from "../components/doctors";
 
 // Custom hook for debounced value
@@ -186,11 +186,11 @@ export default function DoctorsPage() {
             <label className="text-sm text-slate-600 mb-1 block">Search</label>
             <div className="relative">
               <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10"
                 size={18}
               />
               <input
-                className="input pl-10 pr-8"
+                className="input !pl-12 pr-8"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Name, specialization, registration..."
@@ -204,38 +204,39 @@ export default function DoctorsPage() {
           </div>
 
           {/* Department */}
-          <div className="min-w-[160px]">
-            <label className="text-sm text-slate-600 mb-1 block">
-              Department
-            </label>
-            <select
-              className="select"
-              name="departmentId"
+          <div className="min-w-[180px]">
+            <SearchableDropdown
+              label="Department"
               value={filters.departmentId}
-              onChange={handleFilterChange}>
-              <option value="">All Departments</option>
-              {departmentOptions.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "All Departments" },
+                ...departmentOptions.map((d) => ({
+                  value: String(d.id),
+                  label: d.name
+                }))
+              ]}
+              onChange={(value) =>
+                setFilters((f) => ({ ...f, departmentId: value, page: 1 }))
+              }
+              placeholder="All Departments"
+            />
           </div>
 
           {/* Availability */}
-          <div className="min-w-[140px]">
-            <label className="text-sm text-slate-600 mb-1 block">
-              Availability
-            </label>
-            <select
-              className="select"
-              name="available"
+          <div className="min-w-[160px]">
+            <SearchableDropdown
+              label="Availability"
               value={filters.available}
-              onChange={handleFilterChange}>
-              <option value="">All</option>
-              <option value="true">Available</option>
-              <option value="false">Unavailable</option>
-            </select>
+              options={[
+                { value: "", label: "All" },
+                { value: "true", label: "Available" },
+                { value: "false", label: "Unavailable" }
+              ]}
+              onChange={(value) =>
+                setFilters((f) => ({ ...f, available: value, page: 1 }))
+              }
+              placeholder="All"
+            />
           </div>
 
           {/* Bulk Delete */}

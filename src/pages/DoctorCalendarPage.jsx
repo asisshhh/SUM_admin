@@ -1,12 +1,14 @@
 // frontend/src/pages/DoctorCalendarPage.jsx
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
+import { useAuth } from "../contexts/AuthContext";
 import SlotBookingModal from "../components/schedule/SlotBookingModal";
+import { SearchableDropdown } from "../components/shared";
 import {
   Calendar,
   Stethoscope,
@@ -22,12 +24,20 @@ import { toast } from "react-toastify";
 
 export default function DoctorCalendarPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [doctorId, setDoctorId] = useState("");
   const [events, setEvents] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewRange, setViewRange] = useState({ start: null, end: null });
   const calendarRef = useRef();
+
+  // Auto-set doctorId if user is a doctor
+  useEffect(() => {
+    if (user?.role === "DOCTOR" && user?.doctorProfile?.id && !doctorId) {
+      setDoctorId(user.doctorProfile.id.toString());
+    }
+  }, [user, doctorId]);
 
   const { data: doctors, isLoading: doctorsLoading } = useQuery({
     queryKey: ["doctors-list"],
@@ -216,7 +226,9 @@ export default function DoctorCalendarPage() {
                   Doctor Calendar
                 </h1>
                 <p className="text-sm text-slate-500">
-                  {selectedDoctor
+                  {user?.role === "DOCTOR"
+                    ? "Viewing your calendar"
+                    : selectedDoctor
                     ? `Viewing schedule for ${selectedDoctor.user?.name}`
                     : "Select a doctor to view their calendar"}
                 </p>
@@ -226,28 +238,46 @@ export default function DoctorCalendarPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Doctor Selection */}
-            <div className="flex-1 min-w-[250px]">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                <Stethoscope size={12} className="inline mr-1" />
-                Select Doctor
-              </label>
-              <div className="relative">
-                <select
-                  value={doctorId}
-                  onChange={(e) => {
-                    setDoctorId(e.target.value);
+            {user?.role !== "DOCTOR" && (
+              <div className="flex-1 min-w-[250px]">
+                <SearchableDropdown
+                  label={
+                    <span>
+                      <Stethoscope size={12} className="inline mr-1" />
+                      Select Doctor
+                    </span>
+                  }
+                  value={doctorId || ""}
+                  options={[
+                    { value: "", label: "Choose a doctor..." },
+                    ...(doctors || []).map((d) => ({
+                      value: String(d.id),
+                      label: `${d.user?.name} — ${
+                        d.specialization || "General"
+                      }`
+                    }))
+                  ]}
+                  onChange={(value) => {
+                    setDoctorId(value);
                     setEvents([]);
                   }}
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-                  <option value="">Choose a doctor...</option>
-                  {doctors?.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.user?.name} — {d.specialization || "General"}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Choose a doctor..."
+                  className=""
+                />
               </div>
-            </div>
+            )}
+            {user?.role === "DOCTOR" && doctorId && (
+              <div className="flex-1 min-w-[250px]">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <Stethoscope size={12} className="inline mr-1" />
+                  Doctor
+                </label>
+                <div className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700">
+                  {selectedDoctor?.user?.name || "Loading..."} —{" "}
+                  {selectedDoctor?.specialization || "General"}
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-2">
@@ -353,11 +383,14 @@ export default function DoctorCalendarPage() {
             <div className="p-12 text-center">
               <Calendar className="mx-auto text-slate-300 mb-4" size={64} />
               <h3 className="text-lg font-semibold text-slate-600 mb-2">
-                No Doctor Selected
+                {user?.role === "DOCTOR"
+                  ? "Loading Calendar"
+                  : "No Doctor Selected"}
               </h3>
               <p className="text-slate-500">
-                Please select a doctor from the dropdown above to view their
-                calendar
+                {user?.role === "DOCTOR"
+                  ? "Loading your calendar..."
+                  : "Please select a doctor from the dropdown above to view their calendar"}
               </p>
             </div>
           ) : (

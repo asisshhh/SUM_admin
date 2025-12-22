@@ -184,14 +184,14 @@ export default function TimeSlotTemplatesPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button
+          {/* <button
             onClick={() => initializeTemplates.mutate()}
             className="btn bg-green-600 text-white hover:bg-green-700 flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-lg"
             disabled={initializeTemplates.isPending}>
             {initializeTemplates.isPending
               ? "Initializing..."
               : "Initialize Defaults"}
-          </button>
+          </button> */}
           {canCreate && (
             <button
               onClick={handleAdd}

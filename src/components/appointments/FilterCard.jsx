@@ -1,12 +1,6 @@
 import React from "react";
-import {
-  Search,
-  Filter,
-  Building2,
-  Stethoscope,
-  Calendar,
-  ChevronDown
-} from "lucide-react";
+import { Search, Filter, Building2, Stethoscope, Calendar } from "lucide-react";
+import { SearchableDropdown } from "../shared";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
@@ -159,84 +153,63 @@ function SearchInput({ value, onChange }) {
 
 function StatusSelect({ value, onChange }) {
   return (
-    <div>
-      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-        Status
-      </label>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          size={16}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-        />
-      </div>
-    </div>
+    <SearchableDropdown
+      label="Status"
+      value={value || ""}
+      options={STATUS_OPTIONS}
+      onChange={onChange}
+      placeholder="All Status"
+      className=""
+    />
   );
 }
 
 function DepartmentSelect({ value, options, onChange }) {
   return (
-    <div>
-      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-        <Building2 size={12} className="inline mr-1" />
-        Department
-      </label>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
-          <option value="">All Departments</option>
-          {options.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          size={16}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-        />
-      </div>
-    </div>
+    <SearchableDropdown
+      label={
+        <span>
+          <Building2 size={12} className="inline mr-1" />
+          Department
+        </span>
+      }
+      value={value || ""}
+      options={[
+        { value: "", label: "All Departments" },
+        ...(options || []).map((d) => ({
+          value: String(d.id),
+          label: d.name
+        }))
+      ]}
+      onChange={onChange}
+      placeholder="All Departments"
+      className=""
+    />
   );
 }
 
 function DoctorSelect({ value, options, onChange, disabled }) {
   return (
-    <div>
-      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-        <Stethoscope size={12} className="inline mr-1" />
-        Doctor
-      </label>
-      <div className="relative">
-        <select
-          value={value}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-          <option value="">All Doctors</option>
-          {options.map((doc) => (
-            <option key={doc.id} value={doc.id}>
-              {doc.user?.name}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          size={16}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-        />
-      </div>
-    </div>
+    <SearchableDropdown
+      label={
+        <span>
+          <Stethoscope size={12} className="inline mr-1" />
+          Doctor
+        </span>
+      }
+      value={value || ""}
+      options={[
+        { value: "", label: "All Doctors" },
+        ...(options || []).map((doc) => ({
+          value: String(doc.id),
+          label: doc.user?.name || `Doctor #${doc.id}`
+        }))
+      ]}
+      onChange={onChange}
+      placeholder="All Doctors"
+      disabled={disabled}
+      className=""
+    />
   );
 }
 
@@ -315,4 +288,3 @@ function ResultsCount({ rowCount, total }) {
     </div>
   );
 }
-

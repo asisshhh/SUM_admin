@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/client";
+import { SearchableDropdown } from "../shared";
 
 export default function AmbulanceBookingModal({ onClose }) {
   const qc = useQueryClient();
@@ -65,18 +66,20 @@ export default function AmbulanceBookingModal({ onClose }) {
           </div>
 
           <div>
-            <label className="text-sm">Ambulance</label>
-            <select
-              className="select"
-              value={form.ambulanceId}
-              onChange={(e) => update("ambulanceId", e.target.value)}>
-              <option value="">Choose</option>
-              {ambulances?.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.vehicleNumber} — {a.type}
-                </option>
-              ))}
-            </select>
+            <SearchableDropdown
+              label="Ambulance"
+              value={form.ambulanceId || ""}
+              options={[
+                { value: "", label: "Choose" },
+                ...(ambulances || []).map((a) => ({
+                  value: String(a.id),
+                  label: `${a.vehicleNumber} — ${a.type}`
+                }))
+              ]}
+              onChange={(value) => update("ambulanceId", value)}
+              placeholder="Choose"
+              className=""
+            />
           </div>
 
           <div>
@@ -116,14 +119,17 @@ export default function AmbulanceBookingModal({ onClose }) {
           </div>
 
           <div>
-            <label className="text-sm">Emergency</label>
-            <select
-              className="select"
+            <SearchableDropdown
+              label="Emergency"
               value={String(form.emergency)}
-              onChange={(e) => update("emergency", e.target.value === "true")}>
-              <option value="false">No</option>
-              <option value="true">Yes (Emergency)</option>
-            </select>
+              options={[
+                { value: "false", label: "No" },
+                { value: "true", label: "Yes (Emergency)" }
+              ]}
+              onChange={(value) => update("emergency", value === "true")}
+              placeholder="Select"
+              className=""
+            />
           </div>
 
           <div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
+import patientApi from "../api/patients";
 import { useConfirm } from "../contexts/ConfirmContext";
 import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
@@ -18,7 +19,8 @@ import {
   Calendar,
   X,
   UserPlus,
-  MapPin
+  MapPin,
+  UserX
 } from "lucide-react";
 import { Pagination, SearchableDropdown } from "../components/shared";
 import { toast } from "react-toastify";
@@ -86,7 +88,7 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
   const [errors, setErrors] = useState({});
 
   const createMutation = useMutation({
-    mutationFn: (data) => api.post("/users/patients", data),
+    mutationFn: (data) => patientApi.createPatient(data),
     onSuccess: () => {
       toast.success("Patient created successfully");
       onSuccess();
@@ -98,7 +100,7 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data) => api.put(`/users/patients/${patient.id}`, data),
+    mutationFn: (data) => patientApi.updatePatient(patient.id, data),
     onSuccess: () => {
       toast.success("Patient updated successfully");
       onSuccess();
@@ -398,8 +400,7 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
   const [errors, setErrors] = useState({});
 
   const createMutation = useMutation({
-    mutationFn: (data) =>
-      api.post(`/users/patients/${patient.id}/profiles`, data),
+    mutationFn: (data) => patientApi.addPatientProfile(patient.id, data),
     onSuccess: () => {
       toast.success("Profile added successfully");
       onSuccess();
@@ -412,7 +413,7 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
 
   const updateMutation = useMutation({
     mutationFn: (data) =>
-      api.put(`/users/patients/${patient.id}/profiles/${profile.id}`, data),
+      patientApi.updatePatientProfile(patient.id, profile.id, data),
     onSuccess: () => {
       toast.success("Profile updated successfully");
       onSuccess();
@@ -669,6 +670,7 @@ const PatientRow = ({
   patient,
   onEdit,
   onDelete,
+  onAnonymize,
   onAddProfile,
   onEditProfile,
   onDeleteProfile,
@@ -747,12 +749,14 @@ const PatientRow = ({
               </button>
             )}
             {canDelete && (
-              <button
-                onClick={() => onDelete(patient)}
-                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-                title="Delete Patient">
-                <Trash2 size={16} />
-              </button>
+              <>
+                <button
+                  onClick={() => onAnonymize(patient)}
+                  className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition"
+                  title="Anonymize Account">
+                  <UserX size={16} />
+                </button>
+              </>
             )}
             {!canCreate && !canEdit && !canDelete && (
               <span className="text-xs text-slate-400">View only</span>
@@ -831,14 +835,6 @@ const PatientRow = ({
                           <Edit size={14} />
                         </button>
                       )}
-                      {canDelete && (
-                        <button
-                          onClick={() => onDeleteProfile(patient, profile)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-                          title="Delete Profile">
-                          <Trash2 size={14} />
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
@@ -889,7 +885,7 @@ export default function PatientsPage() {
           (params[key] === "" || params[key] === undefined) &&
           delete params[key]
       );
-      return (await api.get("/users/patients", { params })).data;
+      return await patientApi.getPatients(params);
     }
   });
 
@@ -898,7 +894,7 @@ export default function PatientsPage() {
 
   // Delete mutations
   const deletePatientMutation = useMutation({
-    mutationFn: (id) => api.delete(`/users/${id}`),
+    mutationFn: (id) => patientApi.deletePatient(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
       toast.success("Patient deleted successfully");
@@ -908,9 +904,27 @@ export default function PatientsPage() {
     }
   });
 
+  // Anonymize mutation
+  const anonymizePatientMutation = useMutation({
+    mutationFn: (id) => patientApi.anonymizePatient(id),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success(
+        `Patient account anonymized successfully. ${
+          data.data?.anonymizedPatientProfiles || 0
+        } patient profile(s) anonymized.`
+      );
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.error || "Failed to anonymize patient account"
+      );
+    }
+  });
+
   const deleteProfileMutation = useMutation({
     mutationFn: ({ patientId, profileId }) =>
-      api.delete(`/users/patients/${patientId}/profiles/${profileId}`),
+      patientApi.deletePatientProfile(patientId, profileId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
       toast.success("Profile deleted successfully");
@@ -943,6 +957,25 @@ export default function PatientsPage() {
       if (ok) deletePatientMutation.mutate(patient.id);
     },
     [confirm, deletePatientMutation]
+  );
+
+  const handleAnonymizePatient = useCallback(
+    async (patient) => {
+      const ok = await confirm({
+        title: "Anonymize Patient Account",
+        message: `Are you sure you want to anonymize "${patient.name}"? This will:
+
+• Create an anonymous user clone with anonymized personal information
+• Anonymize all patient profiles (including relatives) for this user
+• Update all related records (appointments, bookings, orders, etc.) to reference the anonymous user
+• Delete the original patient account
+
+This action cannot be undone.`,
+        danger: true
+      });
+      if (ok) anonymizePatientMutation.mutate(patient.id);
+    },
+    [confirm, anonymizePatientMutation]
   );
 
   const handleAddProfile = useCallback((patient) => {
@@ -1087,6 +1120,7 @@ export default function PatientsPage() {
                     patient={patient}
                     onEdit={handleEditPatient}
                     onDelete={handleDeletePatient}
+                    onAnonymize={handleAnonymizePatient}
                     onAddProfile={handleAddProfile}
                     onEditProfile={handleEditProfile}
                     onDeleteProfile={handleDeleteProfile}

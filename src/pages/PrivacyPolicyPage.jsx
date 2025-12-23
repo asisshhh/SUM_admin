@@ -1,14 +1,31 @@
 // PrivacyPolicyPage.jsx — Admin page to edit privacy policy
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/client";
-import { FileText, Save, Loader2 } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { FileText, Save, Loader2, Shield, AlertCircle } from "lucide-react";
 
 export default function PrivacyPolicyPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { user, isSuperAdmin, loading: authLoading } = useAuth();
   const [content, setContent] = useState("");
+
+  // Check if user is ADMIN or SUPER_ADMIN
+  useEffect(() => {
+    if (!authLoading) {
+      const isAdmin = user?.role === "ADMIN";
+      if (!isSuperAdmin && !isAdmin) {
+        toast.error(
+          "Access denied. Only administrators can manage privacy policy."
+        );
+        navigate("/");
+      }
+    }
+  }, [user, isSuperAdmin, authLoading, navigate]);
 
   // Fetch current privacy policy
   const { data, isLoading, error } = useQuery({
@@ -16,7 +33,8 @@ export default function PrivacyPolicyPage() {
     queryFn: async () => {
       const response = await api.get("/privacy-policy");
       return response.data;
-    }
+    },
+    enabled: !authLoading && (isSuperAdmin || user?.role === "ADMIN")
   });
 
   // Update content when data loads
@@ -52,6 +70,46 @@ export default function PrivacyPolicyPage() {
     }
     updateMutation.mutate(content);
   };
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="animate-spin text-blue-600" size={32} />
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check access - only ADMIN and SUPER_ADMIN
+  const isAdmin = user?.role === "ADMIN";
+  if (!isSuperAdmin && !isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-red-200 shadow-lg p-8 max-w-md">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="text-red-600" size={32} />
+            </div>
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">
+              Access Denied
+            </h2>
+            <p className="text-slate-600 mb-4">
+              Only administrators can manage the privacy policy. Please contact
+              your system administrator if you need access.
+            </p>
+            <button
+              onClick={() => navigate("/")}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

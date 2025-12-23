@@ -199,18 +199,35 @@ const DEFAULT_NAV_ITEMS = [
 ];
 
 // Sidebar Navigation Content
-const SidebarNav = ({ onNavClick, canAccess, isSuperAdmin, permissions }) => {
+const SidebarNav = ({
+  onNavClick,
+  canAccess,
+  isSuperAdmin,
+  permissions,
+  user
+}) => {
   // Get accessible items
   const getAccessibleItems = () => {
-    if (isSuperAdmin) {
-      return DEFAULT_NAV_ITEMS;
+    let items = DEFAULT_NAV_ITEMS;
+
+    if (!isSuperAdmin) {
+      // Filter based on permissions
+      items = DEFAULT_NAV_ITEMS.filter((item) => {
+        // Check if user has permission for this path
+        return canAccess(item.path);
+      });
     }
 
-    // Filter based on permissions
-    return DEFAULT_NAV_ITEMS.filter((item) => {
-      // Check if user has permission for this path
-      return canAccess(item.path);
+    // Filter Privacy Policy - only for ADMIN and SUPER_ADMIN
+    const isAdmin = user?.role === "ADMIN";
+    items = items.filter((item) => {
+      if (item.path === "/add-privacy-policy") {
+        return isSuperAdmin || isAdmin;
+      }
+      return true;
     });
+
+    return items;
   };
 
   const accessibleItems = getAccessibleItems();
@@ -415,6 +432,7 @@ export default function AppLayout() {
           canAccess={canAccess}
           isSuperAdmin={isSuperAdmin}
           permissions={permissions}
+          user={user}
         />
         {/* Mobile Logout */}
         <div className="p-4 border-t border-slate-200">
@@ -474,6 +492,7 @@ export default function AppLayout() {
           canAccess={canAccess}
           isSuperAdmin={isSuperAdmin}
           permissions={permissions}
+          user={user}
         />
         {/* Logout Button */}
         <div className="p-4 border-t border-slate-200">

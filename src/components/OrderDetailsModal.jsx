@@ -8,9 +8,12 @@ import {
   Hash,
   CalendarDays,
   ChevronDown,
-  CreditCard
+  CreditCard,
+  RotateCcw
 } from "lucide-react";
 import api from "../api/client";
+import { useConfirm } from "../contexts/ConfirmContext";
+import { toast } from "react-toastify";
 
 export default function OrderDetailsModal({
   open,
@@ -29,15 +32,24 @@ export default function OrderDetailsModal({
   const [paymentStatus, setPaymentStatus] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentAmount, setPaymentAmount] = useState("");
+  const confirm = useConfirm();
 
   // Sync modal data when a new order is opened
   useEffect(() => {
     setLocalData(data);
   }, [data]);
-  const effectivePaymentStatus =
-    localData?.paymentStatus === "PAID"
-      ? "SUCCESS"
-      : localData?.paymentStatus || localData?.billing?.status || "PENDING";
+  // Calculate effective payment status - check payments array first for REFUNDED status
+  const refundedPayment = localData?.payments?.find(
+    (p) => p.status === "REFUNDED"
+  );
+  const effectivePaymentStatus = refundedPayment
+    ? "REFUNDED"
+    : localData?.paymentStatus === "PAID"
+    ? "SUCCESS"
+    : localData?.paymentStatus ||
+      localData?.payments?.[0]?.status ||
+      localData?.billing?.status ||
+      "PENDING";
   const effectiveAmount =
     localData.paymentAmount ??
     localData.payments?.[0]?.amount ??
@@ -208,7 +220,11 @@ export default function OrderDetailsModal({
     setLoading(false);
   };
   const markPaid = async () => {
-    if (!confirm("Confirm payment received at hospital?")) return;
+    const ok = await confirm({
+      title: "Mark Payment as Paid",
+      message: "Confirm payment received at hospital?"
+    });
+    if (!ok) return;
 
     setLoading(true);
     try {
@@ -227,9 +243,68 @@ export default function OrderDetailsModal({
       }));
 
       await onUpdated?.();
-      alert("Payment marked as PAID");
+      toast.success("Payment marked as PAID");
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to mark payment");
+      toast.error(err.response?.data?.message || "Failed to mark payment");
+    }
+    setLoading(false);
+  };
+
+  const handleRefund = async () => {
+    // Find the payment with SUCCESS status and isOnline
+    const payment = localData.payments?.find(
+      (p) =>
+        p.status === "SUCCESS" &&
+        p.isOnline === true &&
+        p.gatewayPaymentId &&
+        p.status !== "REFUNDED"
+    );
+
+    if (!payment) {
+      toast.error("No eligible payment found for refund");
+      return;
+    }
+
+    const ok = await confirm({
+      title: "Process Refund",
+      message: `Are you sure you want to process a refund of ₹${payment.amount} for this cancelled appointment?`
+    });
+
+    if (!ok) return;
+
+    setLoading(true);
+    try {
+      const response = await api.post(`/ccavenue/refund/${payment.id}`, {
+        reason: "Appointment cancelled"
+      });
+
+      if (response.data.success) {
+        toast.success("Refund processed successfully");
+        // Update local data - mark payment as REFUNDED
+        setLocalData((prev) => ({
+          ...prev,
+          payments: prev.payments?.map((p) =>
+            p.id === payment.id
+              ? {
+                  ...p,
+                  status: "REFUNDED",
+                  refundedAt: response.data.payment?.refundedAt || new Date()
+                }
+              : p
+          ),
+          // Also update paymentStatus if it exists
+          paymentStatus: "REFUNDED"
+        }));
+        await onUpdated?.();
+      } else {
+        toast.error(response.data.error || "Failed to process refund");
+      }
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to process refund"
+      );
     }
     setLoading(false);
   };
@@ -330,6 +405,8 @@ export default function OrderDetailsModal({
                 className={`px-3 py-1.5 rounded-xl font-bold text-sm border-2 ${
                   effectivePaymentStatus === "SUCCESS"
                     ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                    : effectivePaymentStatus === "REFUNDED"
+                    ? "bg-orange-50 text-orange-700 border-orange-300"
                     : effectivePaymentStatus === "PENDING"
                     ? "bg-yellow-50 text-yellow-700 border-yellow-300"
                     : effectivePaymentStatus === "FAILED"
@@ -426,6 +503,56 @@ export default function OrderDetailsModal({
                 </div>
               </div>
             )}
+
+          {/* REFUND OPTION FOR CANCELLED APPOINTMENTS */}
+          {localData.status === "CANCELLED" &&
+            (() => {
+              const refundablePayment = localData.payments?.find(
+                (p) =>
+                  p.status === "SUCCESS" &&
+                  p.isOnline === true &&
+                  p.gatewayPaymentId &&
+                  p.status !== "REFUNDED"
+              );
+
+              if (!refundablePayment) return null;
+
+              return (
+                <div className="p-5 rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg mb-6">
+                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <RotateCcw size={20} className="text-orange-600" />
+                    Refund Payment
+                  </h3>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-orange-200/60">
+                      <span className="text-slate-600 font-semibold">
+                        Payment Amount
+                      </span>
+                      <span className="font-bold text-slate-800 text-lg">
+                        ₹{refundablePayment.amount}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-slate-600 font-semibold">
+                        Payment Status
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl font-bold text-sm border-2 bg-emerald-50 text-emerald-700 border-emerald-300">
+                        {refundablePayment.status}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleRefund}
+                      disabled={loading}
+                      className="w-full mt-4 py-3.5 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-xl shadow-lg hover:shadow-xl font-bold transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed">
+                      {loading ? "Processing Refund..." : "Process Refund"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
         </div>
 
         {/* Fixed Premium Footer */}

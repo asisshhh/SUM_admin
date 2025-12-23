@@ -6,6 +6,8 @@ import useDateRange from "../hooks/useDateRange";
 import OrderDetailsModal from "../components/OrderDetailsModal";
 import { printReceipt } from "../components/ReceiptPrint";
 import Socket from "../utils/SocketManager";
+import { useConfirm } from "../contexts/ConfirmContext";
+import { toast } from "react-toastify";
 
 // Import modular components
 import {
@@ -65,6 +67,9 @@ export default function AppointmentOrders() {
 
   // Debounce ref
   const searchRef = useRef(null);
+
+  // Confirm hook
+  const confirm = useConfirm();
 
   // ═══════════════════════════════════════════════════════════════════
   // DATA FETCHING
@@ -217,6 +222,69 @@ export default function AppointmentOrders() {
     setDoctor("");
   };
 
+  const handleRefund = useCallback(
+    async (appointment) => {
+      // Find the payment with SUCCESS status and isOnline
+      const payment = appointment.payments?.find(
+        (p) =>
+          p.status === "SUCCESS" &&
+          p.isOnline === true &&
+          p.gatewayPaymentId &&
+          p.status !== "REFUNDED"
+      );
+
+      if (!payment) {
+        console.error("Refund failed - payment details:", {
+          payments: appointment.payments,
+          paymentStatus: appointment.paymentStatus,
+          billing: appointment.billing
+        });
+        toast.error(
+          "No eligible payment found for refund. Payment must be online and successful with CCAvenue reference."
+        );
+        return;
+      }
+
+      const ok = await confirm({
+        title: "Process Refund",
+        message: `Are you sure you want to process a refund of ₹${payment.amount} for this cancelled appointment?`,
+        danger: false
+      });
+
+      if (!ok) return;
+
+      try {
+        const response = await api.post(`/ccavenue/refund/${payment.id}`, {
+          reason: "Appointment cancelled"
+        });
+
+        if (response.data.success) {
+          toast.success("Refund processed successfully");
+          // Refresh the table to show updated payment status
+          await load(page);
+          // Also update selected order if it's the refunded one
+          if (selectedOrder?.id === appointment.id) {
+            const freshData = await api.get(`/orders/${appointment.id}`, {
+              params: { type: "appointments" }
+            });
+            if (freshData.data?.data) {
+              setSelectedOrder(freshData.data.data);
+            }
+          }
+        } else {
+          toast.error(response.data.error || "Failed to process refund");
+        }
+      } catch (err) {
+        toast.error(
+          err.response?.data?.error ||
+            err.response?.data?.message ||
+            "Failed to process refund"
+        );
+      }
+    },
+    [confirm, load, page]
+  );
+
   // ═══════════════════════════════════════════════════════════════════
   // COMPUTED VALUES
   // ═══════════════════════════════════════════════════════════════════
@@ -282,6 +350,7 @@ export default function AppointmentOrders() {
           limit={limit}
           onViewDetails={handleViewDetails}
           onPrintReceipt={printReceipt}
+          onRefund={handleRefund}
         />
 
         {/* Pagination */}

@@ -1,20 +1,34 @@
 import React from "react";
-import { Calendar, Clock, Eye, Printer, Users, CreditCard } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Eye,
+  Printer,
+  Users,
+  CreditCard,
+  RotateCcw
+} from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 export default function AppointmentRow({
   appointment,
   index,
   onView,
-  onPrint
+  onPrint,
+  onRefund
 }) {
   const r = appointment;
 
-  // Calculate payment status (same logic as OrderDetailsModal)
-  const effectivePaymentStatus =
-    r.paymentStatus === "PAID"
-      ? "SUCCESS"
-      : r.paymentStatus || r.billing?.status || "PENDING";
+  // Calculate payment status - check payments array first for REFUNDED status
+  const refundedPayment = r.payments?.find((p) => p.status === "REFUNDED");
+  const effectivePaymentStatus = refundedPayment
+    ? "REFUNDED"
+    : r.paymentStatus === "PAID"
+    ? "SUCCESS"
+    : r.paymentStatus ||
+      r.payments?.[0]?.status ||
+      r.billing?.status ||
+      "PENDING";
 
   return (
     <tr className="hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-transparent transition-all duration-200 border-b border-slate-100 last:border-0">
@@ -67,7 +81,9 @@ export default function AppointmentRow({
         <ActionButtons
           onView={onView}
           onPrint={onPrint}
+          onRefund={onRefund}
           doctorId={r.doctorId}
+          appointment={r}
         />
       </td>
     </tr>
@@ -153,7 +169,23 @@ function PaymentStatusCell({ status }) {
   );
 }
 
-function ActionButtons({ onView, onPrint, doctorId }) {
+function ActionButtons({ onView, onPrint, onRefund, doctorId, appointment }) {
+  // Check if refund is available
+  // Find the first successful online payment with gatewayPaymentId
+  const refundablePayment = appointment?.payments?.find(
+    (p) =>
+      p.status === "SUCCESS" &&
+      p.isOnline === true &&
+      p.gatewayPaymentId &&
+      p.status !== "REFUNDED"
+  );
+
+  // Check if appointment is cancelled and has a refundable payment
+  const canRefund =
+    appointment?.status === "CANCELLED" &&
+    refundablePayment &&
+    refundablePayment.status !== "REFUNDED";
+
   return (
     <div className="flex items-center gap-2">
       <button
@@ -168,6 +200,14 @@ function ActionButtons({ onView, onPrint, doctorId }) {
         title="Print Receipt">
         <Printer size={16} />
       </button>
+      {canRefund && (
+        <button
+          className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+          onClick={() => onRefund?.(appointment)}
+          title="Process Refund">
+          <RotateCcw size={16} />
+        </button>
+      )}
       {doctorId && (
         <a
           href={`/doctor/queue-monitor/${doctorId}`}

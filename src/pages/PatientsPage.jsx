@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
-import patientApi from "../api/patients";
 import { useConfirm } from "../contexts/ConfirmContext";
 import { usePagePermissions } from "../hooks/usePagePermissions";
 import {
@@ -88,7 +87,7 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
   const [errors, setErrors] = useState({});
 
   const createMutation = useMutation({
-    mutationFn: (data) => patientApi.createPatient(data),
+    mutationFn: (data) => api.post("/users/patients", data),
     onSuccess: () => {
       toast.success("Patient created successfully");
       onSuccess();
@@ -100,7 +99,7 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data) => patientApi.updatePatient(patient.id, data),
+    mutationFn: (data) => api.put(`/users/patients/${patient.id}`, data),
     onSuccess: () => {
       toast.success("Patient updated successfully");
       onSuccess();
@@ -400,7 +399,8 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
   const [errors, setErrors] = useState({});
 
   const createMutation = useMutation({
-    mutationFn: (data) => patientApi.addPatientProfile(patient.id, data),
+    mutationFn: (data) =>
+      api.post(`/users/patients/${patient.id}/profiles`, data),
     onSuccess: () => {
       toast.success("Profile added successfully");
       onSuccess();
@@ -413,7 +413,7 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
 
   const updateMutation = useMutation({
     mutationFn: (data) =>
-      patientApi.updatePatientProfile(patient.id, profile.id, data),
+      api.put(`/users/patients/${patient.id}/profiles/${profile.id}`, data),
     onSuccess: () => {
       toast.success("Profile updated successfully");
       onSuccess();
@@ -669,11 +669,9 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
 const PatientRow = ({
   patient,
   onEdit,
-  onDelete,
   onAnonymize,
   onAddProfile,
   onEditProfile,
-  onDeleteProfile,
   canCreate = true,
   canEdit = true,
   canDelete = true
@@ -885,28 +883,16 @@ export default function PatientsPage() {
           (params[key] === "" || params[key] === undefined) &&
           delete params[key]
       );
-      return await patientApi.getPatients(params);
+      return (await api.get("/users/patients", { params })).data;
     }
   });
 
   const patients = data?.patients || [];
   const pagination = data?.pagination || {};
 
-  // Delete mutations
-  const deletePatientMutation = useMutation({
-    mutationFn: (id) => patientApi.deletePatient(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["patients"] });
-      toast.success("Patient deleted successfully");
-    },
-    onError: (err) => {
-      toast.error(err.response?.data?.error || "Failed to delete patient");
-    }
-  });
-
   // Anonymize mutation
   const anonymizePatientMutation = useMutation({
-    mutationFn: (id) => patientApi.anonymizePatient(id),
+    mutationFn: (id) => api.post(`/users/patients/${id}/anonymize`),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["patients"] });
       toast.success(
@@ -922,18 +908,6 @@ export default function PatientsPage() {
     }
   });
 
-  const deleteProfileMutation = useMutation({
-    mutationFn: ({ patientId, profileId }) =>
-      patientApi.deletePatientProfile(patientId, profileId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["patients"] });
-      toast.success("Profile deleted successfully");
-    },
-    onError: (err) => {
-      toast.error(err.response?.data?.error || "Failed to delete profile");
-    }
-  });
-
   // Handlers
   const handlePageChange = useCallback((page) => {
     setFilters((f) => ({ ...f, page }));
@@ -946,18 +920,6 @@ export default function PatientsPage() {
   const handleEditPatient = useCallback((patient) => {
     setPatientModal({ open: true, patient });
   }, []);
-
-  const handleDeletePatient = useCallback(
-    async (patient) => {
-      const ok = await confirm({
-        title: "Delete Patient",
-        message: `Are you sure you want to delete "${patient.name}"? This will also delete all their profiles and cannot be undone.`,
-        danger: true
-      });
-      if (ok) deletePatientMutation.mutate(patient.id);
-    },
-    [confirm, deletePatientMutation]
-  );
 
   const handleAnonymizePatient = useCallback(
     async (patient) => {
@@ -985,23 +947,6 @@ This action cannot be undone.`,
   const handleEditProfile = useCallback((patient, profile) => {
     setProfileModal({ open: true, patient, profile });
   }, []);
-
-  const handleDeleteProfile = useCallback(
-    async (patient, profile) => {
-      const ok = await confirm({
-        title: "Delete Profile",
-        message: `Are you sure you want to delete "${profile.name}"? This cannot be undone.`,
-        danger: true
-      });
-      if (ok) {
-        deleteProfileMutation.mutate({
-          patientId: patient.id,
-          profileId: profile.id
-        });
-      }
-    },
-    [confirm, deleteProfileMutation]
-  );
 
   const handleSuccess = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["patients"] });
@@ -1119,11 +1064,9 @@ This action cannot be undone.`,
                     key={patient.id}
                     patient={patient}
                     onEdit={handleEditPatient}
-                    onDelete={handleDeletePatient}
                     onAnonymize={handleAnonymizePatient}
                     onAddProfile={handleAddProfile}
                     onEditProfile={handleEditProfile}
-                    onDeleteProfile={handleDeleteProfile}
                     canCreate={canCreate}
                     canEdit={canEdit}
                     canDelete={canDelete}

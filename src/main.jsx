@@ -59,6 +59,9 @@ import GlobalSchedulePage from "./pages/GlobalSchedulePage.jsx";
 import DoctorSchedulePage from "./pages/DoctorSchedulePage.jsx";
 // Time Slot Templates Management
 import TimeSlotTemplatesPage from "./pages/TimeSlotTemplatesPage.jsx";
+// Privacy Policy Management
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
+import PublicPrivacyPolicyPage from "./pages/PublicPrivacyPolicyPage.jsx";
 
 const qc = new QueryClient();
 
@@ -88,6 +91,10 @@ createRoot(document.getElementById("root")).render(
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/privacy-policy"
+                element={<PublicPrivacyPolicyPage />}
+              />
               <Route
                 path="/"
                 element={
@@ -186,6 +193,10 @@ createRoot(document.getElementById("root")).render(
                 <Route
                   path="role-management"
                   element={<RoleManagementPage />}
+                />
+                <Route
+                  path="add-privacy-policy"
+                  element={<PrivacyPolicyPage />}
                 />
               </Route>
             </Routes>

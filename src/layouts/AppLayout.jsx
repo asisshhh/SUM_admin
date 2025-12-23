@@ -26,7 +26,8 @@ import {
   HeartPulse,
   Shield,
   User,
-  Crown
+  Crown,
+  FileText
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -187,6 +188,12 @@ const DEFAULT_NAV_ITEMS = [
     path: "/role-management",
     label: "Role Management",
     icon: Shield,
+    category: "Admin"
+  },
+  {
+    path: "/add-privacy-policy",
+    label: "Privacy Policy",
+    icon: FileText,
     category: "Admin"
   }
 ];

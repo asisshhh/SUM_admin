@@ -189,9 +189,16 @@ export default function LoginPage() {
 
           {/* Footer */}
           <div className="mt-6 pt-6 border-t border-slate-200">
-            <p className="text-xs text-center text-slate-500">
+            <p className="text-xs text-center text-slate-500 mb-2">
               Secure access to SUM Ultimate Medicare Admin Panel
             </p>
+            <div className="text-center">
+              <a
+                href="/privacy-policy"
+                className="text-xs text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+                Privacy Policy
+              </a>
+            </div>
           </div>
         </div>
       </div>

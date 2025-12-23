@@ -62,13 +62,11 @@ const UserModal = ({ user, onClose, onSuccess }) => {
   });
   // Password change fields for edit mode
   const [passwordChange, setPasswordChange] = useState({
-    oldPassword: "",
     newPassword: "",
     confirmNewPassword: ""
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [enablePasswordChange, setEnablePasswordChange] = useState(false);
@@ -101,7 +99,6 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     }
     // Always reset password fields for security
     setPasswordChange({
-      oldPassword: "",
       newPassword: "",
       confirmNewPassword: ""
     });
@@ -110,7 +107,6 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     // Reset all password visibility toggles
     setShowPassword(false);
     setShowConfirmPassword(false);
-    setShowOldPassword(false);
     setShowNewPassword(false);
     setShowConfirmNewPassword(false);
   }, [user?.id]); // Reset when user ID changes
@@ -119,7 +115,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
   const { data: departmentsData } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
-      const response = await api.get("/admin/departments", {
+      const response = await api.get("/departments", {
         params: { active: true }
       });
       return response.data;
@@ -159,16 +155,13 @@ const UserModal = ({ user, onClose, onSuccess }) => {
       toast.success("Password changed successfully");
       // Reset password change fields
       setPasswordChange({
-        oldPassword: "",
         newPassword: "",
         confirmNewPassword: ""
       });
       setEnablePasswordChange(false);
     },
     onError: (err) => {
-      toast.error(
-        err.response?.data?.error || "Failed to change password. Please check your old password."
-      );
+      toast.error(err.response?.data?.error || "Failed to change password.");
     }
   });
 
@@ -176,7 +169,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.phone.trim()) newErrors.phone = "Phone is required";
-    
+
     // Password validation for create mode
     if (!isEdit) {
       if (!formData.password) {
@@ -184,38 +177,31 @@ const UserModal = ({ user, onClose, onSuccess }) => {
       } else if (formData.password.length < 6) {
         newErrors.password = "Password must be at least 6 characters";
       }
-      
+
       if (!formData.confirmPassword) {
         newErrors.confirmPassword = "Please confirm your password";
       } else if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = "Passwords do not match";
       }
     }
-    
+
     // Password change validation for edit mode
     if (isEdit && enablePasswordChange) {
-      if (!passwordChange.oldPassword) {
-        newErrors.oldPassword = "Old password is required";
-      }
-      
       if (!passwordChange.newPassword) {
         newErrors.newPassword = "New password is required";
       } else if (passwordChange.newPassword.length < 6) {
         newErrors.newPassword = "Password must be at least 6 characters";
       }
-      
+
       if (!passwordChange.confirmNewPassword) {
         newErrors.confirmNewPassword = "Please confirm your new password";
-      } else if (passwordChange.newPassword !== passwordChange.confirmNewPassword) {
+      } else if (
+        passwordChange.newPassword !== passwordChange.confirmNewPassword
+      ) {
         newErrors.confirmNewPassword = "New passwords do not match";
       }
-      
-      if (passwordChange.oldPassword && passwordChange.newPassword && 
-          passwordChange.oldPassword === passwordChange.newPassword) {
-        newErrors.newPassword = "New password must be different from old password";
-      }
     }
-    
+
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
@@ -233,13 +219,13 @@ const UserModal = ({ user, onClose, onSuccess }) => {
 
     if (isEdit) {
       // If password change is enabled, change password first, then update role
-      if (enablePasswordChange && 
-          passwordChange.oldPassword && 
-          passwordChange.newPassword && 
-          passwordChange.confirmNewPassword) {
+      if (
+        enablePasswordChange &&
+        passwordChange.newPassword &&
+        passwordChange.confirmNewPassword
+      ) {
         changePasswordMutation.mutate(
           {
-            oldPassword: passwordChange.oldPassword,
             newPassword: passwordChange.newPassword
           },
           {
@@ -291,7 +277,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
-    
+
     // Clear confirm password error when password changes
     if (name === "password" && errors.confirmPassword) {
       setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
@@ -301,12 +287,12 @@ const UserModal = ({ user, onClose, onSuccess }) => {
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordChange((prev) => ({ ...prev, [name]: value }));
-    
+
     // Clear errors when user types
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
-    
+
     // Clear confirm password error when new password changes
     if (name === "newPassword" && errors.confirmNewPassword) {
       setErrors((prev) => ({ ...prev, confirmNewPassword: undefined }));
@@ -318,13 +304,11 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     // Reset password change fields when toggling off
     if (enablePasswordChange) {
       setPasswordChange({
-        oldPassword: "",
         newPassword: "",
         confirmNewPassword: ""
       });
       setErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors.oldPassword;
         delete newErrors.newPassword;
         delete newErrors.confirmNewPassword;
         return newErrors;
@@ -332,7 +316,10 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     }
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending || changePasswordMutation.isPending;
+  const isLoading =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    changePasswordMutation.isPending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 overflow-y-auto">
@@ -352,386 +339,448 @@ const UserModal = ({ user, onClose, onSuccess }) => {
 
         {/* Scrollable Form Content */}
         <div className="overflow-y-auto flex-1 min-h-0">
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4" noValidate>
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Full Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              disabled={isEdit}
-              className={`w-full px-4 py-2.5 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                errors.name ? "border-red-500" : "border-slate-300"
-              } ${isEdit ? "bg-slate-100" : ""}`}
-              placeholder="Enter full name"
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-            )}
-          </div>
+          <form
+            onSubmit={handleSubmit}
+            className="p-4 sm:p-6 space-y-4"
+            noValidate>
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Full Name *
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                disabled={isEdit}
+                className={`w-full px-4 py-2.5 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  errors.name ? "border-red-500" : "border-slate-300"
+                } ${isEdit ? "bg-slate-100" : ""}`}
+                placeholder="Enter full name"
+              />
+              {errors.name && (
+                <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+              )}
+            </div>
 
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Phone Number *
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              disabled={isEdit}
-              className={`w-full px-4 py-2.5 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                errors.phone ? "border-red-500" : "border-slate-300"
-              } ${isEdit ? "bg-slate-100" : ""}`}
-              placeholder="Enter phone number"
-            />
-            {errors.phone && (
-              <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
-            )}
-          </div>
+            {/* Phone */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                disabled={isEdit}
+                className={`w-full px-4 py-2.5 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  errors.phone ? "border-red-500" : "border-slate-300"
+                } ${isEdit ? "bg-slate-100" : ""}`}
+                placeholder="Enter phone number"
+              />
+              {errors.phone && (
+                <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+              )}
+            </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Email (Optional)
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              disabled={isEdit}
-              className={`w-full px-4 py-2.5 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                errors.email ? "border-red-500" : "border-slate-300"
-              } ${isEdit ? "bg-slate-100" : ""}`}
-              placeholder="Enter email address"
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-            )}
-          </div>
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Email (Optional)
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isEdit}
+                className={`w-full px-4 py-2.5 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  errors.email ? "border-red-500" : "border-slate-300"
+                } ${isEdit ? "bg-slate-100" : ""}`}
+                placeholder="Enter email address"
+              />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
+            </div>
 
-          {/* Password (only for new users) */}
-          {!isEdit && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      errors.password ? "border-red-500" : "border-slate-300"
-                    }`}
-                    placeholder="Enter password (min 6 characters)"
-                    aria-label="Password"
-                    aria-invalid={!!errors.password}
-                    aria-describedby={errors.password ? "password-error" : undefined}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
-                    aria-label={showPassword ? "Hide password" : "Show password"}>
-                    {showPassword ? <EyeOff size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <Eye size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />}
-                  </button>
+            {/* Password (only for new users) */}
+            {!isEdit && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                        errors.password ? "border-red-500" : "border-slate-300"
+                      }`}
+                      placeholder="Enter password (min 6 characters)"
+                      aria-label="Password"
+                      aria-invalid={!!errors.password}
+                      aria-describedby={
+                        errors.password ? "password-error" : undefined
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }>
+                      {showPassword ? (
+                        <EyeOff
+                          size={18}
+                          className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                        />
+                      ) : (
+                        <Eye
+                          size={18}
+                          className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                        />
+                      )}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p
+                      id="password-error"
+                      className="text-red-500 text-xs mt-1"
+                      role="alert">
+                      {errors.password}
+                    </p>
+                  )}
                 </div>
-                {errors.password && (
-                  <p id="password-error" className="text-red-500 text-xs mt-1" role="alert">
-                    {errors.password}
-                  </p>
-                )}
-              </div>
 
-              {/* Confirm Password */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Confirm Password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      errors.confirmPassword ? "border-red-500" : "border-slate-300"
-                    }`}
-                    placeholder="Confirm your password"
-                    aria-label="Confirm Password"
-                    aria-invalid={!!errors.confirmPassword}
-                    aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
-                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}>
-                    {showConfirmPassword ? <EyeOff size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <Eye size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />}
-                  </button>
+                {/* Confirm Password */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Confirm Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                        errors.confirmPassword
+                          ? "border-red-500"
+                          : "border-slate-300"
+                      }`}
+                      placeholder="Confirm your password"
+                      aria-label="Confirm Password"
+                      aria-invalid={!!errors.confirmPassword}
+                      aria-describedby={
+                        errors.confirmPassword
+                          ? "confirm-password-error"
+                          : undefined
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
+                      aria-label={
+                        showConfirmPassword ? "Hide password" : "Show password"
+                      }>
+                      {showConfirmPassword ? (
+                        <EyeOff
+                          size={18}
+                          className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                        />
+                      ) : (
+                        <Eye
+                          size={18}
+                          className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                        />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p
+                      id="confirm-password-error"
+                      className="text-red-500 text-xs mt-1"
+                      role="alert">
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                  {!errors.confirmPassword &&
+                    formData.password &&
+                    formData.confirmPassword &&
+                    formData.password === formData.confirmPassword && (
+                      <p className="text-green-600 text-xs mt-1">
+                        ✓ Passwords match
+                      </p>
+                    )}
                 </div>
-                {errors.confirmPassword && (
-                  <p id="confirm-password-error" className="text-red-500 text-xs mt-1" role="alert">
-                    {errors.confirmPassword}
-                  </p>
-                )}
-                {!errors.confirmPassword && formData.password && formData.confirmPassword && 
-                 formData.password === formData.confirmPassword && (
-                  <p className="text-green-600 text-xs mt-1">✓ Passwords match</p>
-                )}
-              </div>
-            </>
-          )}
+              </>
+            )}
 
-          {/* Role */}
-          <div>
-            <SearchableDropdown
-              label="Role *"
-              value={formData.role || ""}
-              options={[
-                { value: "ADMIN", label: "Admin" },
-                { value: "DOCTOR", label: "Doctor" },
-                { value: "RECEPTIONIST", label: "Receptionist" },
-                { value: "DEPARTMENT_HEAD", label: "Department Head" },
-                { value: "NURSE", label: "Nurse" }
-              ]}
-              onChange={(value) =>
-                handleChange({ target: { name: "role", value } })
-              }
-              placeholder="Select Role"
-              className=""
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Staff users can access the admin portal based on their role
-            </p>
-          </div>
-
-          {/* Department (only for doctors) */}
-          {formData.role === "DOCTOR" && (
+            {/* Role */}
             <div>
               <SearchableDropdown
-                label="Department *"
-                value={formData.departmentId || ""}
+                label="Role *"
+                value={formData.role || ""}
                 options={[
-                  { value: "", label: "Select Department" },
-                  ...departments.map((dept) => ({
-                    value: String(dept.id),
-                    label: dept.name
-                  }))
+                  { value: "ADMIN", label: "Admin" },
+                  { value: "DOCTOR", label: "Doctor" },
+                  { value: "RECEPTIONIST", label: "Receptionist" },
+                  { value: "DEPARTMENT_HEAD", label: "Department Head" },
+                  { value: "NURSE", label: "Nurse" }
                 ]}
                 onChange={(value) =>
-                  handleChange({ target: { name: "departmentId", value } })
+                  handleChange({ target: { name: "role", value } })
                 }
-                placeholder="Select Department"
-                disabled={isEdit}
-                className={errors.departmentId ? "border-red-500" : ""}
+                placeholder="Select Role"
+                className=""
               />
-              {errors.departmentId && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.departmentId}
-                </p>
-              )}
-              {departments.length === 0 && !isEdit && (
-                <p className="text-xs text-amber-600 mt-1">
-                  No departments available. Please create departments first.
-                </p>
-              )}
+              <p className="text-xs text-slate-500 mt-1">
+                Staff users can access the admin portal based on their role
+              </p>
             </div>
-          )}
 
-          {/* Password Change Section (only for edit mode) */}
-          {isEdit && (
-            <div className="border-t border-slate-200 pt-4 mt-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-slate-700">
-                    Change Password
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Update user's password securely
+            {/* Department (only for doctors) */}
+            {formData.role === "DOCTOR" && (
+              <div>
+                <SearchableDropdown
+                  label="Department *"
+                  value={formData.departmentId || ""}
+                  options={[
+                    { value: "", label: "Select Department" },
+                    ...departments.map((dept) => ({
+                      value: String(dept.id),
+                      label: dept.name
+                    }))
+                  ]}
+                  onChange={(value) =>
+                    handleChange({ target: { name: "departmentId", value } })
+                  }
+                  placeholder="Select Department"
+                  disabled={isEdit}
+                  className={errors.departmentId ? "border-red-500" : ""}
+                />
+                {errors.departmentId && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.departmentId}
                   </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={enablePasswordChange}
-                    onChange={handleTogglePasswordChange}
-                    className="sr-only peer"
-                    aria-label="Enable password change"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                </label>
+                )}
+                {departments.length === 0 && !isEdit && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    No departments available. Please create departments first.
+                  </p>
+                )}
               </div>
+            )}
 
-              {enablePasswordChange && (
-                <div className="space-y-4 bg-slate-50 p-3 sm:p-4 rounded-lg">
-                  {/* Old Password */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Old Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showOldPassword ? "text" : "password"}
-                        name="oldPassword"
-                        value={passwordChange.oldPassword}
-                        onChange={handlePasswordChange}
-                        className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                          errors.oldPassword ? "border-red-500" : "border-slate-300"
-                        }`}
-                        placeholder="Enter current password"
-                        aria-label="Old Password"
-                        aria-invalid={!!errors.oldPassword}
-                        aria-describedby={errors.oldPassword ? "old-password-error" : undefined}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowOldPassword(!showOldPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
-                        aria-label={showOldPassword ? "Hide password" : "Show password"}>
-                        {showOldPassword ? <EyeOff size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <Eye size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />}
-                      </button>
-                    </div>
-                    {errors.oldPassword && (
-                      <p id="old-password-error" className="text-red-500 text-xs mt-1" role="alert">
-                        {errors.oldPassword}
-                      </p>
-                    )}
+            {/* Password Change Section (only for edit mode) */}
+            {isEdit && (
+              <div className="border-t border-slate-200 pt-4 mt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-slate-700">
+                      Change Password
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Update user's password securely
+                    </p>
                   </div>
-
-                  {/* New Password */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      New Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        name="newPassword"
-                        value={passwordChange.newPassword}
-                        onChange={handlePasswordChange}
-                        className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                          errors.newPassword ? "border-red-500" : "border-slate-300"
-                        }`}
-                        placeholder="Enter new password (min 6 characters)"
-                        aria-label="New Password"
-                        aria-invalid={!!errors.newPassword}
-                        aria-describedby={errors.newPassword ? "new-password-error" : undefined}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
-                        aria-label={showNewPassword ? "Hide password" : "Show password"}>
-                        {showNewPassword ? <EyeOff size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <Eye size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />}
-                      </button>
-                    </div>
-                    {errors.newPassword && (
-                      <p id="new-password-error" className="text-red-500 text-xs mt-1" role="alert">
-                        {errors.newPassword}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Confirm New Password */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Confirm New Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showConfirmNewPassword ? "text" : "password"}
-                        name="confirmNewPassword"
-                        value={passwordChange.confirmNewPassword}
-                        onChange={handlePasswordChange}
-                        className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                          errors.confirmNewPassword ? "border-red-500" : "border-slate-300"
-                        }`}
-                        placeholder="Confirm your new password"
-                        aria-label="Confirm New Password"
-                        aria-invalid={!!errors.confirmNewPassword}
-                        aria-describedby={errors.confirmNewPassword ? "confirm-new-password-error" : undefined}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
-                        aria-label={showConfirmNewPassword ? "Hide password" : "Show password"}>
-                        {showConfirmNewPassword ? <EyeOff size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <Eye size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />}
-                      </button>
-                    </div>
-                    {errors.confirmNewPassword && (
-                      <p id="confirm-new-password-error" className="text-red-500 text-xs mt-1" role="alert">
-                        {errors.confirmNewPassword}
-                      </p>
-                    )}
-                    {!errors.confirmNewPassword && 
-                     passwordChange.newPassword && 
-                     passwordChange.confirmNewPassword && 
-                     passwordChange.newPassword === passwordChange.confirmNewPassword && (
-                      <p className="text-green-600 text-xs mt-1">✓ New passwords match</p>
-                    )}
-                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={enablePasswordChange}
+                      onChange={handleTogglePasswordChange}
+                      className="sr-only peer"
+                      aria-label="Enable password change"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 pb-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition text-sm sm:text-base">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base">
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span className="hidden sm:inline">
-                    {isEdit 
-                      ? enablePasswordChange && passwordChange.oldPassword 
-                        ? "Updating..." 
-                        : "Updating Role..."
-                      : "Creating..."}
-                  </span>
-                  <span className="sm:hidden">
-                    {isEdit ? "Updating..." : "Creating..."}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <UserCheck size={18} />
-                  <span className="hidden sm:inline">
-                    {isEdit 
-                      ? enablePasswordChange && passwordChange.oldPassword 
-                        ? "Update Role & Password" 
-                        : "Update Role"
-                      : "Create User"}
-                  </span>
-                  <span className="sm:hidden">
-                    {isEdit ? "Update" : "Create"}
-                  </span>
-                </>
-              )}
-            </button>
-          </div>
+                {enablePasswordChange && (
+                  <div className="space-y-4 bg-slate-50 p-3 sm:p-4 rounded-lg">
+                    {/* New Password */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        New Password *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          name="newPassword"
+                          value={passwordChange.newPassword}
+                          onChange={handlePasswordChange}
+                          className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                            errors.newPassword
+                              ? "border-red-500"
+                              : "border-slate-300"
+                          }`}
+                          placeholder="Enter new password (min 6 characters)"
+                          aria-label="New Password"
+                          aria-invalid={!!errors.newPassword}
+                          aria-describedby={
+                            errors.newPassword
+                              ? "new-password-error"
+                              : undefined
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
+                          aria-label={
+                            showNewPassword ? "Hide password" : "Show password"
+                          }>
+                          {showNewPassword ? (
+                            <EyeOff
+                              size={18}
+                              className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                            />
+                          ) : (
+                            <Eye
+                              size={18}
+                              className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                            />
+                          )}
+                        </button>
+                      </div>
+                      {errors.newPassword && (
+                        <p
+                          id="new-password-error"
+                          className="text-red-500 text-xs mt-1"
+                          role="alert">
+                          {errors.newPassword}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Confirm New Password */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Confirm New Password *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmNewPassword ? "text" : "password"}
+                          name="confirmNewPassword"
+                          value={passwordChange.confirmNewPassword}
+                          onChange={handlePasswordChange}
+                          className={`w-full px-4 py-2.5 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                            errors.confirmNewPassword
+                              ? "border-red-500"
+                              : "border-slate-300"
+                          }`}
+                          placeholder="Confirm your new password"
+                          aria-label="Confirm New Password"
+                          aria-invalid={!!errors.confirmNewPassword}
+                          aria-describedby={
+                            errors.confirmNewPassword
+                              ? "confirm-new-password-error"
+                              : undefined
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowConfirmNewPassword(!showConfirmNewPassword)
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 touch-manipulation"
+                          aria-label={
+                            showConfirmNewPassword
+                              ? "Hide password"
+                              : "Show password"
+                          }>
+                          {showConfirmNewPassword ? (
+                            <EyeOff
+                              size={18}
+                              className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                            />
+                          ) : (
+                            <Eye
+                              size={18}
+                              className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                            />
+                          )}
+                        </button>
+                      </div>
+                      {errors.confirmNewPassword && (
+                        <p
+                          id="confirm-new-password-error"
+                          className="text-red-500 text-xs mt-1"
+                          role="alert">
+                          {errors.confirmNewPassword}
+                        </p>
+                      )}
+                      {!errors.confirmNewPassword &&
+                        passwordChange.newPassword &&
+                        passwordChange.confirmNewPassword &&
+                        passwordChange.newPassword ===
+                          passwordChange.confirmNewPassword && (
+                          <p className="text-green-600 text-xs mt-1">
+                            ✓ New passwords match
+                          </p>
+                        )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 pb-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition text-sm sm:text-base">
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base">
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span className="hidden sm:inline">
+                      {isEdit
+                        ? enablePasswordChange && passwordChange.newPassword
+                          ? "Updating..."
+                          : "Updating Role..."
+                        : "Creating..."}
+                    </span>
+                    <span className="sm:hidden">
+                      {isEdit ? "Updating..." : "Creating..."}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={18} />
+                    <span className="hidden sm:inline">
+                      {isEdit
+                        ? enablePasswordChange && passwordChange.newPassword
+                          ? "Update Role & Password"
+                          : "Update Role"
+                        : "Create User"}
+                    </span>
+                    <span className="sm:hidden">
+                      {isEdit ? "Update" : "Create"}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </div>
-        
+
         {/* Sticky Footer for Actions on Mobile (Alternative approach) */}
         {/* Actions are now inside scrollable area but will be visible when scrolled */}
       </div>

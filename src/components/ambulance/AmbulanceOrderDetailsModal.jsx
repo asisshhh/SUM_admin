@@ -8,14 +8,18 @@ import {
   Edit2,
   Save,
   X,
-  DollarSign
+  DollarSign,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useConfirm } from "../../contexts/ConfirmContext";
 
 const AmbulanceOrderDetailsModal = React.memo(
   function AmbulanceOrderDetailsModal({ booking, onClose, onUpdated }) {
     const qc = useQueryClient();
+    const confirm = useConfirm();
     const [isEditing, setIsEditing] = useState(false);
+    const [refundLoading, setRefundLoading] = useState(false);
     const [selectedTypeId, setSelectedTypeId] = useState(
       booking?.ambulanceTypeId
     );
@@ -146,6 +150,38 @@ const AmbulanceOrderDetailsModal = React.memo(
       // Reset to original values
       setSelectedTypeId(currentBooking?.ambulanceTypeId);
       setSelectedPricingIds(currentBooking?.selectedFeaturePricingIds || []);
+    };
+
+    const handleRefund = async (payment) => {
+      const ok = await confirm({
+        title: "Process Refund",
+        message: `Are you sure you want to process a refund of ₹${payment.amount} for this cancelled ambulance booking?`
+      });
+
+      if (!ok) return;
+
+      setRefundLoading(true);
+      try {
+        const response = await api.post(`/ccavenue/refund/${payment.id}`, {
+          reason: "Ambulance booking cancelled"
+        });
+
+        if (response.data.success) {
+          toast.success("Refund processed successfully");
+          qc.invalidateQueries(["ambulance-order", booking.id]);
+          qc.invalidateQueries(["ambulance-orders"]);
+          if (onUpdated) onUpdated();
+        } else {
+          toast.error(response.data.error || "Failed to process refund");
+        }
+      } catch (err) {
+        toast.error(
+          err.response?.data?.error ||
+            err.response?.data?.message ||
+            "Failed to process refund"
+        );
+      }
+      setRefundLoading(false);
     };
 
     const formatDate = (date) => {
@@ -310,59 +346,83 @@ const AmbulanceOrderDetailsModal = React.memo(
                   Payment Information
                 </h3>
                 <div className="space-y-3">
-                  {currentBooking.payments.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="bg-white border border-slate-200 rounded-lg p-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-slate-500">Amount:</span>
-                          <span className="ml-2 font-bold text-green-600">
-                            ₹{payment.amount?.toFixed(2) || "0.00"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Method:</span>
-                          <span className="ml-2 font-medium">
-                            {payment.method || "-"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Status:</span>
-                          <span
-                            className={`ml-2 font-medium ${
-                              payment.status === "SUCCESS"
-                                ? "text-green-600"
-                                : payment.status === "PENDING"
-                                ? "text-yellow-600"
-                                : payment.status === "FAILED"
-                                ? "text-red-600"
-                                : "text-slate-600"
-                            }`}>
-                            {payment.status || "-"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Paid At:</span>
-                          <span className="ml-2 font-medium">
-                            {payment.paidAt
-                              ? formatDate(payment.paidAt)
-                              : payment.createdAt
-                              ? formatDate(payment.createdAt)
-                              : "-"}
-                          </span>
-                        </div>
-                        {payment.notes && (
-                          <div className="col-span-2">
-                            <span className="text-slate-500">Notes:</span>
-                            <span className="ml-2 font-medium text-slate-700">
-                              {payment.notes}
+                  {currentBooking.payments.map((payment) => {
+                    const canRefund =
+                      currentBooking.status === "CANCELLED" &&
+                      payment.status === "SUCCESS" &&
+                      payment.isOnline === true &&
+                      payment.gatewayPaymentId &&
+                      payment.status !== "REFUNDED";
+
+                    return (
+                      <div
+                        key={payment.id}
+                        className="bg-white border border-slate-200 rounded-lg p-4">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-slate-500">Amount:</span>
+                            <span className="ml-2 font-bold text-green-600">
+                              ₹{payment.amount?.toFixed(2) || "0.00"}
                             </span>
                           </div>
-                        )}
+                          <div>
+                            <span className="text-slate-500">Method:</span>
+                            <span className="ml-2 font-medium">
+                              {payment.method || "-"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Status:</span>
+                            <span
+                              className={`ml-2 font-medium ${
+                                payment.status === "SUCCESS"
+                                  ? "text-green-600"
+                                  : payment.status === "REFUNDED"
+                                  ? "text-orange-600"
+                                  : payment.status === "PENDING"
+                                  ? "text-yellow-600"
+                                  : payment.status === "FAILED"
+                                  ? "text-red-600"
+                                  : "text-slate-600"
+                              }`}>
+                              {payment.status || "-"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Paid At:</span>
+                            <span className="ml-2 font-medium">
+                              {payment.paidAt
+                                ? formatDate(payment.paidAt)
+                                : payment.createdAt
+                                ? formatDate(payment.createdAt)
+                                : "-"}
+                            </span>
+                          </div>
+                          {payment.notes && (
+                            <div className="col-span-2">
+                              <span className="text-slate-500">Notes:</span>
+                              <span className="ml-2 font-medium text-slate-700">
+                                {payment.notes}
+                              </span>
+                            </div>
+                          )}
+                          {canRefund && (
+                            <div className="col-span-2 mt-3 pt-3 border-t border-slate-200">
+                              <button
+                                onClick={() => handleRefund(payment)}
+                                disabled={refundLoading}
+                                className="w-full py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-lg shadow-md hover:shadow-lg font-semibold transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                <RotateCcw size={16} />
+                                {refundLoading
+                                  ? "Processing Refund..."
+                                  : "Process Refund"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-200">
                   <div className="flex items-center justify-between text-sm">

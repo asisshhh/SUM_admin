@@ -1,26 +1,54 @@
-import React from "react";
-import { FlaskConical, X, Clock, Calendar, User, Phone, FileText, IndianRupee, CheckCircle2, AlertCircle, Beaker } from "lucide-react";
+import React, { useState } from "react";
+import {
+  FlaskConical,
+  X,
+  Clock,
+  Calendar,
+  User,
+  Phone,
+  FileText,
+  IndianRupee,
+  CheckCircle2,
+  AlertCircle,
+  Beaker,
+  RotateCcw
+} from "lucide-react";
+import api from "../../api/client";
+import { useConfirm } from "../../contexts/ConfirmContext";
+import { toast } from "react-toastify";
 
 // Status badge component
 function StatusBadge({ status }) {
   const config = {
     PENDING: { bg: "bg-amber-100", text: "text-amber-700", icon: Clock },
     PROCESSING: { bg: "bg-cyan-100", text: "text-cyan-700", icon: Clock },
-    COMPLETED: { bg: "bg-emerald-100", text: "text-emerald-700", icon: CheckCircle2 },
+    COMPLETED: {
+      bg: "bg-emerald-100",
+      text: "text-emerald-700",
+      icon: CheckCircle2
+    },
     CANCELLED: { bg: "bg-red-100", text: "text-red-700", icon: AlertCircle }
-  }[status] || { bg: "bg-slate-100", text: "text-slate-700", icon: AlertCircle };
+  }[status] || {
+    bg: "bg-slate-100",
+    text: "text-slate-700",
+    icon: AlertCircle
+  };
 
   const Icon = config.icon;
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${config.bg} ${config.text}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${config.bg} ${config.text}`}>
       <Icon size={14} />
       {status}
     </span>
   );
 }
 
-function LabOrderViewModal({ order, onClose }) {
+function LabOrderViewModal({ order, onClose, onUpdated }) {
+  const confirm = useConfirm();
+  const [loading, setLoading] = useState(false);
+
   if (!order) return null;
 
   const patientName = order.patient?.name || order.user?.name || "Unknown";
@@ -28,7 +56,61 @@ function LabOrderViewModal({ order, onClose }) {
   const patientEmail = order.patient?.email || order.user?.email || "-";
 
   const tests = order.items || [];
-  const testName = order.testName || tests.map(i => i.testName || i.test?.name).filter(Boolean).join(", ") || "-";
+  const testName =
+    order.testName ||
+    tests
+      .map((i) => i.testName || i.test?.name)
+      .filter(Boolean)
+      .join(", ") ||
+    "-";
+
+  // Check for refundable payment
+  const refundablePayment = order.payments?.find(
+    (p) =>
+      p.status === "SUCCESS" &&
+      p.isOnline === true &&
+      p.gatewayPaymentId &&
+      p.status !== "REFUNDED"
+  );
+
+  const handleRefund = async () => {
+    if (!refundablePayment) {
+      toast.error("No eligible payment found for refund");
+      return;
+    }
+
+    const ok = await confirm({
+      title: "Process Refund",
+      message: `Are you sure you want to process a refund of ₹${refundablePayment.amount} for this cancelled lab test order?`
+    });
+
+    if (!ok) return;
+
+    setLoading(true);
+    try {
+      const response = await api.post(
+        `/ccavenue/refund/${refundablePayment.id}`,
+        {
+          reason: "Lab test order cancelled"
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Refund processed successfully");
+        await onUpdated?.();
+        onClose();
+      } else {
+        toast.error(response.data.error || "Failed to process refund");
+      }
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to process refund"
+      );
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -56,7 +138,9 @@ function LabOrderViewModal({ order, onClose }) {
             <StatusBadge status={order.status} />
             <div className="text-sm text-slate-500">
               <Calendar size={14} className="inline mr-1" />
-              {order.scheduledDate?.split("T")[0] || order.createdAt?.split("T")[0] || "-"}
+              {order.scheduledDate?.split("T")[0] ||
+                order.createdAt?.split("T")[0] ||
+                "-"}
             </div>
           </div>
 
@@ -96,13 +180,17 @@ function LabOrderViewModal({ order, onClose }) {
             {tests.length > 0 ? (
               <div className="divide-y">
                 {tests.map((item, idx) => (
-                  <div key={idx} className="px-4 py-3 flex items-center justify-between">
+                  <div
+                    key={idx}
+                    className="px-4 py-3 flex items-center justify-between">
                     <div>
                       <p className="font-medium text-slate-800">
                         {item.testName || item.test?.name || `Test #${idx + 1}`}
                       </p>
                       {item.test?.code && (
-                        <p className="text-xs text-slate-500 font-mono">{item.test.code}</p>
+                        <p className="text-xs text-slate-500 font-mono">
+                          {item.test.code}
+                        </p>
                       )}
                     </div>
                     {(item.price || item.test?.price) && (
@@ -135,19 +223,44 @@ function LabOrderViewModal({ order, onClose }) {
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Payment Status</p>
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                    order.paymentStatus === "SUCCESS" || order.paymentStatus === "PAID"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-amber-100 text-amber-700"
-                  }`}>
-                    {order.paymentStatus === "SUCCESS" || order.paymentStatus === "PAID" ? (
-                      <><CheckCircle2 size={14} /> Paid</>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                      order.paymentStatus === "SUCCESS" ||
+                      order.paymentStatus === "PAID"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : order.paymentStatus === "REFUNDED"
+                        ? "bg-orange-100 text-orange-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}>
+                    {order.paymentStatus === "SUCCESS" ||
+                    order.paymentStatus === "PAID" ? (
+                      <>
+                        <CheckCircle2 size={14} /> Paid
+                      </>
+                    ) : order.paymentStatus === "REFUNDED" ? (
+                      <>
+                        <RotateCcw size={14} /> Refunded
+                      </>
                     ) : (
-                      <><Clock size={14} /> {order.paymentStatus || "Pending"}</>
+                      <>
+                        <Clock size={14} /> {order.paymentStatus || "Pending"}
+                      </>
                     )}
                   </span>
                 </div>
               </div>
+              {/* Refund option for cancelled orders */}
+              {order.status === "CANCELLED" && refundablePayment && (
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <button
+                    onClick={handleRefund}
+                    disabled={loading}
+                    className="w-full py-3 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-xl shadow-lg hover:shadow-xl font-bold transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <RotateCcw size={18} />
+                    {loading ? "Processing Refund..." : "Process Refund"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -176,7 +289,9 @@ function LabOrderViewModal({ order, onClose }) {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 p-6 border-t bg-slate-50 rounded-b-2xl flex-shrink-0">
-          <button className="btn" onClick={onClose}>Close</button>
+          <button className="btn" onClick={onClose}>
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -184,4 +299,3 @@ function LabOrderViewModal({ order, onClose }) {
 }
 
 export default React.memo(LabOrderViewModal);
-

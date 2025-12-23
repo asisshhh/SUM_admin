@@ -18,7 +18,8 @@ import {
   UserPlus,
   X,
   ChevronDown,
-  Settings
+  Settings,
+  RotateCcw
 } from "lucide-react";
 
 // Import shared components
@@ -349,6 +350,54 @@ export default function HomeHealthcareOrders() {
     }
   };
 
+  const handleRefund = useCallback(
+    async (order) => {
+      // Find the payment with SUCCESS status and isOnline
+      const payment = order.payments?.find(
+        (p) =>
+          p.status === "SUCCESS" &&
+          p.isOnline === true &&
+          p.gatewayPaymentId &&
+          p.status !== "REFUNDED"
+      );
+
+      if (!payment) {
+        toast.error(
+          "No eligible payment found for refund. Payment must be online and successful with CCAvenue reference."
+        );
+        return;
+      }
+
+      const ok = await confirm({
+        title: "Process Refund",
+        message: `Are you sure you want to process a refund of ₹${payment.amount} for this cancelled home healthcare package order?`,
+        danger: false
+      });
+
+      if (!ok) return;
+
+      try {
+        const response = await api.post(`/ccavenue/refund/${payment.id}`, {
+          reason: "Home healthcare package order cancelled"
+        });
+
+        if (response.data.success) {
+          toast.success("Refund processed successfully");
+          await load(page);
+        } else {
+          toast.error(response.data.error || "Failed to process refund");
+        }
+      } catch (err) {
+        toast.error(
+          err.response?.data?.error ||
+            err.response?.data?.message ||
+            "Failed to process refund"
+        );
+      }
+    },
+    [confirm, load, page]
+  );
+
   // ═══════════════════════════════════════════════════════════════════
   // COMPUTED
   // ═══════════════════════════════════════════════════════════════════
@@ -604,6 +653,27 @@ export default function HomeHealthcareOrders() {
                               />
                             </span>
                           )}
+                          {/* Refund button for cancelled orders with successful online payments */}
+                          {(() => {
+                            const refundablePayment = row.payments?.find(
+                              (p) =>
+                                p.status === "SUCCESS" &&
+                                p.isOnline === true &&
+                                p.gatewayPaymentId &&
+                                p.status !== "REFUNDED"
+                            );
+                            return (
+                              row.status === "CANCELLED" &&
+                              refundablePayment && (
+                                <button
+                                  className="p-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                                  onClick={() => handleRefund(row)}
+                                  title="Process Refund">
+                                  <RotateCcw size={14} />
+                                </button>
+                              )
+                            );
+                          })()}
                           {/* Status Change Dropdown */}
                           {(() => {
                             const allowedStatuses =

@@ -16,7 +16,8 @@ import {
   User,
   Truck,
   RefreshCw,
-  Filter
+  Filter,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { Pagination, SearchableDropdown } from "../components/shared";
@@ -223,6 +224,54 @@ export default function AmbulanceOrders() {
       if (ok) cancelMutation.mutate({ id: booking.id, reason });
     },
     [confirm, cancelMutation]
+  );
+
+  const handleRefund = useCallback(
+    async (booking) => {
+      // Find the payment with SUCCESS status and isOnline
+      const payment = booking.payments?.find(
+        (p) =>
+          p.status === "SUCCESS" &&
+          p.isOnline === true &&
+          p.gatewayPaymentId &&
+          p.status !== "REFUNDED"
+      );
+
+      if (!payment) {
+        toast.error(
+          "No eligible payment found for refund. Payment must be online and successful with CCAvenue reference."
+        );
+        return;
+      }
+
+      const ok = await confirm({
+        title: "Process Refund",
+        message: `Are you sure you want to process a refund of ₹${payment.amount} for this cancelled ambulance booking?`,
+        danger: false
+      });
+
+      if (!ok) return;
+
+      try {
+        const response = await api.post(`/ccavenue/refund/${payment.id}`, {
+          reason: "Ambulance booking cancelled"
+        });
+
+        if (response.data.success) {
+          toast.success("Refund processed successfully");
+          refetch();
+        } else {
+          toast.error(response.data.error || "Failed to process refund");
+        }
+      } catch (err) {
+        toast.error(
+          err.response?.data?.error ||
+            err.response?.data?.message ||
+            "Failed to process refund"
+        );
+      }
+    },
+    [confirm, refetch]
   );
 
   // Memoize badge functions to prevent recreation on every render
@@ -673,6 +722,27 @@ export default function AmbulanceOrders() {
                               title="View Details">
                               <Eye size={16} />
                             </button>
+                            {/* Refund button for cancelled bookings with successful online payments */}
+                            {(() => {
+                              const refundablePayment = item.payments?.find(
+                                (p) =>
+                                  p.status === "SUCCESS" &&
+                                  p.isOnline === true &&
+                                  p.gatewayPaymentId &&
+                                  p.status !== "REFUNDED"
+                              );
+                              return (
+                                item.status === "CANCELLED" &&
+                                refundablePayment && (
+                                  <button
+                                    onClick={() => handleRefund(item)}
+                                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition"
+                                    title="Process Refund">
+                                    <RotateCcw size={16} />
+                                  </button>
+                                )
+                              );
+                            })()}
                             {item.status !== "CANCELLED" && (
                               <>
                                 {item.approved === null && (

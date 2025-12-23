@@ -12,7 +12,8 @@ import {
   Eye,
   CreditCard,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  RotateCcw
 } from "lucide-react";
 
 // Import shared components
@@ -163,6 +164,54 @@ export default function PackageOrders() {
     setTimeout(() => load(1), 100);
   };
 
+  const handleRefund = useCallback(
+    async (order) => {
+      // Find the payment with SUCCESS status and isOnline
+      const payment = order.payments?.find(
+        (p) =>
+          p.status === "SUCCESS" &&
+          p.isOnline === true &&
+          p.gatewayPaymentId &&
+          p.status !== "REFUNDED"
+      );
+
+      if (!payment) {
+        toast.error(
+          "No eligible payment found for refund. Payment must be online and successful with CCAvenue reference."
+        );
+        return;
+      }
+
+      const ok = await confirm({
+        title: "Process Refund",
+        message: `Are you sure you want to process a refund of ₹${payment.amount} for this cancelled health package order?`,
+        danger: false
+      });
+
+      if (!ok) return;
+
+      try {
+        const response = await api.post(`/ccavenue/refund/${payment.id}`, {
+          reason: "Health package order cancelled"
+        });
+
+        if (response.data.success) {
+          toast.success("Refund processed successfully");
+          await load(page);
+        } else {
+          toast.error(response.data.error || "Failed to process refund");
+        }
+      } catch (err) {
+        toast.error(
+          err.response?.data?.error ||
+            err.response?.data?.message ||
+            "Failed to process refund"
+        );
+      }
+    },
+    [confirm, load, page]
+  );
+
   // ═══════════════════════════════════════════════════════════════════
   // COMPUTED
   // ═══════════════════════════════════════════════════════════════════
@@ -277,6 +326,7 @@ export default function PackageOrders() {
                     index={(page - 1) * limit + i + 1}
                     onMarkPaid={() => onMarkPaidClick(r)}
                     onView={() => setViewingOrder(r)}
+                    onRefund={handleRefund}
                   />
                 ))}
               </tbody>
@@ -300,6 +350,7 @@ export default function PackageOrders() {
         <PackageOrderViewModal
           order={viewingOrder}
           onClose={() => setViewingOrder(null)}
+          onUpdated={() => load(page)}
         />
       )}
 
@@ -324,7 +375,7 @@ export default function PackageOrders() {
 // ROW COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
-function PackageOrderRow({ order, index, onMarkPaid, onView }) {
+function PackageOrderRow({ order, index, onMarkPaid, onView, onRefund }) {
   const r = order;
 
   return (
@@ -414,6 +465,32 @@ function PackageOrderRow({ order, index, onMarkPaid, onView }) {
               <CheckCircle2 size={16} className="text-emerald-500" />
             </span>
           )}
+          {/* Refund button for cancelled orders with successful online payments */}
+          {(() => {
+            const refundablePayment = r.payments?.find(
+              (p) =>
+                p.status === "SUCCESS" &&
+                p.isOnline === true &&
+                p.gatewayPaymentId &&
+                p.status !== "REFUNDED"
+            );
+            return (
+              r.status === "CANCELLED" &&
+              refundablePayment && (
+                <button
+                  type="button"
+                  className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onRefund?.(r);
+                  }}
+                  title="Process Refund">
+                  <RotateCcw size={16} />
+                </button>
+              )
+            );
+          })()}
         </div>
       </td>
     </tr>

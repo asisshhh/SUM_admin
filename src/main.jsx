@@ -62,6 +62,12 @@ import TimeSlotTemplatesPage from "./pages/TimeSlotTemplatesPage.jsx";
 // Privacy Policy Management
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import PublicPrivacyPolicyPage from "./pages/PublicPrivacyPolicyPage.jsx";
+// Terms of Use Management
+import TermsOfUsePage from "./pages/TermsOfUsePage.jsx";
+import PublicTermsOfUsePage from "./pages/PublicTermsOfUsePage.jsx";
+// Refund Policy Management
+import RefundPolicyPage from "./pages/RefundPolicyPage.jsx";
+import PublicRefundPolicyPage from "./pages/PublicRefundPolicyPage.jsx";
 
 const qc = new QueryClient();
 
@@ -94,6 +100,11 @@ createRoot(document.getElementById("root")).render(
               <Route
                 path="/privacy-policy"
                 element={<PublicPrivacyPolicyPage />}
+              />
+              <Route path="/terms-of-use" element={<PublicTermsOfUsePage />} />
+              <Route
+                path="/refund-policy"
+                element={<PublicRefundPolicyPage />}
               />
               <Route
                 path="/"
@@ -197,6 +208,11 @@ createRoot(document.getElementById("root")).render(
                 <Route
                   path="add-privacy-policy"
                   element={<PrivacyPolicyPage />}
+                />
+                <Route path="add-terms-of-use" element={<TermsOfUsePage />} />
+                <Route
+                  path="add-refund-policy"
+                  element={<RefundPolicyPage />}
                 />
               </Route>
             </Routes>

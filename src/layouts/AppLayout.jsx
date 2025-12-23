@@ -27,7 +27,9 @@ import {
   Shield,
   User,
   Crown,
-  FileText
+  FileText,
+  Scale,
+  RotateCcw
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -195,6 +197,18 @@ const DEFAULT_NAV_ITEMS = [
     label: "Privacy Policy",
     icon: FileText,
     category: "Admin"
+  },
+  {
+    path: "/add-terms-of-use",
+    label: "Terms of Use",
+    icon: Scale,
+    category: "Admin"
+  },
+  {
+    path: "/add-refund-policy",
+    label: "Refund Policy",
+    icon: RotateCcw,
+    category: "Admin"
   }
 ];
 
@@ -218,10 +232,14 @@ const SidebarNav = ({
       });
     }
 
-    // Filter Privacy Policy - only for ADMIN and SUPER_ADMIN
+    // Filter Privacy Policy, Terms of Use, and Refund Policy - only for ADMIN and SUPER_ADMIN
     const isAdmin = user?.role === "ADMIN";
     items = items.filter((item) => {
-      if (item.path === "/add-privacy-policy") {
+      if (
+        item.path === "/add-privacy-policy" ||
+        item.path === "/add-terms-of-use" ||
+        item.path === "/add-refund-policy"
+      ) {
         return isSuperAdmin || isAdmin;
       }
       return true;

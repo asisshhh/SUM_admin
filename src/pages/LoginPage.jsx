@@ -192,11 +192,23 @@ export default function LoginPage() {
             <p className="text-xs text-center text-slate-500 mb-2">
               Secure access to SUM Ultimate Medicare Admin Panel
             </p>
-            <div className="text-center">
+            <div className="flex items-center justify-center gap-3 text-xs">
               <a
                 href="/privacy-policy"
-                className="text-xs text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+                className="text-blue-600 hover:text-blue-700 hover:underline transition-colors">
                 Privacy Policy
+              </a>
+              <span className="text-slate-300">|</span>
+              <a
+                href="/terms-of-use"
+                className="text-purple-600 hover:text-purple-700 hover:underline transition-colors">
+                Terms of Use
+              </a>
+              <span className="text-slate-300">|</span>
+              <a
+                href="/refund-policy"
+                className="text-orange-600 hover:text-orange-700 hover:underline transition-colors">
+                Refund Policy
               </a>
             </div>
           </div>

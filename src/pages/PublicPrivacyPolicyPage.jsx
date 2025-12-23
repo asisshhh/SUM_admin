@@ -1,8 +1,7 @@
 // PublicPrivacyPolicyPage.jsx — Public page to view privacy policy (no login required)
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import api from "../api/client";
 import logo from "../assets/logo.webp";
 
@@ -26,8 +25,6 @@ const publicApi = {
 };
 
 export default function PublicPrivacyPolicyPage() {
-  const navigate = useNavigate();
-
   // Fetch privacy policy (public, no auth required)
   const { data, isLoading, error } = useQuery({
     queryKey: ["public-privacy-policy"],
@@ -75,11 +72,11 @@ export default function PublicPrivacyPolicyPage() {
               We're sorry, but we couldn't load the privacy policy at this time.
               Please try again later.
             </p>
-            <button
-              onClick={() => navigate("/login")}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            <a
+              href="/login"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition inline-block">
               Go to Login
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -103,25 +100,13 @@ export default function PublicPrivacyPolicyPage() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate("/login")}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                <ArrowLeft className="text-slate-600" size={20} />
-              </button>
-              <div className="flex items-center gap-2">
-                <FileText className="text-blue-600" size={24} />
-                <h1 className="text-xl font-bold text-slate-800">
-                  Privacy Policy
-                </h1>
-              </div>
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-2">
+              <FileText className="text-blue-600" size={24} />
+              <h1 className="text-xl font-bold text-slate-800">
+                Privacy Policy
+              </h1>
             </div>
-            <button
-              onClick={() => navigate("/login")}
-              className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition font-medium">
-              Back to Login
-            </button>
           </div>
         </div>
       </div>
@@ -161,15 +146,6 @@ export default function PublicPrivacyPolicyPage() {
               </div>
             </>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => navigate("/login")}
-            className="text-blue-600 hover:text-blue-700 font-medium">
-            ← Back to Login
-          </button>
         </div>
       </div>
     </div>

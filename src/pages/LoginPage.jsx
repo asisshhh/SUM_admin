@@ -195,18 +195,24 @@ export default function LoginPage() {
             <div className="flex items-center justify-center gap-3 text-xs">
               <a
                 href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-700 hover:underline transition-colors">
                 Privacy Policy
               </a>
               <span className="text-slate-300">|</span>
               <a
                 href="/terms-of-use"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-purple-600 hover:text-purple-700 hover:underline transition-colors">
                 Terms of Use
               </a>
               <span className="text-slate-300">|</span>
               <a
                 href="/refund-policy"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-orange-600 hover:text-orange-700 hover:underline transition-colors">
                 Refund Policy
               </a>

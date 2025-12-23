@@ -1,8 +1,7 @@
 // PublicTermsOfUsePage.jsx — Public page to view terms of use (no login required)
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Loader2, Scale } from "lucide-react";
+import { FileText, Loader2, Scale } from "lucide-react";
 import api from "../api/client";
 import logo from "../assets/logo.webp";
 
@@ -26,8 +25,6 @@ const publicApi = {
 };
 
 export default function PublicTermsOfUsePage() {
-  const navigate = useNavigate();
-
   // Fetch terms of use (public, no auth required)
   const { data, isLoading, error } = useQuery({
     queryKey: ["public-terms-of-use"],
@@ -75,11 +72,11 @@ export default function PublicTermsOfUsePage() {
               We're sorry, but we couldn't load the terms of use at this time.
               Please try again later.
             </p>
-            <button
-              onClick={() => navigate("/login")}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+            <a
+              href="/login"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition inline-block">
               Go to Login
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -103,25 +100,11 @@ export default function PublicTermsOfUsePage() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate("/login")}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                <ArrowLeft className="text-slate-600" size={20} />
-              </button>
-              <div className="flex items-center gap-2">
-                <Scale className="text-purple-600" size={24} />
-                <h1 className="text-xl font-bold text-slate-800">
-                  Terms of Use
-                </h1>
-              </div>
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-2">
+              <Scale className="text-purple-600" size={24} />
+              <h1 className="text-xl font-bold text-slate-800">Terms of Use</h1>
             </div>
-            <button
-              onClick={() => navigate("/login")}
-              className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition font-medium">
-              Back to Login
-            </button>
           </div>
         </div>
       </div>
@@ -161,15 +144,6 @@ export default function PublicTermsOfUsePage() {
               </div>
             </>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => navigate("/login")}
-            className="text-purple-600 hover:text-purple-700 font-medium">
-            ← Back to Login
-          </button>
         </div>
       </div>
     </div>

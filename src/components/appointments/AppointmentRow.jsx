@@ -177,6 +177,7 @@ function ActionButtons({ onView, onPrint, onRefund, doctorId, appointment }) {
       p.status === "SUCCESS" &&
       p.isOnline === true &&
       p.gatewayPaymentId &&
+      !p.refundedAt &&
       p.status !== "REFUNDED"
   );
 

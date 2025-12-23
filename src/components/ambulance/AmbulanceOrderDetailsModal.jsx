@@ -352,6 +352,7 @@ const AmbulanceOrderDetailsModal = React.memo(
                       payment.status === "SUCCESS" &&
                       payment.isOnline === true &&
                       payment.gatewayPaymentId &&
+                      !payment.refundedAt &&
                       payment.status !== "REFUNDED";
 
                     return (

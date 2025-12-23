@@ -172,6 +172,7 @@ export default function PackageOrders() {
           p.status === "SUCCESS" &&
           p.isOnline === true &&
           p.gatewayPaymentId &&
+          !p.refundedAt &&
           p.status !== "REFUNDED"
       );
 
@@ -472,6 +473,7 @@ function PackageOrderRow({ order, index, onMarkPaid, onView, onRefund }) {
                 p.status === "SUCCESS" &&
                 p.isOnline === true &&
                 p.gatewayPaymentId &&
+                !p.refundedAt &&
                 p.status !== "REFUNDED"
             );
             return (

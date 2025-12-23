@@ -512,6 +512,7 @@ export default function OrderDetailsModal({
                   p.status === "SUCCESS" &&
                   p.isOnline === true &&
                   p.gatewayPaymentId &&
+                  !p.refundedAt &&
                   p.status !== "REFUNDED"
               );
 

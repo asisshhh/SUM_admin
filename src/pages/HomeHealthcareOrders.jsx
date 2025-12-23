@@ -358,6 +358,7 @@ export default function HomeHealthcareOrders() {
           p.status === "SUCCESS" &&
           p.isOnline === true &&
           p.gatewayPaymentId &&
+          !p.refundedAt &&
           p.status !== "REFUNDED"
       );
 
@@ -660,6 +661,7 @@ export default function HomeHealthcareOrders() {
                                 p.status === "SUCCESS" &&
                                 p.isOnline === true &&
                                 p.gatewayPaymentId &&
+                                !p.refundedAt &&
                                 p.status !== "REFUNDED"
                             );
                             return (

@@ -228,6 +228,7 @@ export default function LabOrders() {
           p.status === "SUCCESS" &&
           p.isOnline === true &&
           p.gatewayPaymentId &&
+          !p.refundedAt &&
           p.status !== "REFUNDED"
       );
 
@@ -567,6 +568,7 @@ function LabOrderRow({
                 p.status === "SUCCESS" &&
                 p.isOnline === true &&
                 p.gatewayPaymentId &&
+                !p.refundedAt &&
                 p.status !== "REFUNDED"
             );
             return (

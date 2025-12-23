@@ -234,6 +234,7 @@ export default function AmbulanceOrders() {
           p.status === "SUCCESS" &&
           p.isOnline === true &&
           p.gatewayPaymentId &&
+          !p.refundedAt &&
           p.status !== "REFUNDED"
       );
 
@@ -729,6 +730,7 @@ export default function AmbulanceOrders() {
                                   p.status === "SUCCESS" &&
                                   p.isOnline === true &&
                                   p.gatewayPaymentId &&
+                                  !p.refundedAt &&
                                   p.status !== "REFUNDED"
                               );
                               return (

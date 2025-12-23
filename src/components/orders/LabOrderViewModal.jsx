@@ -70,6 +70,7 @@ function LabOrderViewModal({ order, onClose, onUpdated }) {
       p.status === "SUCCESS" &&
       p.isOnline === true &&
       p.gatewayPaymentId &&
+      !p.refundedAt &&
       p.status !== "REFUNDED"
   );
 

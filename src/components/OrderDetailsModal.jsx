@@ -65,7 +65,10 @@ export default function OrderDetailsModal({
     COMPLETED: "bg-green-100 text-green-800 border-green-300",
     CANCELLED: "bg-red-100 text-red-800 border-red-300",
     SKIPPED: "bg-orange-100 text-orange-800 border-orange-300",
-    IN_QUEUE: "bg-purple-100 text-purple-800 border-purple-300"
+    IN_QUEUE: "bg-purple-100 text-purple-800 border-purple-300",
+    IN_PROGRESS: "bg-indigo-100 text-indigo-800 border-indigo-300",
+    CHECKED_IN: "bg-purple-100 text-purple-800 border-purple-300", // Backend status, maps to IN_QUEUE in UI
+    NO_SHOW: "bg-orange-100 text-orange-800 border-orange-300" // Backend status, maps to SKIPPED in UI
   };
 
   const paymentStatusColor = {
@@ -309,14 +312,60 @@ export default function OrderDetailsModal({
     setLoading(false);
   };
 
-  const statusOptions = [
+  // ✅ Sequential status transitions for appointments (like ambulance orders)
+  // Workflow: PENDING → CONFIRMED → IN_QUEUE (CHECKED_IN) → IN_PROGRESS → COMPLETED
+  // Cannot go backwards (e.g., CONFIRMED → PENDING)
+  // Admin cannot directly set IN_QUEUE - must go through CONFIRMED first
+  const STATUS_TRANSITIONS = {
+    PENDING: ["CONFIRMED", "CANCELLED"],
+    CONFIRMED: ["IN_QUEUE", "CANCELLED", "SKIPPED"], // Cannot go back to PENDING
+    CHECKED_IN: ["IN_PROGRESS", "COMPLETED", "CANCELLED", "SKIPPED"], // Backend uses CHECKED_IN, UI shows IN_QUEUE
+    IN_QUEUE: ["IN_PROGRESS", "COMPLETED", "CANCELLED", "SKIPPED"], // UI label for CHECKED_IN
+    IN_PROGRESS: ["COMPLETED", "CANCELLED"], // Cannot go back
+    COMPLETED: [], // No transitions from COMPLETED
+    CANCELLED: [], // No transitions from CANCELLED
+    NO_SHOW: [], // No transitions from NO_SHOW
+    SKIPPED: [] // No transitions from SKIPPED (UI label for NO_SHOW)
+  };
+
+  // All possible status options for UI (mapped from backend enum)
+  const ALL_STATUS_OPTIONS = [
     "PENDING",
     "CONFIRMED",
+    "IN_QUEUE", // UI label for CHECKED_IN
+    "IN_PROGRESS",
     "COMPLETED",
     "CANCELLED",
-    "SKIPPED",
-    "IN_QUEUE"
+    "SKIPPED" // UI label for NO_SHOW
   ];
+
+  // Get allowed status transitions based on current status
+  const getAllowedStatuses = () => {
+    const currentStatus = localData.status;
+    const allowed = STATUS_TRANSITIONS[currentStatus] || [];
+
+    // Map backend statuses to UI statuses
+    // CHECKED_IN (backend) → IN_QUEUE (UI)
+    // NO_SHOW (backend) → SKIPPED (UI)
+    const mappedAllowed = allowed.map((s) => {
+      if (s === "CHECKED_IN") return "IN_QUEUE";
+      if (s === "NO_SHOW") return "SKIPPED";
+      return s;
+    });
+
+    // Filter to only include valid UI status options
+    return mappedAllowed.filter((s) => ALL_STATUS_OPTIONS.includes(s));
+  };
+
+  const statusOptions = getAllowedStatuses();
+
+  // Map backend status to UI display status (CHECKED_IN → IN_QUEUE, NO_SHOW → SKIPPED)
+  const displayStatus =
+    localData.status === "CHECKED_IN"
+      ? "IN_QUEUE"
+      : localData.status === "NO_SHOW"
+      ? "SKIPPED"
+      : localData.status;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -367,25 +416,31 @@ export default function OrderDetailsModal({
                 <button
                   onClick={() => setStatusOpen((v) => !v)}
                   className={`px-4 py-1.5 text-sm font-bold rounded-xl border-2 flex items-center gap-2 shadow-sm transition-all hover:scale-105 ${
-                    badgeColor[localData.status]
+                    badgeColor[displayStatus] || badgeColor[localData.status]
                   }`}>
-                  {localData.status} <ChevronDown size={14} />
+                  {displayStatus} <ChevronDown size={14} />
                 </button>
               </div>
 
               {statusOpen && (
                 <div className="absolute right-0 mt-2 bg-white border-2 border-slate-200 shadow-2xl rounded-xl z-20 w-48 overflow-hidden">
-                  {statusOptions.map((s) => (
-                    <div
-                      key={s}
-                      className="px-4 py-2.5 hover:bg-gradient-to-r hover:from-violet-50 hover:to-purple-50 cursor-pointer text-sm font-medium text-slate-700 transition-all border-b border-slate-100 last:border-0"
-                      onClick={() => {
-                        updateStatus(s);
-                        setStatusOpen(false);
-                      }}>
-                      {s}
+                  {statusOptions.length > 0 ? (
+                    statusOptions.map((s) => (
+                      <div
+                        key={s}
+                        className="px-4 py-2.5 hover:bg-gradient-to-r hover:from-violet-50 hover:to-purple-50 cursor-pointer text-sm font-medium text-slate-700 transition-all border-b border-slate-100 last:border-0"
+                        onClick={() => {
+                          updateStatus(s);
+                          setStatusOpen(false);
+                        }}>
+                        {s}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2.5 text-sm text-slate-500 italic">
+                      No status transitions available
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>

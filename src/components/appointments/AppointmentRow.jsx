@@ -36,7 +36,11 @@ export default function AppointmentRow({
 
       {/* Patient Info */}
       <td className="px-4 py-3.5">
-        <PatientCell name={r.patient?.name} phone={r.patient?.phone} />
+        <PatientCell
+          name={r.patient?.name}
+          phone={r.patient?.phone}
+          userName={r.user?.name}
+        />
       </td>
 
       {/* Doctor Info */}
@@ -90,7 +94,7 @@ export default function AppointmentRow({
 }
 
 // Sub-components
-function PatientCell({ name, phone }) {
+function PatientCell({ name, phone, userName }) {
   return (
     <div className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
@@ -98,7 +102,7 @@ function PatientCell({ name, phone }) {
       </div>
       <div>
         <p className="font-medium text-slate-800">{name || "-"}</p>
-        <p className="text-xs text-slate-500">{phone || "-"}</p>
+        <p className="text-xs text-slate-500">{userName || "-"}</p>
       </div>
     </div>
   );

@@ -33,7 +33,10 @@ export default function PaymentBadge({ status, amount }) {
         COLOR_CLASSES[config.color]
       }`}>
       <Icon size={12} />
-      <span>₹{amount ?? "-"}</span>
+      <span>{config.label}</span>
+      {amount !== undefined && amount !== null && (
+        <span className="ml-1">₹{amount}</span>
+      )}
     </div>
   );
 }

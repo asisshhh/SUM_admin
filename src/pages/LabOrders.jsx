@@ -226,10 +226,9 @@ export default function LabOrders() {
       const payment = order.payments?.find(
         (p) =>
           p.status === "SUCCESS" &&
-          p.isOnline === true &&
+          (p.isOnline === true || p.isOnline === "true" || p.isOnline === 1) &&
           p.gatewayPaymentId &&
-          !p.refundedAt &&
-          p.status !== "REFUNDED"
+          !p.refundedAt
       );
 
       if (!payment) {
@@ -563,14 +562,21 @@ function LabOrderRow({
           )}
           {/* Refund button for cancelled orders with successful online payments */}
           {(() => {
-            const refundablePayment = r.payments?.find(
+            // Ensure payments is an array
+            const payments = Array.isArray(r.payments) ? r.payments : [];
+
+            const refundablePayment = payments.find(
               (p) =>
+                p &&
                 p.status === "SUCCESS" &&
-                p.isOnline === true &&
+                (p.isOnline === true ||
+                  p.isOnline === "true" ||
+                  p.isOnline === 1 ||
+                  String(p.isOnline).toLowerCase() === "true") &&
                 p.gatewayPaymentId &&
-                !p.refundedAt &&
-                p.status !== "REFUNDED"
+                !p.refundedAt
             );
+
             return (
               r.status === "CANCELLED" &&
               refundablePayment && (

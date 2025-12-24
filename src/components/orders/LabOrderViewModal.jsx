@@ -68,11 +68,21 @@ function LabOrderViewModal({ order, onClose, onUpdated }) {
   const refundablePayment = order.payments?.find(
     (p) =>
       p.status === "SUCCESS" &&
-      p.isOnline === true &&
+      (p.isOnline === true || p.isOnline === "true" || p.isOnline === 1) &&
       p.gatewayPaymentId &&
       !p.refundedAt &&
       p.status !== "REFUNDED"
   );
+
+  // Check if any payment has been refunded
+  const hasRefundedPayment = order.payments?.some(
+    (p) => p.refundedAt || p.status === "REFUNDED"
+  );
+
+  // Determine actual payment status from payments array
+  const actualPaymentStatus = hasRefundedPayment
+    ? "REFUNDED"
+    : order.paymentStatus;
 
   const handleRefund = async () => {
     if (!refundablePayment) {
@@ -226,25 +236,28 @@ function LabOrderViewModal({ order, onClose, onUpdated }) {
                   <p className="text-xs text-slate-500 mb-1">Payment Status</p>
                   <span
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                      order.paymentStatus === "SUCCESS" ||
-                      order.paymentStatus === "PAID"
+                      (actualPaymentStatus === "SUCCESS" ||
+                        actualPaymentStatus === "PAID") &&
+                      !hasRefundedPayment
                         ? "bg-emerald-100 text-emerald-700"
-                        : order.paymentStatus === "REFUNDED"
+                        : actualPaymentStatus === "REFUNDED" ||
+                          hasRefundedPayment
                         ? "bg-orange-100 text-orange-700"
                         : "bg-amber-100 text-amber-700"
                     }`}>
-                    {order.paymentStatus === "SUCCESS" ||
-                    order.paymentStatus === "PAID" ? (
-                      <>
-                        <CheckCircle2 size={14} /> Paid
-                      </>
-                    ) : order.paymentStatus === "REFUNDED" ? (
+                    {hasRefundedPayment ||
+                    actualPaymentStatus === "REFUNDED" ? (
                       <>
                         <RotateCcw size={14} /> Refunded
                       </>
+                    ) : actualPaymentStatus === "SUCCESS" ||
+                      actualPaymentStatus === "PAID" ? (
+                      <>
+                        <CheckCircle2 size={14} /> Paid
+                      </>
                     ) : (
                       <>
-                        <Clock size={14} /> {order.paymentStatus || "Pending"}
+                        <Clock size={14} /> {actualPaymentStatus || "Pending"}
                       </>
                     )}
                   </span>

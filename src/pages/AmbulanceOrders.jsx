@@ -31,7 +31,8 @@ import CalculateFinalModal from "../components/ambulance/CalculateFinalModal";
 import PaymentCompleteModal from "../components/ambulance/PaymentCompleteModal";
 
 // Valid status transitions for ambulance bookings
-// Workflow: REQUESTED → CONFIRMED → ASSIGNED → DISPATCHED → ARRIVED → PATIENT_ONBOARD → EN_ROUTE_TO_HOSPITAL → ARRIVED_AT_HOSPITAL → COMPLETED
+// Workflow: REQUESTED → CONFIRMED → ASSIGNED → DISPATCHED → ARRIVED → PATIENT_ONBOARD → EN_ROUTE_TO_HOSPITAL → ARRIVED_AT_HOSPITAL → IN_PROGRESS
+// Note: COMPLETED status can only be set automatically via payment completion, not manually
 const STATUS_TRANSITIONS = {
   REQUESTED: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["ASSIGNED", "DISPATCHED", "CANCELLED"],
@@ -40,8 +41,8 @@ const STATUS_TRANSITIONS = {
   ARRIVED: ["PATIENT_ONBOARD", "CANCELLED"],
   PATIENT_ONBOARD: ["EN_ROUTE_TO_HOSPITAL", "CANCELLED"],
   EN_ROUTE_TO_HOSPITAL: ["ARRIVED_AT_HOSPITAL", "CANCELLED"],
-  ARRIVED_AT_HOSPITAL: ["IN_PROGRESS", "COMPLETED", "CANCELLED"],
-  IN_PROGRESS: ["COMPLETED", "CANCELLED"],
+  ARRIVED_AT_HOSPITAL: ["IN_PROGRESS", "CANCELLED"],
+  IN_PROGRESS: ["CANCELLED"],
   COMPLETED: [],
   CANCELLED: []
 };
@@ -686,32 +687,42 @@ export default function AmbulanceOrders() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="overflow-hidden">
+                <table className="w-full table-fixed">
+                  <colgroup>
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "20%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "16%" }} />
+                  </colgroup>
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
                         Booking ID
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
                         User
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
                         Ambulance Type
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
                         Route
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
                         Amounts
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
                         Approval
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
                         Actions
                       </th>
                     </tr>
@@ -719,8 +730,8 @@ export default function AmbulanceOrders() {
                   <tbody className="divide-y divide-slate-200">
                     {items.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-slate-800">
+                        <td className="px-3 py-4">
+                          <div className="font-medium text-slate-800 text-sm">
                             #{item.id}
                           </div>
                           {item.emergency && (
@@ -729,30 +740,40 @@ export default function AmbulanceOrders() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-slate-800">
+                        <td className="px-3 py-4">
+                          <div
+                            className="font-medium text-slate-800 text-sm truncate"
+                            title={item.user?.name || "-"}>
                             {item.user?.name || "-"}
                           </div>
-                          <div className="text-xs text-slate-500">
+                          <div
+                            className="text-xs text-slate-500 truncate"
+                            title={item.user?.phone || "-"}>
                             {item.user?.phone || "-"}
                           </div>
                           {item.patientName && (
-                            <div className="text-xs text-slate-500">
+                            <div
+                              className="text-xs text-slate-500 truncate"
+                              title={`Patient: ${item.patientName}`}>
                               Patient: {item.patientName}
                             </div>
                           )}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 py-4">
                           {item.ambulanceType ? (
                             <div>
-                              <div className="font-medium text-slate-800">
+                              <div
+                                className="font-medium text-slate-800 text-sm truncate"
+                                title={item.ambulanceType.name || "-"}>
                                 {item.ambulanceType.name || "-"}
                               </div>
                               <div className="text-xs text-slate-500">
                                 {item.ambulanceType.code || ""}
                               </div>
                               {item.ambulance && (
-                                <div className="text-xs text-green-600 mt-1 font-medium">
+                                <div
+                                  className="text-xs text-green-600 mt-1 font-medium truncate"
+                                  title={item.ambulance.vehicleNumber}>
                                   🚑 {item.ambulance.vehicleNumber}
                                 </div>
                               )}
@@ -761,39 +782,61 @@ export default function AmbulanceOrders() {
                             <span className="text-slate-400 text-sm">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm">
-                            <div className="flex items-start gap-2 mb-1">
-                              <MapPin className="text-green-600" size={14} />
-                              <span className="text-slate-600">
+                        <td className="px-3 py-4">
+                          <div className="text-xs">
+                            <div className="flex items-start gap-1 mb-1">
+                              <MapPin
+                                className="text-green-600 flex-shrink-0 mt-0.5"
+                                size={12}
+                              />
+                              <span
+                                className="text-slate-600 truncate block"
+                                title={item.pickupAddress}
+                                style={{
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 1,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden"
+                                }}>
                                 {item.pickupAddress}
                               </span>
                             </div>
-                            <div className="flex items-start gap-2">
-                              <MapPin className="text-red-600" size={14} />
-                              <span className="text-slate-600">
+                            <div className="flex items-start gap-1">
+                              <MapPin
+                                className="text-red-600 flex-shrink-0 mt-0.5"
+                                size={12}
+                              />
+                              <span
+                                className="text-slate-600 truncate block"
+                                title={item.destination}
+                                style={{
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 1,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden"
+                                }}>
                                 {item.destination}
                               </span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm space-y-1">
-                            <div>
-                              <span className="text-slate-500">Initial: </span>
+                        <td className="px-3 py-4">
+                          <div className="text-xs space-y-0.5">
+                            <div className="truncate">
+                              <span className="text-slate-500">Init: </span>
                               <span className="font-medium">
                                 ₹{item.initialAmount || 0}
                               </span>
                             </div>
                             {item.extraAmount > 0 && (
-                              <div>
+                              <div className="truncate">
                                 <span className="text-slate-500">Extra: </span>
                                 <span className="font-medium">
                                   ₹{item.extraAmount}
                                 </span>
                               </div>
                             )}
-                            <div>
+                            <div className="truncate">
                               <span className="text-slate-500">Total: </span>
                               <span className="font-bold text-green-600">
                                 ₹{item.totalAmount || item.initialAmount || 0}
@@ -801,19 +844,19 @@ export default function AmbulanceOrders() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-3 py-4 text-center">
                           {getApprovalBadge(item.approved)}
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-3 py-4 text-center">
                           {getStatusBadge(item.status)}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <td className="px-3 py-4">
+                          <div className="flex items-center justify-center gap-1 flex-wrap">
                             <button
                               onClick={() => handleView(item)}
-                              className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition"
+                              className="p-1.5 text-slate-600 hover:bg-slate-50 rounded transition"
                               title="View Details">
-                              <Eye size={16} />
+                              <Eye size={14} />
                             </button>
                             {/* Refund button for cancelled bookings with successful online payments */}
                             {(() => {
@@ -830,9 +873,9 @@ export default function AmbulanceOrders() {
                                 refundablePayment && (
                                   <button
                                     onClick={() => handleRefund(item)}
-                                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition"
+                                    className="p-1.5 text-orange-600 hover:bg-orange-50 rounded transition"
                                     title="Process Refund">
-                                    <RotateCcw size={16} />
+                                    <RotateCcw size={14} />
                                   </button>
                                 )
                               );
@@ -843,15 +886,15 @@ export default function AmbulanceOrders() {
                                   <>
                                     <button
                                       onClick={() => handleApprove(item)}
-                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                      className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
                                       title="Approve">
-                                      <CheckCircle size={16} />
+                                      <CheckCircle size={14} />
                                     </button>
                                     <button
                                       onClick={() => handleDecline(item)}
-                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
                                       title="Decline">
-                                      <XCircle size={16} />
+                                      <XCircle size={14} />
                                     </button>
                                   </>
                                 )}
@@ -862,7 +905,7 @@ export default function AmbulanceOrders() {
                                         onClick={() =>
                                           handleAssignAmbulance(item)
                                         }
-                                        className={`p-2 rounded-lg transition ${
+                                        className={`p-1.5 rounded transition ${
                                           item.ambulanceId
                                             ? "text-purple-600 hover:bg-purple-50"
                                             : "text-purple-600 hover:bg-purple-50"
@@ -872,7 +915,7 @@ export default function AmbulanceOrders() {
                                             ? "Reassign Ambulance"
                                             : "Assign Ambulance"
                                         }>
-                                        <Truck size={16} />
+                                        <Truck size={14} />
                                       </button>
                                     )}
                                     {item.status !== "COMPLETED" &&
@@ -882,28 +925,34 @@ export default function AmbulanceOrders() {
                                             onClick={() =>
                                               handleCalculateFinal(item)
                                             }
-                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
                                             title="Calculate Final">
-                                            <Calculator size={16} />
+                                            <Calculator size={14} />
                                           </button>
-                                          {item.totalAmount && (
-                                            <button
-                                              onClick={() =>
-                                                handlePaymentComplete(item)
-                                              }
-                                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                              title="Update Payment & Complete">
-                                              <DollarSign size={16} />
-                                            </button>
-                                          )}
+                                          {/* Show "Mark as Paid" only if there's extra amount (initialAmount !== totalAmount) */}
+                                          {item.totalAmount &&
+                                            item.initialAmount &&
+                                            Math.abs(
+                                              item.initialAmount -
+                                                item.totalAmount
+                                            ) > 0.01 && (
+                                              <button
+                                                onClick={() =>
+                                                  handlePaymentComplete(item)
+                                                }
+                                                className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
+                                                title="Update Payment & Complete">
+                                                <DollarSign size={14} />
+                                              </button>
+                                            )}
                                         </>
                                       )}
                                     {item.status !== "COMPLETED" && (
                                       <button
                                         onClick={() => handleCancel(item)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
                                         title="Cancel Order">
-                                        <XCircle size={16} />
+                                        <XCircle size={14} />
                                       </button>
                                     )}
                                     {/* Status Change Dropdown */}
@@ -935,7 +984,7 @@ export default function AmbulanceOrders() {
                                             zIndex: isOpen ? 1000 : "auto"
                                           }}>
                                           <button
-                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition flex items-center gap-1"
+                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition flex items-center gap-0.5"
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setStatusDropdownOpen(
@@ -943,9 +992,9 @@ export default function AmbulanceOrders() {
                                               );
                                             }}
                                             title="Change Status">
-                                            <Settings size={16} />
+                                            <Settings size={14} />
                                             <ChevronDown
-                                              size={10}
+                                              size={9}
                                               className={`transition-transform ${
                                                 isOpen ? "rotate-180" : ""
                                               }`}

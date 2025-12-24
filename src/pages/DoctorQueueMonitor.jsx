@@ -27,6 +27,7 @@ export default function DoctorQueueMonitor() {
   const [next, setNext] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
+  const [doctor, setDoctor] = useState(null);
 
   const loadQueue = useCallback(async () => {
     try {
@@ -95,9 +96,21 @@ export default function DoctorQueueMonitor() {
     }
   }, [doctorId, today]);
 
+  // Load doctor details
+  const loadDoctor = useCallback(async () => {
+    if (!doctorId) return;
+    try {
+      const res = await api.get(`/doctors/${doctorId}`);
+      setDoctor(res.data?.data || res.data || null);
+    } catch (e) {
+      console.error("Failed to load doctor details:", e);
+    }
+  }, [doctorId]);
+
   useEffect(() => {
     loadQueue();
-  }, [loadQueue]);
+    loadDoctor();
+  }, [loadQueue, loadDoctor]);
 
   // SOCKET HANDLERS (Optimized)
   useEffect(() => {
@@ -203,10 +216,36 @@ export default function DoctorQueueMonitor() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-800 mb-2">
-                Live Queue Monitor (Optimized)
+                Live Queue Monitor
               </h1>
-              <p className="text-slate-600 flex items-center gap-3">
-                <span className="font-semibold">Doctor ID: {doctorId}</span>
+              <p className="text-slate-600 flex items-center gap-3 flex-wrap">
+                {doctor ? (
+                  <>
+                    <span className="font-semibold text-slate-800">
+                      {doctor.user?.name || "Doctor"}
+                    </span>
+                    {doctor.specialization && (
+                      <>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-slate-600">
+                          {doctor.specialization}
+                        </span>
+                      </>
+                    )}
+                    {doctor.department?.name && (
+                      <>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-slate-600">
+                          {doctor.department.name}
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <span className="font-semibold">
+                    Loading doctor details...
+                  </span>
+                )}
                 <span className="text-slate-400">•</span>
                 <span>{today}</span>
               </p>

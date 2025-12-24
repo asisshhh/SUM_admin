@@ -708,23 +708,13 @@ const CalculateFinalModal = React.memo(function CalculateFinalModal({
               Cancel
             </button>
             {!showPaymentForm ? (
-              <>
-                <button
-                  onClick={handleCalculate}
-                  disabled={calculateMutation.isPending || !finalKm}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2">
-                  <Calculator size={18} />
-                  {calculateMutation.isPending ? "Calculating..." : "Calculate"}
-                </button>
-                {extraAmount > 0 && (
-                  <button
-                    onClick={() => setShowPaymentForm(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2">
-                    <DollarSign size={18} />
-                    Update Payment
-                  </button>
-                )}
-              </>
+              <button
+                onClick={handleCalculate}
+                disabled={calculateMutation.isPending || !finalKm}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2">
+                <Calculator size={18} />
+                {calculateMutation.isPending ? "Calculating..." : "Calculate"}
+              </button>
             ) : null}
           </div>
         </div>

@@ -3,7 +3,7 @@ import { Calendar, RefreshCw } from "lucide-react";
 import AppointmentRow from "./AppointmentRow";
 
 const TABLE_HEADERS = [
-  { key: "index", label: "#" },
+  { key: "orderId", label: "Order ID" },
   { key: "patient", label: "Patient" },
   { key: "doctor", label: "Doctor" },
   { key: "schedule", label: "Schedule" },
@@ -43,11 +43,10 @@ export default function AppointmentTable({
           </thead>
           <tbody>
             {rows.length === 0 && !loading && <EmptyState />}
-            {rows.map((appointment, i) => (
+            {rows.map((appointment) => (
               <AppointmentRow
                 key={appointment.id}
                 appointment={appointment}
-                index={(page - 1) * limit + i + 1}
                 onView={() => onViewDetails(appointment)}
                 onPrint={() => onPrintReceipt(appointment)}
                 onRefund={onRefund}

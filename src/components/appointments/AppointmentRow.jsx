@@ -12,7 +12,6 @@ import StatusBadge from "./StatusBadge";
 
 export default function AppointmentRow({
   appointment,
-  index,
   onView,
   onPrint,
   onRefund
@@ -32,8 +31,8 @@ export default function AppointmentRow({
 
   return (
     <tr className="hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-transparent transition-all duration-200 border-b border-slate-100 last:border-0">
-      {/* Index */}
-      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">#{index}</td>
+      {/* Order ID */}
+      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">#{r.id}</td>
 
       {/* Patient Info */}
       <td className="px-4 py-3.5">

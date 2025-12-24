@@ -480,51 +480,35 @@ export default function HomeHealthcareOrders() {
                 className="w-full text-xs"
                 style={{ tableLayout: "fixed" }}>
                 <colgroup>
-                  <col style={{ width: "9%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "8%" }} />
-                  <col style={{ width: "7%" }} />
-                  <col style={{ width: "6%" }} />
-                  <col style={{ width: "7%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "8%" }} />
-                  <col style={{ width: "9%" }} />
-                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "18%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "20%" }} />
                 </colgroup>
                 <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Order #
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Package
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Patient
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Date
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      Date & Time
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Time
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Payment
                     </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Assigned To
                     </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -533,63 +517,58 @@ export default function HomeHealthcareOrders() {
                   {rows.map((row, i) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-3 py-3">
-                        <span className="font-mono text-xs text-slate-500 truncate block">
-                          {row.orderNumber || `HHP0${row.id}`}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="min-w-0">
-                          <div className="font-medium text-slate-800 text-xs truncate">
-                            {row.user?.name || "-"}
-                          </div>
-                          <div className="text-xs text-slate-500 truncate">
-                            {row.user?.phone || ""}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="min-w-0">
-                          <div className="font-medium text-slate-700 text-xs truncate">
+                      className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-slate-50/50 hover:to-transparent transition-all duration-200">
+                      <td className="px-4 py-4">
+                        <div className="space-y-1.5">
+                          <div className="font-semibold text-slate-800 text-sm">
                             {row.packageName || row.package?.name || "-"}
                           </div>
+                          <div className="font-mono text-xs text-slate-500 break-all leading-relaxed">
+                            {row.orderNumber || `HHP0${row.id}`}
+                          </div>
                           {row.serviceCount && (
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-slate-500 font-medium">
                               {row.serviceCount} services
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-3">
-                        <div className="min-w-0">
-                          <div className="font-medium text-slate-800 text-xs truncate">
+                      <td className="px-4 py-4">
+                        <div className="space-y-1">
+                          <div className="font-medium text-slate-800 text-sm truncate">
                             {row.patient?.name || "-"}
                           </div>
-                          <div className="text-xs text-slate-500 truncate">
-                            {row.patient?.relation || ""}
-                          </div>
+                          {row.patient?.relation && (
+                            <div className="text-xs text-slate-500">
+                              {row.patient.relation}
+                            </div>
+                          )}
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-xs">
-                        {row.scheduledDate
-                          ? new Date(row.scheduledDate).toLocaleDateString(
-                              "en-IN",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "2-digit"
-                              }
-                            )
-                          : "-"}
+                      <td className="px-4 py-4">
+                        <div className="space-y-1">
+                          {row.scheduledDate ? (
+                            <div className="font-medium text-slate-800 text-sm">
+                              {new Date(row.scheduledDate).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "2-digit"
+                                }
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-slate-400 text-sm">-</div>
+                          )}
+                          {(row.scheduledTime || row.timeSlot) && (
+                            <div className="text-xs text-slate-500 font-medium">
+                              {row.scheduledTime || row.timeSlot}
+                            </div>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-3 py-3 text-xs">
-                        {row.scheduledTime || row.timeSlot || "-"}
-                      </td>
-                      <td className="px-3 py-3 font-semibold text-slate-800 text-xs">
-                        ₹{row.totalAmount || 0}
-                      </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-4 py-4 text-center">
                         <div className="flex justify-center">
                           <PaymentBadge
                             status={row.paymentStatus || "PENDING"}
@@ -597,59 +576,59 @@ export default function HomeHealthcareOrders() {
                           />
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-4 py-4 text-center">
                         <div className="flex justify-center">
                           <OrderStatusBadge status={row.status} />
                         </div>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-4">
                         {row.assignee ? (
-                          <div className="min-w-0">
-                            <div className="font-medium text-xs text-slate-800 truncate">
+                          <div className="space-y-1">
+                            <div className="font-medium text-sm text-slate-800 truncate">
                               {row.assignee.name}
                             </div>
-                            <div className="text-xs text-slate-500 truncate">
+                            <div className="text-xs text-slate-500">
                               {row.assignee.role}
                             </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400">
+                          <span className="text-sm text-slate-400 italic">
                             Unassigned
                           </span>
                         )}
                       </td>
                       <td
-                        className="px-3 py-3"
+                        className="px-4 py-4"
                         style={{ position: "relative", zIndex: "auto" }}>
                         <div
-                          className="flex justify-center gap-1 flex-wrap items-center"
+                          className="flex justify-center gap-2 items-center flex-wrap"
                           style={{ position: "relative" }}>
                           <button
-                            className="p-1.5 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
+                            className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-all hover:scale-105"
                             onClick={() => handleViewOrder(row)}
                             title="View Details">
-                            <Eye size={14} />
+                            <Eye size={16} />
                           </button>
                           <button
-                            className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
+                            className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all hover:scale-105"
                             onClick={() => handleAssignOrder(row)}
                             title="Assign">
-                            <UserPlus size={14} />
+                            <UserPlus size={16} />
                           </button>
                           {row.paymentStatus !== "SUCCESS" &&
                             row.status !== "CANCELLED" && (
                               <button
-                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all hover:scale-105"
                                 onClick={() => onMarkPaidClick(row)}
                                 title="Mark as Paid">
-                                <CreditCard size={14} />
+                                <CreditCard size={16} />
                               </button>
                             )}
                           {/* Show checkmark if already paid */}
                           {row.paymentStatus === "SUCCESS" && (
-                            <span className="p-1.5">
+                            <span className="p-2 inline-flex items-center">
                               <CheckCircle2
-                                size={14}
+                                size={16}
                                 className="text-emerald-500"
                               />
                             </span>
@@ -659,19 +638,20 @@ export default function HomeHealthcareOrders() {
                             const refundablePayment = row.payments?.find(
                               (p) =>
                                 p.status === "SUCCESS" &&
-                                p.isOnline === true &&
+                                (p.isOnline === true ||
+                                  p.isOnline === "true" ||
+                                  p.isOnline === 1) &&
                                 p.gatewayPaymentId &&
-                                !p.refundedAt &&
-                                p.status !== "REFUNDED"
+                                !p.refundedAt
                             );
                             return (
                               row.status === "CANCELLED" &&
                               refundablePayment && (
                                 <button
-                                  className="p-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                                  className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-all hover:scale-105"
                                   onClick={() => handleRefund(row)}
                                   title="Process Refund">
-                                  <RotateCcw size={14} />
+                                  <RotateCcw size={16} />
                                 </button>
                               )
                             );

@@ -31,17 +31,18 @@ import CalculateFinalModal from "../components/ambulance/CalculateFinalModal";
 import PaymentCompleteModal from "../components/ambulance/PaymentCompleteModal";
 
 // Valid status transitions for ambulance bookings
-// Workflow: REQUESTED → CONFIRMED → ASSIGNED → DISPATCHED → ARRIVED → PATIENT_ONBOARD → EN_ROUTE_TO_HOSPITAL → ARRIVED_AT_HOSPITAL → IN_PROGRESS
-// Note: COMPLETED status can only be set automatically via payment completion, not manually
+// Workflow: REQUESTED → CONFIRMED → ASSIGNED → DISPATCHED → ARRIVED → PATIENT_ONBOARD → EN_ROUTE_TO_HOSPITAL → ARRIVED_AT_HOSPITAL
+// Note: COMPLETED and CANCELLED are not available in dropdown. COMPLETED is set automatically via payment completion.
+// Cancellation is not allowed after PATIENT_ONBOARD
 const STATUS_TRANSITIONS = {
-  REQUESTED: ["CONFIRMED", "CANCELLED"],
-  CONFIRMED: ["ASSIGNED", "DISPATCHED", "CANCELLED"],
-  ASSIGNED: ["DISPATCHED", "ARRIVED", "PATIENT_ONBOARD", "CANCELLED"],
+  REQUESTED: ["CONFIRMED"],
+  CONFIRMED: ["ASSIGNED", "DISPATCHED"],
+  ASSIGNED: ["DISPATCHED", "ARRIVED", "PATIENT_ONBOARD"],
   DISPATCHED: ["ARRIVED", "PATIENT_ONBOARD"],
   ARRIVED: ["PATIENT_ONBOARD"],
   PATIENT_ONBOARD: ["EN_ROUTE_TO_HOSPITAL"],
   EN_ROUTE_TO_HOSPITAL: ["ARRIVED_AT_HOSPITAL"],
-  ARRIVED_AT_HOSPITAL: ["COMPLETED"],
+  ARRIVED_AT_HOSPITAL: [],
   COMPLETED: [],
   CANCELLED: []
 };
@@ -957,31 +958,28 @@ export default function AmbulanceOrders() {
                                             )}
                                         </>
                                       )}
-                                    {item.status !== "COMPLETED" && (
-                                      <button
-                                        onClick={() => handleCancel(item)}
-                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                                        title="Cancel Order">
-                                        <XCircle size={14} />
-                                      </button>
-                                    )}
+                                    {/* Cancel button - only show before PATIENT_ONBOARD */}
+                                    {item.status !== "COMPLETED" &&
+                                      item.status !== "CANCELLED" &&
+                                      ![
+                                        "PATIENT_ONBOARD",
+                                        "EN_ROUTE_TO_HOSPITAL",
+                                        "ARRIVED_AT_HOSPITAL",
+                                        "IN_PROGRESS"
+                                      ].includes(item.status) && (
+                                        <button
+                                          onClick={() => handleCancel(item)}
+                                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                                          title="Cancel Order">
+                                          <XCircle size={14} />
+                                        </button>
+                                      )}
                                     {/* Status Change Dropdown */}
                                     {(() => {
                                       const allowedStatuses =
                                         STATUS_TRANSITIONS[item.status] || [];
-                                      // CANCELLED is always available except from COMPLETED or if already CANCELLED
-                                      const canCancel =
-                                        item.status !== "COMPLETED" &&
-                                        item.status !== "CANCELLED";
-                                      const hasOptions =
-                                        allowedStatuses.length > 0 || canCancel;
                                       // Don't show dropdown if no options available
-                                      if (!hasOptions) return null;
-                                      // Don't show dropdown if status is CANCELLED and has no other transitions
-                                      if (
-                                        item.status === "CANCELLED" &&
-                                        allowedStatuses.length === 0
-                                      )
+                                      if (allowedStatuses.length === 0)
                                         return null;
 
                                       const isOpen =
@@ -1030,19 +1028,6 @@ export default function AmbulanceOrders() {
                                                     </button>
                                                   )
                                                 )}
-                                                {canCancel &&
-                                                  !allowedStatuses.includes(
-                                                    "CANCELLED"
-                                                  ) && (
-                                                    <button
-                                                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleCancel(item);
-                                                      }}>
-                                                      Cancel
-                                                    </button>
-                                                  )}
                                               </div>
                                             </div>
                                           )}

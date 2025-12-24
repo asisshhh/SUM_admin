@@ -17,7 +17,9 @@ import {
   Truck,
   RefreshCw,
   Filter,
-  RotateCcw
+  RotateCcw,
+  Settings,
+  ChevronDown
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { Pagination, SearchableDropdown } from "../components/shared";
@@ -27,6 +29,37 @@ import AmbulanceOrderDetailsModal from "../components/ambulance/AmbulanceOrderDe
 import AssignAmbulanceModal from "../components/ambulance/AssignAmbulanceModal";
 import CalculateFinalModal from "../components/ambulance/CalculateFinalModal";
 import PaymentCompleteModal from "../components/ambulance/PaymentCompleteModal";
+
+// Valid status transitions for ambulance bookings
+// Workflow: REQUESTED → CONFIRMED → ASSIGNED → DISPATCHED → ARRIVED → PATIENT_ONBOARD → EN_ROUTE_TO_HOSPITAL → ARRIVED_AT_HOSPITAL → COMPLETED
+const STATUS_TRANSITIONS = {
+  REQUESTED: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["ASSIGNED", "DISPATCHED", "CANCELLED"],
+  ASSIGNED: ["DISPATCHED", "ARRIVED", "PATIENT_ONBOARD", "CANCELLED"],
+  DISPATCHED: ["ARRIVED", "PATIENT_ONBOARD", "CANCELLED"],
+  ARRIVED: ["PATIENT_ONBOARD", "CANCELLED"],
+  PATIENT_ONBOARD: ["EN_ROUTE_TO_HOSPITAL", "CANCELLED"],
+  EN_ROUTE_TO_HOSPITAL: ["ARRIVED_AT_HOSPITAL", "CANCELLED"],
+  ARRIVED_AT_HOSPITAL: ["IN_PROGRESS", "COMPLETED", "CANCELLED"],
+  IN_PROGRESS: ["COMPLETED", "CANCELLED"],
+  COMPLETED: [],
+  CANCELLED: []
+};
+
+// User-friendly status labels
+const STATUS_LABELS = {
+  REQUESTED: "Requested",
+  CONFIRMED: "Confirmed",
+  ASSIGNED: "Assigned",
+  DISPATCHED: "Dispatched",
+  ARRIVED: "Arrived",
+  PATIENT_ONBOARD: "Patient Onboard",
+  EN_ROUTE_TO_HOSPITAL: "En Route to Hospital",
+  ARRIVED_AT_HOSPITAL: "Arrived at Hospital",
+  IN_PROGRESS: "In Progress",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled"
+};
 
 export default function AmbulanceOrders() {
   const qc = useQueryClient();
@@ -66,6 +99,23 @@ export default function AmbulanceOrders() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [viewingBooking, setViewingBooking] = useState(null);
   const [assigningAmbulance, setAssigningAmbulance] = useState(null);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(null);
+
+  // Close status dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        statusDropdownOpen &&
+        !event.target.closest(".status-dropdown-container")
+      ) {
+        setStatusDropdownOpen(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [statusDropdownOpen]);
 
   // Fetch ambulance types for filter
   const { data: ambulanceTypesData } = useQuery({
@@ -226,6 +276,36 @@ export default function AmbulanceOrders() {
     [confirm, cancelMutation]
   );
 
+  // Status change mutation
+  const statusChangeMutation = useMutation({
+    mutationFn: ({ id, status }) =>
+      api.put(`/ambulance-orders/${id}/status`, { status }),
+    onSuccess: () => {
+      toast.success("Status updated successfully");
+      refetch();
+      setStatusDropdownOpen(null);
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || "Failed to update status");
+    }
+  });
+
+  const handleStatusChange = useCallback(
+    async (booking, newStatus) => {
+      const ok = await confirm({
+        title: "Change Status",
+        message: `Change status from ${
+          STATUS_LABELS[booking.status] || booking.status
+        } to ${STATUS_LABELS[newStatus] || newStatus}?`,
+        danger: false
+      });
+      if (ok) {
+        statusChangeMutation.mutate({ id: booking.id, status: newStatus });
+      }
+    },
+    [confirm, statusChangeMutation]
+  );
+
   const handleRefund = useCallback(
     async (booking) => {
       // Find the payment with SUCCESS status and isOnline
@@ -305,6 +385,9 @@ export default function AmbulanceOrders() {
       ASSIGNED: "bg-purple-100 text-purple-700",
       DISPATCHED: "bg-indigo-100 text-indigo-700",
       ARRIVED: "bg-cyan-100 text-cyan-700",
+      PATIENT_ONBOARD: "bg-teal-100 text-teal-700",
+      EN_ROUTE_TO_HOSPITAL: "bg-amber-100 text-amber-700",
+      ARRIVED_AT_HOSPITAL: "bg-emerald-100 text-emerald-700",
       IN_PROGRESS: "bg-orange-100 text-orange-700",
       COMPLETED: "bg-green-100 text-green-700",
       CANCELLED: "bg-red-100 text-red-700"
@@ -472,6 +555,15 @@ export default function AmbulanceOrders() {
                     { value: "ASSIGNED", label: "Assigned" },
                     { value: "DISPATCHED", label: "Dispatched" },
                     { value: "ARRIVED", label: "Arrived" },
+                    { value: "PATIENT_ONBOARD", label: "Patient Onboard" },
+                    {
+                      value: "EN_ROUTE_TO_HOSPITAL",
+                      label: "En Route to Hospital"
+                    },
+                    {
+                      value: "ARRIVED_AT_HOSPITAL",
+                      label: "Arrived at Hospital"
+                    },
                     { value: "IN_PROGRESS", label: "In Progress" },
                     { value: "COMPLETED", label: "Completed" },
                     { value: "CANCELLED", label: "Cancelled" }
@@ -783,9 +875,9 @@ export default function AmbulanceOrders() {
                                         <Truck size={16} />
                                       </button>
                                     )}
-                                    {item.status !== "COMPLETED" && (
-                                      <>
-                                        {!item.totalAmount && (
+                                    {item.status !== "COMPLETED" &&
+                                      item.status !== "CANCELLED" && (
+                                        <>
                                           <button
                                             onClick={() =>
                                               handleCalculateFinal(item)
@@ -794,19 +886,18 @@ export default function AmbulanceOrders() {
                                             title="Calculate Final">
                                             <Calculator size={16} />
                                           </button>
-                                        )}
-                                        {item.totalAmount && (
-                                          <button
-                                            onClick={() =>
-                                              handlePaymentComplete(item)
-                                            }
-                                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                            title="Update Payment & Complete">
-                                            <DollarSign size={16} />
-                                          </button>
-                                        )}
-                                      </>
-                                    )}
+                                          {item.totalAmount && (
+                                            <button
+                                              onClick={() =>
+                                                handlePaymentComplete(item)
+                                              }
+                                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                              title="Update Payment & Complete">
+                                              <DollarSign size={16} />
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
                                     {item.status !== "COMPLETED" && (
                                       <button
                                         onClick={() => handleCancel(item)}
@@ -815,6 +906,90 @@ export default function AmbulanceOrders() {
                                         <XCircle size={16} />
                                       </button>
                                     )}
+                                    {/* Status Change Dropdown */}
+                                    {(() => {
+                                      const allowedStatuses =
+                                        STATUS_TRANSITIONS[item.status] || [];
+                                      // CANCELLED is always available except from COMPLETED or if already CANCELLED
+                                      const canCancel =
+                                        item.status !== "COMPLETED" &&
+                                        item.status !== "CANCELLED";
+                                      const hasOptions =
+                                        allowedStatuses.length > 0 || canCancel;
+                                      // Don't show dropdown if no options available
+                                      if (!hasOptions) return null;
+                                      // Don't show dropdown if status is CANCELLED and has no other transitions
+                                      if (
+                                        item.status === "CANCELLED" &&
+                                        allowedStatuses.length === 0
+                                      )
+                                        return null;
+
+                                      const isOpen =
+                                        statusDropdownOpen === item.id;
+
+                                      return (
+                                        <div
+                                          className="relative status-dropdown-container"
+                                          style={{
+                                            zIndex: isOpen ? 1000 : "auto"
+                                          }}>
+                                          <button
+                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition flex items-center gap-1"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setStatusDropdownOpen(
+                                                isOpen ? null : item.id
+                                              );
+                                            }}
+                                            title="Change Status">
+                                            <Settings size={16} />
+                                            <ChevronDown
+                                              size={10}
+                                              className={`transition-transform ${
+                                                isOpen ? "rotate-180" : ""
+                                              }`}
+                                            />
+                                          </button>
+                                          {isOpen && (
+                                            <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                                              <div className="py-1">
+                                                {allowedStatuses.map(
+                                                  (status) => (
+                                                    <button
+                                                      key={status}
+                                                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStatusChange(
+                                                          item,
+                                                          status
+                                                        );
+                                                      }}>
+                                                      {STATUS_LABELS[status] ||
+                                                        status}
+                                                    </button>
+                                                  )
+                                                )}
+                                                {canCancel &&
+                                                  !allowedStatuses.includes(
+                                                    "CANCELLED"
+                                                  ) && (
+                                                    <button
+                                                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCancel(item);
+                                                      }}>
+                                                      Cancel
+                                                    </button>
+                                                  )}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })()}
                                   </>
                                 )}
                               </>

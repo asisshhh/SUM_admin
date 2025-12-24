@@ -905,7 +905,7 @@ export default function AmbulanceOrders() {
                                         "PATIENT_ONBOARD",
                                         "EN_ROUTE_TO_HOSPITAL",
                                         "ARRIVED_AT_HOSPITAL",
-                                        "IN_PROGRESS"
+                                        "REQUESTED"
                                       ].includes(item.status) && (
                                         <button
                                           onClick={() =>

@@ -37,12 +37,11 @@ const STATUS_TRANSITIONS = {
   REQUESTED: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["ASSIGNED", "DISPATCHED", "CANCELLED"],
   ASSIGNED: ["DISPATCHED", "ARRIVED", "PATIENT_ONBOARD", "CANCELLED"],
-  DISPATCHED: ["ARRIVED", "PATIENT_ONBOARD", "CANCELLED"],
-  ARRIVED: ["PATIENT_ONBOARD", "CANCELLED"],
-  PATIENT_ONBOARD: ["EN_ROUTE_TO_HOSPITAL", "CANCELLED"],
-  EN_ROUTE_TO_HOSPITAL: ["ARRIVED_AT_HOSPITAL", "CANCELLED"],
-  ARRIVED_AT_HOSPITAL: ["IN_PROGRESS", "CANCELLED"],
-  IN_PROGRESS: ["CANCELLED"],
+  DISPATCHED: ["ARRIVED", "PATIENT_ONBOARD"],
+  ARRIVED: ["PATIENT_ONBOARD"],
+  PATIENT_ONBOARD: ["EN_ROUTE_TO_HOSPITAL"],
+  EN_ROUTE_TO_HOSPITAL: ["ARRIVED_AT_HOSPITAL"],
+  ARRIVED_AT_HOSPITAL: ["COMPLETED"],
   COMPLETED: [],
   CANCELLED: []
 };
@@ -57,7 +56,6 @@ const STATUS_LABELS = {
   PATIENT_ONBOARD: "Patient Onboard",
   EN_ROUTE_TO_HOSPITAL: "En Route to Hospital",
   ARRIVED_AT_HOSPITAL: "Arrived at Hospital",
-  IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled"
 };
@@ -389,7 +387,6 @@ export default function AmbulanceOrders() {
       PATIENT_ONBOARD: "bg-teal-100 text-teal-700",
       EN_ROUTE_TO_HOSPITAL: "bg-amber-100 text-amber-700",
       ARRIVED_AT_HOSPITAL: "bg-emerald-100 text-emerald-700",
-      IN_PROGRESS: "bg-orange-100 text-orange-700",
       COMPLETED: "bg-green-100 text-green-700",
       CANCELLED: "bg-red-100 text-red-700"
     };
@@ -565,7 +562,6 @@ export default function AmbulanceOrders() {
                       value: "ARRIVED_AT_HOSPITAL",
                       label: "Arrived at Hospital"
                     },
-                    { value: "IN_PROGRESS", label: "In Progress" },
                     { value: "COMPLETED", label: "Completed" },
                     { value: "CANCELLED", label: "Cancelled" }
                   ]}
@@ -900,26 +896,40 @@ export default function AmbulanceOrders() {
                                 )}
                                 {item.approved === true && (
                                   <>
-                                    {item.status !== "COMPLETED" && (
-                                      <button
-                                        onClick={() =>
-                                          handleAssignAmbulance(item)
-                                        }
-                                        className={`p-1.5 rounded transition ${
-                                          item.ambulanceId
-                                            ? "text-purple-600 hover:bg-purple-50"
-                                            : "text-purple-600 hover:bg-purple-50"
-                                        }`}
-                                        title={
-                                          item.ambulanceId
-                                            ? "Reassign Ambulance"
-                                            : "Assign Ambulance"
-                                        }>
-                                        <Truck size={14} />
-                                      </button>
-                                    )}
+                                    {/* Show Assign Ambulance button only if status is before DISPATCHED */}
                                     {item.status !== "COMPLETED" &&
-                                      item.status !== "CANCELLED" && (
+                                      ![
+                                        "DISPATCHED",
+                                        "ARRIVED",
+                                        "PATIENT_ONBOARD",
+                                        "EN_ROUTE_TO_HOSPITAL",
+                                        "ARRIVED_AT_HOSPITAL",
+                                        "IN_PROGRESS"
+                                      ].includes(item.status) && (
+                                        <button
+                                          onClick={() =>
+                                            handleAssignAmbulance(item)
+                                          }
+                                          className={`p-1.5 rounded transition ${
+                                            item.ambulanceId
+                                              ? "text-purple-600 hover:bg-purple-50"
+                                              : "text-purple-600 hover:bg-purple-50"
+                                          }`}
+                                          title={
+                                            item.ambulanceId
+                                              ? "Reassign Ambulance"
+                                              : "Assign Ambulance"
+                                          }>
+                                          <Truck size={14} />
+                                        </button>
+                                      )}
+                                    {/* Show Calculate Final button only when status is ARRIVED_AT_HOSPITAL or later */}
+                                    {item.status !== "COMPLETED" &&
+                                      item.status !== "CANCELLED" &&
+                                      [
+                                        "ARRIVED_AT_HOSPITAL",
+                                        "IN_PROGRESS"
+                                      ].includes(item.status) && (
                                         <>
                                           <button
                                             onClick={() =>

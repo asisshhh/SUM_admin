@@ -32,6 +32,7 @@ import {
 } from "../components/orders";
 import PaymentModal from "../components/health-package/PaymentModal";
 import { SearchableDropdown } from "../components/shared";
+import HomeHealthcareOrderViewModal from "../components/home-healthcare/HomeHealthcareOrderViewModal";
 
 const DEFAULT_LIMIT = 20;
 
@@ -39,29 +40,48 @@ const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
   { value: "PENDING", label: "Pending" },
   { value: "CONFIRMED", label: "Order Confirmed" },
+  { value: "ASSIGNED", label: "Assigned" },
+  { value: "IN_TRANSIT", label: "In Transit" },
+  { value: "ARRIVED", label: "Arrived" },
   { value: "SAMPLE_COLLECTED", label: "Sample Collected" },
+  { value: "ARRIVED_AT_HOSPITAL", label: "Arrived at Hospital" },
   { value: "PROCESSING", label: "Test in Progress" },
   { value: "COMPLETED", label: "Completed" },
   { value: "CANCELLED", label: "Cancelled" }
 ];
 
 // Valid status transitions for home healthcare package orders
-// Note: Using same status structure as health packages and lab tests
-// Valid values: PENDING, CONFIRMED, SAMPLE_COLLECTED, PROCESSING, PAYMENT_COMPLETED, PAY_AT_HOSPITAL, COMPLETED, CANCELLED
-// User-friendly workflow: PENDING → CONFIRMED → SAMPLE_COLLECTED → PROCESSING → COMPLETED
+// Extended status structure: PENDING → CONFIRMED → ASSIGNED → IN_TRANSIT → ARRIVED → SAMPLE_COLLECTED → ARRIVED_AT_HOSPITAL → PROCESSING → COMPLETED
 // CANCELLED can only be set from PENDING or CONFIRMED (before sample is collected)
 const STATUS_TRANSITIONS = {
   PENDING: ["CONFIRMED", "CANCELLED"],
-  CONFIRMED: ["SAMPLE_COLLECTED", "COMPLETED", "CANCELLED"],
-  SAMPLE_COLLECTED: ["PROCESSING", "COMPLETED"],
+  CONFIRMED: ["ASSIGNED", "CANCELLED"],
+  ASSIGNED: ["IN_TRANSIT", "CANCELLED"],
+  IN_TRANSIT: ["ARRIVED", "CANCELLED"],
+  ARRIVED: ["SAMPLE_COLLECTED", "CANCELLED"],
+  SAMPLE_COLLECTED: ["ARRIVED_AT_HOSPITAL", "PROCESSING", "COMPLETED"],
+  ARRIVED_AT_HOSPITAL: ["PROCESSING", "COMPLETED"],
   PROCESSING: ["COMPLETED"],
   PAYMENT_COMPLETED: [
     "CONFIRMED",
+    "ASSIGNED",
+    "IN_TRANSIT",
+    "ARRIVED",
     "SAMPLE_COLLECTED",
+    "ARRIVED_AT_HOSPITAL",
     "PROCESSING",
     "COMPLETED"
   ],
-  PAY_AT_HOSPITAL: ["CONFIRMED", "SAMPLE_COLLECTED", "PROCESSING", "COMPLETED"],
+  PAY_AT_HOSPITAL: [
+    "CONFIRMED",
+    "ASSIGNED",
+    "IN_TRANSIT",
+    "ARRIVED",
+    "SAMPLE_COLLECTED",
+    "ARRIVED_AT_HOSPITAL",
+    "PROCESSING",
+    "COMPLETED"
+  ],
   COMPLETED: [], // No transitions from COMPLETED
   CANCELLED: [] // No transitions from CANCELLED
 };
@@ -70,7 +90,11 @@ const STATUS_TRANSITIONS = {
 const STATUS_LABELS = {
   PENDING: "Pending",
   CONFIRMED: "Order Confirmed",
+  ASSIGNED: "Assigned",
+  IN_TRANSIT: "In Transit",
+  ARRIVED: "Arrived",
   SAMPLE_COLLECTED: "Sample Collected",
+  ARRIVED_AT_HOSPITAL: "Arrived at Hospital",
   PROCESSING: "Test in Progress",
   PAYMENT_COMPLETED: "Payment Completed",
   PAY_AT_HOSPITAL: "Pay at Hospital",
@@ -78,7 +102,6 @@ const STATUS_LABELS = {
   CANCELLED: "Cancelled",
   // Legacy BookingStatus mappings
   REQUESTED: "Pending",
-  ASSIGNED: "Sample Collected",
   IN_PROGRESS: "Test in Progress"
 };
 
@@ -86,8 +109,11 @@ const STATUS_LABELS = {
 const mapStatusForDisplay = (status) => {
   const statusMap = {
     REQUESTED: "PENDING",
-    ASSIGNED: "SAMPLE_COLLECTED",
-    IN_PROGRESS: "PROCESSING"
+    DISPATCHED: "IN_TRANSIT", // Legacy mapping
+    PATIENT_ONBOARD: "SAMPLE_COLLECTED", // Legacy mapping
+    IN_PROGRESS: "PROCESSING" // Legacy mapping
+    // IN_TRANSIT, SAMPLE_COLLECTED, PROCESSING are now directly in BookingStatus enum
+    // ASSIGNED, ARRIVED, ARRIVED_AT_HOSPITAL are already in both enums
   };
   return statusMap[status] || status;
 };
@@ -561,66 +587,11 @@ export default function HomeHealthcareOrders() {
 
       {/* View Order Modal */}
       {viewingOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h3 className="text-xl font-bold">Order Details</h3>
-              <button
-                onClick={() => setViewingOrder(null)}
-                className="text-slate-500 hover:text-slate-700">
-                ✕
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-slate-500">Order Number</p>
-                  <p className="font-semibold">
-                    {viewingOrder.orderNumber || `HHS${viewingOrder.id}`}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Status</p>
-                  <OrderStatusBadge status={viewingOrder.status} />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Amount</p>
-                  <p className="font-semibold">
-                    ₹{viewingOrder.totalAmount || 0}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Payment Status</p>
-                  <PaymentBadge
-                    status={viewingOrder.paymentStatus || "PENDING"}
-                    amount={
-                      viewingOrder.paymentAmount ||
-                      viewingOrder.totalAmount ||
-                      0
-                    }
-                  />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Assigned To</p>
-                  <p className="font-semibold">
-                    {viewingOrder.assignee?.name || "Unassigned"}
-                  </p>
-                  {viewingOrder.assignee?.role && (
-                    <p className="text-xs text-slate-500">
-                      {viewingOrder.assignee.role}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {viewingOrder.notes && (
-                <div>
-                  <p className="text-sm text-slate-500">Notes</p>
-                  <p className="text-slate-700">{viewingOrder.notes}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <HomeHealthcareOrderViewModal
+          order={viewingOrder}
+          onClose={() => setViewingOrder(null)}
+          onUpdated={() => load(page)}
+        />
       )}
 
       {/* Assign Modal */}
@@ -931,10 +902,15 @@ function HomeHealthcareOrderRow({
           {(() => {
             // Use the already mapped displayStatus
             const allowedStatuses = STATUS_TRANSITIONS[displayStatus] || [];
-            // CANCELLED can only be done from PENDING or CONFIRMED
+            // CANCELLED can only be done from PENDING, CONFIRMED, ASSIGNED, IN_TRANSIT, or ARRIVED (before SAMPLE_COLLECTED)
             const canCancel =
-              (displayStatus === "PENDING" || displayStatus === "CONFIRMED") &&
-              r.status !== "CANCELLED";
+              (displayStatus === "PENDING" ||
+                displayStatus === "CONFIRMED" ||
+                displayStatus === "ASSIGNED" ||
+                displayStatus === "IN_TRANSIT" ||
+                displayStatus === "ARRIVED") &&
+              r.status !== "CANCELLED" &&
+              displayStatus !== "SAMPLE_COLLECTED";
             const hasOptions = allowedStatuses.length > 0 || canCancel;
             // Don't show dropdown if status is CANCELLED and has no other transitions
             if (

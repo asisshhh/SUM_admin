@@ -265,7 +265,7 @@ export default function FeedbackPage() {
                     User
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Doctor
+                    Service/Provider
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Rating
@@ -309,11 +309,11 @@ export default function FeedbackPage() {
                           </div>
                           <div>
                             <div className="text-sm font-medium text-slate-800">
-                              {f.user?.name || "—"}
+                              {f.patient?.name || "—"}
                             </div>
-                            {f.user?.phone && (
+                            {f.patient?.phone && (
                               <div className="text-xs text-slate-500">
-                                {f.user.phone}
+                                {f.patient.phone}
                               </div>
                             )}
                           </div>
@@ -323,9 +323,100 @@ export default function FeedbackPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <Stethoscope size={16} className="text-slate-400" />
-                          <span className="text-sm text-slate-700">
-                            {f.appointment?.doctor?.user?.name || "—"}
-                          </span>
+                          <div className="flex flex-col">
+                            {/* Show service/provider information based on order type */}
+                            {f.orderType === "APPOINTMENT" &&
+                            f.appointment?.doctor ? (
+                              <>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {f.appointment.doctor.name || "—"}
+                                </span>
+                                {f.appointment.doctor.department && (
+                                  <span className="text-xs text-slate-500">
+                                    {f.appointment.doctor.department}
+                                  </span>
+                                )}
+                                <span className="text-xs text-blue-600 font-medium">
+                                  Appointment
+                                </span>
+                              </>
+                            ) : f.relatedOrders?.ambulance?.length > 0 ? (
+                              <>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {f.relatedOrders.ambulance[0].ambulanceType
+                                    ?.name || "Ambulance Service"}
+                                </span>
+                                {f.relatedOrders.ambulance[0].ambulanceType
+                                  ?.code && (
+                                  <span className="text-xs text-slate-500">
+                                    {
+                                      f.relatedOrders.ambulance[0].ambulanceType
+                                        .code
+                                    }
+                                  </span>
+                                )}
+                                <span className="text-xs text-orange-600 font-medium">
+                                  Ambulance
+                                </span>
+                              </>
+                            ) : f.relatedOrders?.healthPackage?.length > 0 ? (
+                              <>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {f.relatedOrders.healthPackage[0].package
+                                    ?.name || "Health Package"}
+                                </span>
+                                <span className="text-xs text-green-600 font-medium">
+                                  Health Package
+                                </span>
+                              </>
+                            ) : f.relatedOrders?.homeHealthcarePackage?.length >
+                              0 ? (
+                              <>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {f.relatedOrders.homeHealthcarePackage[0]
+                                    .package?.name || "Home Healthcare Package"}
+                                </span>
+                                <span className="text-xs text-purple-600 font-medium">
+                                  Home Healthcare
+                                </span>
+                              </>
+                            ) : f.relatedOrders?.lab?.length > 0 ? (
+                              <>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {f.relatedOrders.lab[0].items?.[0]?.test
+                                    ?.name ||
+                                    f.relatedOrders.lab[0].items?.[0]
+                                      ?.testName ||
+                                    "Lab Test"}
+                                </span>
+                                {f.relatedOrders.lab[0].items?.[0]?.test
+                                  ?.code && (
+                                  <span className="text-xs text-slate-500">
+                                    {f.relatedOrders.lab[0].items[0].test.code}
+                                  </span>
+                                )}
+                                <span className="text-xs text-indigo-600 font-medium">
+                                  Lab Test
+                                </span>
+                              </>
+                            ) : f.serviceInfo ? (
+                              <>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {f.serviceInfo.providerName ||
+                                    f.serviceInfo.serviceName ||
+                                    "—"}
+                                </span>
+                                {f.serviceInfo.serviceName &&
+                                  f.serviceInfo.providerName && (
+                                    <span className="text-xs text-slate-500">
+                                      {f.serviceInfo.serviceName}
+                                    </span>
+                                  )}
+                              </>
+                            ) : (
+                              <span className="text-sm text-slate-400">—</span>
+                            )}
+                          </div>
                         </div>
                       </td>
 

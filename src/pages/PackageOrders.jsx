@@ -275,27 +275,27 @@ export default function PackageOrders() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{ position: "relative" }}>
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    #
+                    Order ID
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Customer
+                    Patient
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Package
+                    Package Details
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Schedule
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Payment
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Actions
@@ -320,11 +320,10 @@ export default function PackageOrders() {
                     </td>
                   </tr>
                 )}
-                {rows.map((r, i) => (
+                {rows.map((r) => (
                   <PackageOrderRow
                     key={r.id}
                     order={r}
-                    index={(page - 1) * limit + i + 1}
                     onMarkPaid={() => onMarkPaidClick(r)}
                     onView={() => setViewingOrder(r)}
                     onRefund={handleRefund}
@@ -376,37 +375,40 @@ export default function PackageOrders() {
 // ROW COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
-function PackageOrderRow({ order, index, onMarkPaid, onView, onRefund }) {
+function PackageOrderRow({ order, onMarkPaid, onView, onRefund }) {
   const r = order;
+  // For health packages, patient name is typically the user name
+  const patientName = r.patient?.name || r.user?.name || "-";
+  const primaryUserName = r.user?.name || "-"; // Primary user (the account owner)
 
   return (
     <tr className="hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-transparent transition-all duration-200 border-b border-slate-100 last:border-0">
-      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">#{index}</td>
+      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">#{r.id}</td>
 
-      {/* Customer */}
+      {/* Patient */}
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-            {r.user?.name?.[0] || "?"}
+            {patientName[0] || "?"}
           </div>
           <div>
-            <p className="font-medium text-slate-800">{r.user?.name || "-"}</p>
-            <p className="text-xs text-slate-500">{r.user?.phone || "-"}</p>
+            <p className="font-medium text-slate-800">{patientName}</p>
+            <p className="text-xs text-slate-500">{primaryUserName}</p>
           </div>
         </div>
       </td>
 
-      {/* Package */}
+      {/* Package Details */}
       <td className="px-4 py-3.5">
-        <div className="flex items-center gap-2">
-          <Package size={16} className="text-emerald-500" />
+        <div className="flex items-start gap-2">
+          <Package size={16} className="text-emerald-500 mt-0.5" />
           <div>
-            <p className="font-medium text-slate-700 text-sm">
+            <p className="font-medium text-slate-700 text-sm max-w-[200px] truncate">
               {r.package?.name || r.packageName || "-"}
             </p>
-            <p className="text-xs text-slate-500">
-              {r.orderNumber || `Order #${r.id}`}
-            </p>
+            {r.orderNumber && (
+              <p className="text-xs text-slate-500">{r.orderNumber}</p>
+            )}
           </div>
         </div>
       </td>
@@ -429,19 +431,26 @@ function PackageOrderRow({ order, index, onMarkPaid, onView, onRefund }) {
         )}
       </td>
 
-      {/* Status */}
-      <td className="px-4 py-3.5">
-        <OrderStatusBadge status={r.status} />
+      {/* Payment */}
+      <td className="px-4 py-3.5 text-center">
+        <div className="flex justify-center">
+          <PaymentBadge
+            status={r.paymentStatus || "PENDING"}
+            amount={r.paymentAmount || r.totalAmount || 0}
+          />
+        </div>
       </td>
 
-      {/* Payment */}
-      <td className="px-4 py-3.5">
-        <PaymentBadge status={r.paymentStatus} amount={r.totalAmount} />
+      {/* Status */}
+      <td className="px-4 py-3.5 text-center">
+        <div className="flex justify-center">
+          <OrderStatusBadge status={r.status} />
+        </div>
       </td>
 
       {/* Actions */}
       <td className="px-4 py-3.5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-center">
           <button
             type="button"
             className="p-2 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
@@ -453,10 +462,16 @@ function PackageOrderRow({ order, index, onMarkPaid, onView, onRefund }) {
             title="View Details">
             <Eye size={16} />
           </button>
+          {/* Mark as Paid button - only show for orders that can be marked as paid and not cancelled */}
           {r.paymentStatus !== "SUCCESS" && r.status !== "CANCELLED" && (
             <button
+              type="button"
               className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
-              onClick={onMarkPaid}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onMarkPaid();
+              }}
               title="Mark as Paid">
               <CreditCard size={16} />
             </button>
@@ -468,14 +483,21 @@ function PackageOrderRow({ order, index, onMarkPaid, onView, onRefund }) {
           )}
           {/* Refund button for cancelled orders with successful online payments */}
           {(() => {
-            const refundablePayment = r.payments?.find(
+            // Ensure payments is an array
+            const payments = Array.isArray(r.payments) ? r.payments : [];
+
+            const refundablePayment = payments.find(
               (p) =>
+                p &&
                 p.status === "SUCCESS" &&
-                p.isOnline === true &&
+                (p.isOnline === true ||
+                  p.isOnline === "true" ||
+                  p.isOnline === 1 ||
+                  String(p.isOnline).toLowerCase() === "true") &&
                 p.gatewayPaymentId &&
-                !p.refundedAt &&
-                p.status !== "REFUNDED"
+                !p.refundedAt
             );
+
             return (
               r.status === "CANCELLED" &&
               refundablePayment && (

@@ -46,26 +46,19 @@ const STATUS_OPTIONS = [
 // Note: LabTestOrder uses OrderStatus enum
 // Valid values: PENDING, CONFIRMED, SAMPLE_COLLECTED, PROCESSING, PAYMENT_COMPLETED, PAY_AT_HOSPITAL, COMPLETED, CANCELLED
 // User-friendly workflow: PENDING → CONFIRMED → SAMPLE_COLLECTED → PROCESSING → COMPLETED
-// CANCELLED can be set from any status except COMPLETED
+// CANCELLED can only be set from PENDING or CONFIRMED (before sample is collected)
 const STATUS_TRANSITIONS = {
   PENDING: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["SAMPLE_COLLECTED", "COMPLETED", "CANCELLED"],
-  SAMPLE_COLLECTED: ["PROCESSING", "COMPLETED", "CANCELLED"],
-  PROCESSING: ["COMPLETED", "CANCELLED"],
+  SAMPLE_COLLECTED: ["PROCESSING", "COMPLETED"],
+  PROCESSING: ["COMPLETED"],
   PAYMENT_COMPLETED: [
     "CONFIRMED",
     "SAMPLE_COLLECTED",
     "PROCESSING",
-    "COMPLETED",
-    "CANCELLED"
+    "COMPLETED"
   ],
-  PAY_AT_HOSPITAL: [
-    "CONFIRMED",
-    "SAMPLE_COLLECTED",
-    "PROCESSING",
-    "COMPLETED",
-    "CANCELLED"
-  ],
+  PAY_AT_HOSPITAL: ["CONFIRMED", "SAMPLE_COLLECTED", "PROCESSING", "COMPLETED"],
   COMPLETED: [], // No transitions from COMPLETED
   CANCELLED: [] // No transitions from CANCELLED
 };
@@ -686,9 +679,10 @@ function LabOrderRow({
           {/* Status Change Dropdown */}
           {(() => {
             const allowedStatuses = STATUS_TRANSITIONS[r.status] || [];
-            // CANCELLED is always available except from COMPLETED or if already CANCELLED
+            // CANCELLED can only be done from PENDING or CONFIRMED (before sample collected)
             const canCancel =
-              r.status !== "COMPLETED" && r.status !== "CANCELLED";
+              (r.status === "PENDING" || r.status === "CONFIRMED") &&
+              r.status !== "CANCELLED";
             const hasOptions = allowedStatuses.length > 0 || canCancel;
             // Don't show dropdown if status is CANCELLED and has no other transitions
             if (
@@ -792,6 +786,23 @@ function LabOrderRow({
                           {STATUS_LABELS[status] || status}
                         </button>
                       ))}
+                      {canCancel && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setStatusDropdownOpen(null);
+                            const ok = await confirm({
+                              title: "Cancel Order",
+                              message: `Are you sure you want to cancel this order? This action cannot be undone.`
+                            });
+                            if (ok) {
+                              onStatusChange(r.id, "CANCELLED");
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors border-t border-slate-200 mt-1">
+                          {STATUS_LABELS["CANCELLED"] || "Cancelled"}
+                        </button>
+                      )}
                     </div>
                   </>
                 )}

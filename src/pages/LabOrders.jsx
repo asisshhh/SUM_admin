@@ -335,7 +335,7 @@ export default function LabOrders() {
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    #
+                    Order ID
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Patient
@@ -375,11 +375,10 @@ export default function LabOrders() {
                     </td>
                   </tr>
                 )}
-                {rows.map((r, i) => (
+                {rows.map((r) => (
                   <LabOrderRow
                     key={r.id}
                     order={r}
-                    index={(page - 1) * limit + i + 1}
                     onView={() => setViewingOrder(r)}
                     onMarkPaid={() =>
                       setPaymentOrder({ ...r, orderType: "LAB_TEST" })
@@ -438,7 +437,6 @@ export default function LabOrders() {
 
 function LabOrderRow({
   order,
-  index,
   onView,
   onMarkPaid,
   onRefund,
@@ -452,29 +450,93 @@ function LabOrderRow({
   const buttonRef = React.useRef(null);
   const [dropdownPosition, setDropdownPosition] = React.useState({
     top: 0,
-    right: 0
+    left: 0,
+    position: "below" // "above" or "below"
   });
 
-  // Update dropdown position when it opens
-  React.useEffect(() => {
-    if (statusDropdownOpen === r.id && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
+  // Calculate and update dropdown position
+  const updateDropdownPosition = React.useCallback(() => {
+    if (!buttonRef.current || statusDropdownOpen !== r.id) return;
+
+    requestAnimationFrame(() => {
+      if (!buttonRef.current) return;
+
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 180;
+      const estimatedHeight = 180;
+      const gap = 4;
+
+      // Calculate space
+      const spaceBelow = window.innerHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+
+      // Decide position: above if not enough space below AND more space above
+      const positionAbove =
+        spaceBelow < estimatedHeight + gap && spaceAbove > spaceBelow;
+
+      // Horizontal: align right edge of dropdown with right edge of button
+      let left = buttonRect.right - dropdownWidth;
+
+      // Keep within viewport
+      if (left < 10) left = 10;
+      if (left + dropdownWidth > window.innerWidth - 10) {
+        left = window.innerWidth - dropdownWidth - 10;
+      }
+
+      // Vertical position
+      let top;
+      if (positionAbove) {
+        top = buttonRect.top - estimatedHeight - gap;
+        if (top < 10) top = 10;
+      } else {
+        top = buttonRect.bottom + gap;
+        // If would overflow, try above
+        if (top + estimatedHeight > window.innerHeight - 10) {
+          const aboveTop = buttonRect.top - estimatedHeight - gap;
+          if (aboveTop >= 10) {
+            top = aboveTop;
+            setDropdownPosition({ top, left, position: "above" });
+            return;
+          }
+        }
+      }
+
       setDropdownPosition({
-        top: rect.bottom + 4,
-        right: window.innerWidth - rect.right
+        top,
+        left,
+        position: positionAbove ? "above" : "below"
       });
-    }
+    });
   }, [statusDropdownOpen, r.id]);
+
+  // Update position when dropdown opens
+  React.useEffect(() => {
+    if (statusDropdownOpen === r.id) {
+      updateDropdownPosition();
+    }
+  }, [statusDropdownOpen, r.id, updateDropdownPosition]);
+
+  // Recalculate on scroll/resize
+  React.useEffect(() => {
+    if (statusDropdownOpen === r.id) {
+      window.addEventListener("resize", updateDropdownPosition);
+      window.addEventListener("scroll", updateDropdownPosition, true);
+      return () => {
+        window.removeEventListener("resize", updateDropdownPosition);
+        window.removeEventListener("scroll", updateDropdownPosition, true);
+      };
+    }
+  }, [statusDropdownOpen, r.id, updateDropdownPosition]);
 
   // For pathology reports (type=lab in backend)
   const patientName = r.patient?.name || r.user?.name || "-";
-  const patientPhone = r.patient?.phone || r.user?.phone || "-";
+  const primaryUserName = r.user?.name || "-"; // Primary user (the account owner)
   const testName =
     r.testName || r.items?.map((i) => i.testName).join(", ") || "-";
 
   return (
     <tr className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-slate-100 last:border-0">
-      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">#{index}</td>
+      <td className="px-4 py-3.5 text-sm text-slate-500 font-mono">#{r.id}</td>
 
       {/* Patient */}
       <td className="px-4 py-3.5">
@@ -484,7 +546,7 @@ function LabOrderRow({
           </div>
           <div>
             <p className="font-medium text-slate-800">{patientName}</p>
-            <p className="text-xs text-slate-500">{patientPhone}</p>
+            <p className="text-xs text-slate-500">{primaryUserName}</p>
           </div>
         </div>
       </td>
@@ -662,11 +724,52 @@ function LabOrderRow({
                       onClick={() => setStatusDropdownOpen(null)}
                     />
                     <div
-                      className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px]"
+                      ref={(el) => {
+                        dropdownRef.current = el;
+                        // Fine-tune position after render if needed
+                        if (el && buttonRef.current) {
+                          requestAnimationFrame(() => {
+                            const dropdownRect = el.getBoundingClientRect();
+                            const buttonRect =
+                              buttonRef.current?.getBoundingClientRect();
+                            if (
+                              buttonRect &&
+                              dropdownRect.bottom > window.innerHeight - 10 &&
+                              dropdownPosition.position === "below"
+                            ) {
+                              // Reposition above if overflowing
+                              const newTop = Math.max(
+                                10,
+                                buttonRect.top - dropdownRect.height - 4
+                              );
+                              setDropdownPosition((prev) => ({
+                                ...prev,
+                                top: newTop,
+                                position: "above"
+                              }));
+                            }
+                          });
+                        }
+                      }}
+                      className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px] max-w-[200px]"
                       style={{
                         zIndex: 10000,
                         top: `${dropdownPosition.top}px`,
-                        right: `${dropdownPosition.right}px`
+                        left: `${dropdownPosition.left}px`,
+                        maxHeight:
+                          dropdownPosition.position === "above"
+                            ? `${Math.min(
+                                250,
+                                Math.max(100, dropdownPosition.top - 10)
+                              )}px`
+                            : `${Math.min(
+                                250,
+                                Math.max(
+                                  100,
+                                  window.innerHeight - dropdownPosition.top - 10
+                                )
+                              )}px`,
+                        overflowY: "auto"
                       }}
                       onClick={(e) => e.stopPropagation()}>
                       {allowedStatuses.map((status) => (

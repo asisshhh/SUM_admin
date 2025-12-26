@@ -13,7 +13,9 @@ import {
   CreditCard,
   CheckCircle2,
   RefreshCw,
-  RotateCcw
+  RotateCcw,
+  Settings,
+  ChevronDown
 } from "lucide-react";
 
 // Import shared components
@@ -32,10 +34,45 @@ const DEFAULT_LIMIT = 20;
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
   { value: "PENDING", label: "Pending" },
-  { value: "CONFIRMED", label: "Confirmed" },
+  { value: "CONFIRMED", label: "Order Confirmed" },
+  { value: "SAMPLE_COLLECTED", label: "Sample Collected" },
+  { value: "PROCESSING", label: "Test in Progress" },
   { value: "COMPLETED", label: "Completed" },
   { value: "CANCELLED", label: "Cancelled" }
 ];
+
+// Valid status transitions for health package orders
+// Note: HealthPackageOrder uses OrderStatus enum
+// Valid values: PENDING, CONFIRMED, SAMPLE_COLLECTED, PROCESSING, PAYMENT_COMPLETED, PAY_AT_HOSPITAL, COMPLETED, CANCELLED
+// User-friendly workflow: PENDING → CONFIRMED → SAMPLE_COLLECTED → PROCESSING → COMPLETED
+// CANCELLED can only be set from PENDING or CONFIRMED (before sample is collected)
+const STATUS_TRANSITIONS = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["SAMPLE_COLLECTED", "COMPLETED", "CANCELLED"],
+  SAMPLE_COLLECTED: ["PROCESSING", "COMPLETED"],
+  PROCESSING: ["COMPLETED"],
+  PAYMENT_COMPLETED: [
+    "CONFIRMED",
+    "SAMPLE_COLLECTED",
+    "PROCESSING",
+    "COMPLETED"
+  ],
+  PAY_AT_HOSPITAL: ["CONFIRMED", "SAMPLE_COLLECTED", "PROCESSING", "COMPLETED"],
+  COMPLETED: [], // No transitions from COMPLETED
+  CANCELLED: [] // No transitions from CANCELLED
+};
+
+// User-friendly status labels
+const STATUS_LABELS = {
+  PENDING: "Pending",
+  CONFIRMED: "Order Confirmed",
+  SAMPLE_COLLECTED: "Sample Collected",
+  PROCESSING: "Test in Progress",
+  PAYMENT_COMPLETED: "Payment Completed",
+  PAY_AT_HOSPITAL: "Pay at Hospital",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled"
+};
 
 export default function PackageOrders() {
   // ═══════════════════════════════════════════════════════════════════
@@ -64,6 +101,7 @@ export default function PackageOrders() {
   const [loading, setLoading] = useState(false);
   const [viewingOrder, setViewingOrder] = useState(null);
   const [paymentOrder, setPaymentOrder] = useState(null);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(null);
 
   const currentController = useRef(null);
   const confirm = useConfirm();
@@ -162,6 +200,20 @@ export default function PackageOrders() {
   const handleAllTime = () => {
     clearDates();
     setTimeout(() => load(1), 100);
+  };
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await api.post(`/orders/${orderId}/update-status?type=packages`, {
+        status: newStatus
+      });
+      toast.success(
+        `Status updated to ${STATUS_LABELS[newStatus] || newStatus}`
+      );
+      load(page);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update status");
+    }
   };
 
   const handleRefund = useCallback(
@@ -327,6 +379,9 @@ export default function PackageOrders() {
                     onMarkPaid={() => onMarkPaidClick(r)}
                     onView={() => setViewingOrder(r)}
                     onRefund={handleRefund}
+                    onStatusChange={handleStatusChange}
+                    statusDropdownOpen={statusDropdownOpen}
+                    setStatusDropdownOpen={setStatusDropdownOpen}
                   />
                 ))}
               </tbody>
@@ -375,8 +430,114 @@ export default function PackageOrders() {
 // ROW COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
-function PackageOrderRow({ order, onMarkPaid, onView, onRefund }) {
+function PackageOrderRow({
+  order,
+  onMarkPaid,
+  onView,
+  onRefund,
+  onStatusChange,
+  statusDropdownOpen,
+  setStatusDropdownOpen
+}) {
   const r = order;
+  const confirm = useConfirm();
+  const dropdownRef = React.useRef(null);
+  const buttonRef = React.useRef(null);
+  const [dropdownPosition, setDropdownPosition] = React.useState({
+    top: 0,
+    left: 0,
+    position: "below" // "above" or "below"
+  });
+
+  // Calculate and update dropdown position
+  const updateDropdownPosition = React.useCallback(() => {
+    if (!buttonRef.current || statusDropdownOpen !== r.id) return;
+
+    requestAnimationFrame(() => {
+      if (!buttonRef.current) return;
+
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 180;
+      const estimatedHeight = 150;
+      const gap = 4;
+
+      // Calculate space
+      const spaceBelow = window.innerHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+
+      // Decide position: above if not enough space below AND more space above
+      const positionAbove =
+        spaceBelow < estimatedHeight + gap && spaceAbove > spaceBelow;
+
+      // Horizontal: position dropdown slightly to the right of button
+      let left = buttonRect.left + 8;
+
+      // If would overflow on right, align right edge of dropdown with right edge of button
+      if (left + dropdownWidth > window.innerWidth - 10) {
+        left = buttonRect.right - dropdownWidth;
+      }
+
+      // If still not enough space, position to the left of button
+      if (left < 10) {
+        left = buttonRect.left - dropdownWidth - gap;
+      }
+
+      // Ensure it stays within viewport
+      if (left < 10) left = 10;
+      if (left + dropdownWidth > window.innerWidth - 10) {
+        left = window.innerWidth - dropdownWidth - 10;
+      }
+
+      // Vertical position
+      let top;
+      if (positionAbove) {
+        top = buttonRect.top - estimatedHeight - gap;
+        if (top < 10) {
+          top = buttonRect.bottom + gap;
+          setDropdownPosition({ top, left, position: "below" });
+          return;
+        }
+      } else {
+        top = buttonRect.bottom + gap;
+        if (top + estimatedHeight > window.innerHeight - 10) {
+          const aboveTop = buttonRect.top - estimatedHeight - gap;
+          if (aboveTop >= 10) {
+            top = aboveTop;
+            setDropdownPosition({ top, left, position: "above" });
+            return;
+          } else {
+            top = Math.max(10, window.innerHeight - estimatedHeight - 10);
+          }
+        }
+      }
+
+      setDropdownPosition({
+        top,
+        left,
+        position: positionAbove ? "above" : "below"
+      });
+    });
+  }, [statusDropdownOpen, r.id]);
+
+  // Update position when dropdown opens
+  React.useEffect(() => {
+    if (statusDropdownOpen === r.id) {
+      updateDropdownPosition();
+    }
+  }, [statusDropdownOpen, r.id, updateDropdownPosition]);
+
+  // Recalculate on scroll/resize
+  React.useEffect(() => {
+    if (statusDropdownOpen === r.id) {
+      window.addEventListener("resize", updateDropdownPosition);
+      window.addEventListener("scroll", updateDropdownPosition, true);
+      return () => {
+        window.removeEventListener("resize", updateDropdownPosition);
+        window.removeEventListener("scroll", updateDropdownPosition, true);
+      };
+    }
+  }, [statusDropdownOpen, r.id, updateDropdownPosition]);
+
   // For health packages, patient name is typically the user name
   const patientName = r.patient?.name || r.user?.name || "-";
   const primaryUserName = r.user?.name || "-"; // Primary user (the account owner)
@@ -513,6 +674,171 @@ function PackageOrderRow({ order, onMarkPaid, onView, onRefund }) {
                   <RotateCcw size={16} />
                 </button>
               )
+            );
+          })()}
+          {/* Status Change Dropdown */}
+          {(() => {
+            const allowedStatuses = STATUS_TRANSITIONS[r.status] || [];
+            // CANCELLED can only be done from PENDING or CONFIRMED
+            const canCancel =
+              (r.status === "PENDING" || r.status === "CONFIRMED") &&
+              r.status !== "CANCELLED";
+            const hasOptions = allowedStatuses.length > 0 || canCancel;
+            // Don't show dropdown if status is CANCELLED and has no other transitions
+            if (
+              !hasOptions ||
+              (r.status === "CANCELLED" && allowedStatuses.length === 0)
+            )
+              return null;
+
+            const isOpen = statusDropdownOpen === r.id;
+
+            return (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  ref={buttonRef}
+                  className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors flex items-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatusDropdownOpen(isOpen ? null : r.id);
+                  }}
+                  title="Change Status">
+                  <Settings size={16} />
+                  <ChevronDown
+                    size={12}
+                    className={`transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {isOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-[9999]"
+                      onClick={() => setStatusDropdownOpen(null)}
+                    />
+                    <div
+                      ref={(el) => {
+                        dropdownRef.current = el;
+                        // Fine-tune position after render to ensure it's correctly positioned relative to button
+                        if (
+                          el &&
+                          buttonRef.current &&
+                          statusDropdownOpen === r.id
+                        ) {
+                          requestAnimationFrame(() => {
+                            const dropdownRect = el.getBoundingClientRect();
+                            const buttonRect =
+                              buttonRef.current?.getBoundingClientRect();
+
+                            if (!buttonRect) return;
+
+                            // Check if dropdown is positioned correctly relative to button
+                            const expectedTopBelow = buttonRect.bottom + 4;
+                            const expectedTopAbove =
+                              buttonRect.top - dropdownRect.height - 4;
+
+                            // If positioned below but overflowing, move above
+                            if (
+                              dropdownPosition.position === "below" &&
+                              dropdownRect.bottom > window.innerHeight - 10
+                            ) {
+                              const newTop = Math.max(10, expectedTopAbove);
+                              setDropdownPosition((prev) => ({
+                                ...prev,
+                                top: newTop,
+                                position: "above"
+                              }));
+                            }
+                            // If positioned above but too far up (not adjacent to button), adjust
+                            else if (
+                              dropdownPosition.position === "above" &&
+                              Math.abs(dropdownRect.bottom - buttonRect.top) >
+                                20
+                            ) {
+                              const newTop = Math.max(10, expectedTopAbove);
+                              setDropdownPosition((prev) => ({
+                                ...prev,
+                                top: newTop
+                              }));
+                            }
+                            // If positioned below but not adjacent to button, adjust
+                            else if (
+                              dropdownPosition.position === "below" &&
+                              Math.abs(dropdownRect.top - buttonRect.bottom) >
+                                20
+                            ) {
+                              const newTop = expectedTopBelow;
+                              setDropdownPosition((prev) => ({
+                                ...prev,
+                                top: newTop
+                              }));
+                            }
+                          });
+                        }
+                      }}
+                      className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px] max-w-[200px]"
+                      style={{
+                        zIndex: 10000,
+                        top: `${dropdownPosition.top}px`,
+                        left: `${dropdownPosition.left}px`,
+                        maxHeight:
+                          dropdownPosition.position === "above"
+                            ? `${Math.min(
+                                250,
+                                Math.max(100, dropdownPosition.top - 10)
+                              )}px`
+                            : `${Math.min(
+                                250,
+                                Math.max(
+                                  100,
+                                  window.innerHeight - dropdownPosition.top - 10
+                                )
+                              )}px`,
+                        overflowY: "auto"
+                      }}
+                      onClick={(e) => e.stopPropagation()}>
+                      {allowedStatuses.map((status) => (
+                        <button
+                          key={status}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setStatusDropdownOpen(null);
+                            const ok = await confirm({
+                              title: "Change Status",
+                              message: `Change status from ${
+                                STATUS_LABELS[r.status] || r.status
+                              } to ${STATUS_LABELS[status] || status}?`
+                            });
+                            if (ok) {
+                              onStatusChange(r.id, status);
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors border-b border-slate-100 last:border-0">
+                          {STATUS_LABELS[status] || status}
+                        </button>
+                      ))}
+                      {canCancel && !allowedStatuses.includes("CANCELLED") && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setStatusDropdownOpen(null);
+                            const ok = await confirm({
+                              title: "Cancel Order",
+                              message: `Are you sure you want to cancel this order? This action cannot be undone.`
+                            });
+                            if (ok) {
+                              onStatusChange(r.id, "CANCELLED");
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors border-t border-slate-200 mt-1">
+                          {STATUS_LABELS["CANCELLED"] || "Cancelled"}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             );
           })()}
         </div>

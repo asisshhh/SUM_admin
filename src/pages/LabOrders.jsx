@@ -456,7 +456,8 @@ function LabOrderRow({
 
       const buttonRect = buttonRef.current.getBoundingClientRect();
       const dropdownWidth = 180;
-      const estimatedHeight = 180;
+      // Use a more conservative height estimate - actual height will be adjusted after render
+      const estimatedHeight = 150;
       const gap = 4;
 
       // Calculate space
@@ -467,29 +468,52 @@ function LabOrderRow({
       const positionAbove =
         spaceBelow < estimatedHeight + gap && spaceAbove > spaceBelow;
 
-      // Horizontal: align right edge of dropdown with right edge of button
-      let left = buttonRect.right - dropdownWidth;
+      // Horizontal: position dropdown slightly to the right of button
+      // Align left edge of dropdown with left edge of button, then shift right a bit
+      let left = buttonRect.left + 8; // Shift 8px to the right from button's left edge
 
-      // Keep within viewport
+      // If would overflow on right, align right edge of dropdown with right edge of button
+      if (left + dropdownWidth > window.innerWidth - 10) {
+        left = buttonRect.right - dropdownWidth;
+      }
+
+      // If still not enough space, position to the left of button
+      if (left < 10) {
+        left = buttonRect.left - dropdownWidth - gap;
+      }
+
+      // Ensure it stays within viewport
       if (left < 10) left = 10;
       if (left + dropdownWidth > window.innerWidth - 10) {
         left = window.innerWidth - dropdownWidth - 10;
       }
 
-      // Vertical position
+      // Vertical position - ensure dropdown is directly adjacent to button
       let top;
       if (positionAbove) {
+        // Position directly above the button
+        // We'll calculate actual height after render, but use a reasonable estimate
         top = buttonRect.top - estimatedHeight - gap;
-        if (top < 10) top = 10;
+        // Don't let it go above viewport, but keep it close to button
+        if (top < 10) {
+          // If not enough space above, position below instead
+          top = buttonRect.bottom + gap;
+          setDropdownPosition({ top, left, position: "below" });
+          return;
+        }
       } else {
+        // Position directly below the button
         top = buttonRect.bottom + gap;
-        // If would overflow, try above
+        // If would overflow below, try above
         if (top + estimatedHeight > window.innerHeight - 10) {
           const aboveTop = buttonRect.top - estimatedHeight - gap;
           if (aboveTop >= 10) {
             top = aboveTop;
             setDropdownPosition({ top, left, position: "above" });
             return;
+          } else {
+            // If can't fit above either, position as close as possible
+            top = Math.max(10, window.innerHeight - estimatedHeight - 10);
           }
         }
       }
@@ -720,26 +744,58 @@ function LabOrderRow({
                     <div
                       ref={(el) => {
                         dropdownRef.current = el;
-                        // Fine-tune position after render if needed
-                        if (el && buttonRef.current) {
+                        // Fine-tune position after render to ensure it's correctly positioned relative to button
+                        if (
+                          el &&
+                          buttonRef.current &&
+                          statusDropdownOpen === r.id
+                        ) {
                           requestAnimationFrame(() => {
                             const dropdownRect = el.getBoundingClientRect();
                             const buttonRect =
                               buttonRef.current?.getBoundingClientRect();
+
+                            if (!buttonRect) return;
+
+                            // Check if dropdown is positioned correctly relative to button
+                            const expectedTopBelow = buttonRect.bottom + 4;
+                            const expectedTopAbove =
+                              buttonRect.top - dropdownRect.height - 4;
+
+                            // If positioned below but overflowing, move above
                             if (
-                              buttonRect &&
-                              dropdownRect.bottom > window.innerHeight - 10 &&
-                              dropdownPosition.position === "below"
+                              dropdownPosition.position === "below" &&
+                              dropdownRect.bottom > window.innerHeight - 10
                             ) {
-                              // Reposition above if overflowing
-                              const newTop = Math.max(
-                                10,
-                                buttonRect.top - dropdownRect.height - 4
-                              );
+                              const newTop = Math.max(10, expectedTopAbove);
                               setDropdownPosition((prev) => ({
                                 ...prev,
                                 top: newTop,
                                 position: "above"
+                              }));
+                            }
+                            // If positioned above but too far up (not adjacent to button), adjust
+                            else if (
+                              dropdownPosition.position === "above" &&
+                              Math.abs(dropdownRect.bottom - buttonRect.top) >
+                                20
+                            ) {
+                              const newTop = Math.max(10, expectedTopAbove);
+                              setDropdownPosition((prev) => ({
+                                ...prev,
+                                top: newTop
+                              }));
+                            }
+                            // If positioned below but not adjacent to button, adjust
+                            else if (
+                              dropdownPosition.position === "below" &&
+                              Math.abs(dropdownRect.top - buttonRect.bottom) >
+                                20
+                            ) {
+                              const newTop = expectedTopBelow;
+                              setDropdownPosition((prev) => ({
+                                ...prev,
+                                top: newTop
                               }));
                             }
                           });
@@ -786,7 +842,7 @@ function LabOrderRow({
                           {STATUS_LABELS[status] || status}
                         </button>
                       ))}
-                      {canCancel && (
+                      {canCancel && !allowedStatuses.includes("CANCELLED") && (
                         <button
                           onClick={async (e) => {
                             e.stopPropagation();

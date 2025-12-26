@@ -545,9 +545,11 @@ function LabOrderRow({
     }
   }, [statusDropdownOpen, r.id, updateDropdownPosition]);
 
-  // For pathology reports (type=lab in backend)
-  const patientName = r.patient?.name || r.user?.name || "-";
-  const primaryUserName = r.user?.name || "-"; // Primary user (the account owner)
+  // Show both patient (relative) name and user (account owner) name
+  const patientName = r.patient?.name || "-"; // Patient/Relative name
+  const userName = r.user?.name || "-"; // Account owner (parent user) name
+  // For avatar, use patient name if available, otherwise user name
+  const displayName = patientName !== "-" ? patientName : userName;
   const testName =
     r.testName || r.items?.map((i) => i.testName).join(", ") || "-";
 
@@ -559,11 +561,11 @@ function LabOrderRow({
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-            {patientName[0] || "?"}
+            {displayName && displayName !== "-" ? displayName[0] : "?"}
           </div>
           <div>
             <p className="font-medium text-slate-800">{patientName}</p>
-            <p className="text-xs text-slate-500">{primaryUserName}</p>
+            <p className="text-xs text-slate-500">{userName}</p>
           </div>
         </div>
       </td>

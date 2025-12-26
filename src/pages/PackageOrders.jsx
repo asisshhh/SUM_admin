@@ -218,14 +218,21 @@ export default function PackageOrders() {
 
   const handleRefund = useCallback(
     async (order) => {
-      // Find the payment with SUCCESS status and isOnline
-      const payment = order.payments?.find(
+      // Ensure payments is an array
+      const payments = Array.isArray(order.payments) ? order.payments : [];
+
+      // Find the payment with SUCCESS status and isOnline (via CCAvenue)
+      const payment = payments.find(
         (p) =>
+          p &&
           p.status === "SUCCESS" &&
-          p.isOnline === true &&
+          p.status !== "REFUNDED" &&
+          (p.isOnline === true ||
+            p.isOnline === "true" ||
+            p.isOnline === 1 ||
+            String(p.isOnline).toLowerCase() === "true") &&
           p.gatewayPaymentId &&
-          !p.refundedAt &&
-          p.status !== "REFUNDED"
+          !p.refundedAt
       );
 
       if (!payment) {
@@ -538,9 +545,11 @@ function PackageOrderRow({
     }
   }, [statusDropdownOpen, r.id, updateDropdownPosition]);
 
-  // For health packages, patient name is typically the user name
-  const patientName = r.patient?.name || r.user?.name || "-";
-  const primaryUserName = r.user?.name || "-"; // Primary user (the account owner)
+  // Show both patient (relative) name and user (account owner) name
+  const patientName = r.patient?.name || "-"; // Patient/Relative name
+  const userName = r.user?.name || "-"; // Account owner (parent user) name
+  // For avatar, use patient name if available, otherwise user name
+  const displayName = patientName !== "-" ? patientName : userName;
 
   return (
     <tr className="hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-transparent transition-all duration-200 border-b border-slate-100 last:border-0">
@@ -550,11 +559,11 @@ function PackageOrderRow({
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-            {patientName[0] || "?"}
+            {displayName && displayName !== "-" ? displayName[0] : "?"}
           </div>
           <div>
             <p className="font-medium text-slate-800">{patientName}</p>
-            <p className="text-xs text-slate-500">{primaryUserName}</p>
+            <p className="text-xs text-slate-500">{userName}</p>
           </div>
         </div>
       </td>
@@ -644,36 +653,46 @@ function PackageOrderRow({
           )}
           {/* Refund button for cancelled orders with successful online payments */}
           {(() => {
+            // Only show refund for cancelled orders
+            if (r.status !== "CANCELLED") return null;
+
             // Ensure payments is an array
             const payments = Array.isArray(r.payments) ? r.payments : [];
 
-            const refundablePayment = payments.find(
-              (p) =>
-                p &&
-                p.status === "SUCCESS" &&
-                (p.isOnline === true ||
-                  p.isOnline === "true" ||
-                  p.isOnline === 1 ||
-                  String(p.isOnline).toLowerCase() === "true") &&
-                p.gatewayPaymentId &&
-                !p.refundedAt
-            );
+            // Find refundable payment: must be SUCCESS, online (via CCAvenue), and not refunded
+            const refundablePayment = payments.find((p) => {
+              if (!p) return false;
+              // Must be successful payment
+              if (p.status !== "SUCCESS") return false;
+              // Must be online payment
+              const isOnline =
+                p.isOnline === true ||
+                p.isOnline === "true" ||
+                p.isOnline === 1 ||
+                String(p.isOnline).toLowerCase() === "true";
+              if (!isOnline) return false;
+              // Must have CCAvenue gateway payment ID
+              if (!p.gatewayPaymentId) return false;
+              // Must not already be refunded
+              if (p.refundedAt) return false;
+              return true;
+            });
+
+            // Show refund button if there's a refundable payment
+            if (!refundablePayment) return null;
 
             return (
-              r.status === "CANCELLED" &&
-              refundablePayment && (
-                <button
-                  type="button"
-                  className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onRefund?.(r);
-                  }}
-                  title="Process Refund">
-                  <RotateCcw size={16} />
-                </button>
-              )
+              <button
+                type="button"
+                className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRefund?.(r);
+                }}
+                title="Process Refund">
+                <RotateCcw size={16} />
+              </button>
             );
           })()}
           {/* Status Change Dropdown */}

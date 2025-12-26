@@ -330,7 +330,7 @@ export default function LabOrders() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{ position: "relative" }}>
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50/50">
@@ -448,6 +448,23 @@ function LabOrderRow({
 }) {
   const r = order;
   const confirm = useConfirm();
+  const dropdownRef = React.useRef(null);
+  const buttonRef = React.useRef(null);
+  const [dropdownPosition, setDropdownPosition] = React.useState({
+    top: 0,
+    right: 0
+  });
+
+  // Update dropdown position when it opens
+  React.useEffect(() => {
+    if (statusDropdownOpen === r.id && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right
+      });
+    }
+  }, [statusDropdownOpen, r.id]);
 
   // For pathology reports (type=lab in backend)
   const patientName = r.patient?.name || r.user?.name || "-";
@@ -621,10 +638,9 @@ function LabOrderRow({
             const isOpen = statusDropdownOpen === r.id;
 
             return (
-              <div
-                className="relative"
-                style={{ zIndex: isOpen ? 1000 : "auto" }}>
+              <div className="relative" ref={dropdownRef}>
                 <button
+                  ref={buttonRef}
                   className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -642,14 +658,15 @@ function LabOrderRow({
                 {isOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-[999]"
+                      className="fixed inset-0 z-[9999]"
                       onClick={() => setStatusDropdownOpen(null)}
                     />
                     <div
-                      className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-[1000] min-w-[150px]"
+                      className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px]"
                       style={{
-                        position: "absolute",
-                        zIndex: 1000
+                        zIndex: 10000,
+                        top: `${dropdownPosition.top}px`,
+                        right: `${dropdownPosition.right}px`
                       }}
                       onClick={(e) => e.stopPropagation()}>
                       {allowedStatuses.map((status) => (
@@ -668,7 +685,7 @@ function LabOrderRow({
                               onStatusChange(r.id, status);
                             }
                           }}
-                          className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                          className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-slate-100 last:border-0">
                           {STATUS_LABELS[status] || status}
                         </button>
                       ))}

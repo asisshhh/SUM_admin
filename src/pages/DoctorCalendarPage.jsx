@@ -141,12 +141,15 @@ export default function DoctorCalendarPage() {
 
   const handleEventClick = (clickInfo) => {
     const ext = clickInfo.event.extendedProps;
-    // Server is already in IST, use dates directly
-    const eventDate = new Date(clickInfo.event.start);
-    // Get date string (YYYY-MM-DD)
-    const dateStr = eventDate.toISOString().split("T")[0];
-    // Get time string (HH:MM)
-    const timeStr = eventDate.toTimeString().slice(0, 5);
+    // Server is already in IST, use dates directly without any conversion
+    // Use startStr directly from FullCalendar (already in local timezone format)
+    const startStr = clickInfo.event.startStr || "";
+    // Get date string (YYYY-MM-DD) - use the ISO string directly
+    const dateStr = startStr.split("T")[0] || startStr.split(" ")[0];
+    // Get time string (HH:MM) - extract from startStr
+    const timeStr = startStr.includes("T")
+      ? startStr.split("T")[1]?.slice(0, 5) || ""
+      : "";
 
     if (ext?.type === "schedule") {
       // Open slot booking modal for that date and start time
@@ -176,12 +179,15 @@ export default function DoctorCalendarPage() {
       toast.warning("Please select a doctor first");
       return;
     }
-    // Server is already in IST, use dates directly
-    const slotDate = new Date(slotInfo.start);
-    // Get date string (YYYY-MM-DD)
-    const date = slotDate.toISOString().split("T")[0];
-    // Get time string (HH:MM)
-    const time = slotDate.toTimeString().slice(0, 5);
+    // Server is already in IST, use dates directly without any conversion
+    // Use startStr directly from FullCalendar (already in local timezone format)
+    const startStr = slotInfo.startStr || "";
+    // Get date string (YYYY-MM-DD) - use the ISO string directly
+    const date = startStr.split("T")[0] || startStr.split(" ")[0];
+    // Get time string (HH:MM) - extract from startStr
+    const time = startStr.includes("T")
+      ? startStr.split("T")[1]?.slice(0, 5) || ""
+      : "";
     setSelectedSlot({
       doctorId,
       date,
@@ -469,28 +475,13 @@ export default function DoctorCalendarPage() {
                 <div className="flex items-center justify-between py-2 border-b border-slate-200">
                   <span className="text-sm text-slate-500">Date:</span>
                   <span className="font-medium text-slate-800">
-                    {new Date(
-                      selectedAppointment.date + "T00:00:00"
-                    ).toLocaleDateString("en-IN", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric"
-                    })}
+                    {selectedAppointment.date}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-slate-200">
                   <span className="text-sm text-slate-500">Time:</span>
                   <span className="font-medium text-slate-800">
-                    {selectedAppointment.time
-                      ? new Date(
-                          `2000-01-01T${selectedAppointment.time}:00`
-                        ).toLocaleTimeString("en-IN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true
-                        })
-                      : selectedAppointment.time}
+                    {selectedAppointment.time}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-slate-200">

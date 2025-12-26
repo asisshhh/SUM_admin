@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useConfirm } from "../contexts/ConfirmContext";
+import { useAuth } from "../contexts/AuthContext";
 import api from "../api/client";
 import useDateRange from "../hooks/useDateRange";
 import {
@@ -227,6 +228,7 @@ export default function HomeHealthcareOrders() {
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [assignedToMe, setAssignedToMe] = useState(false);
   const [rows, setRows] = useState([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(DEFAULT_LIMIT);
@@ -239,6 +241,7 @@ export default function HomeHealthcareOrders() {
 
   const currentController = useRef(null);
   const confirm = useConfirm();
+  const { user } = useAuth();
 
   // Fetch assignable users
   const { data: assignableUsersData } = useQuery({
@@ -273,6 +276,7 @@ export default function HomeHealthcareOrders() {
           limit,
           search: search || undefined,
           status: status || undefined,
+          assignedToMe: assignedToMe ? true : undefined,
           ...buildDateParams()
         };
 
@@ -315,7 +319,7 @@ export default function HomeHealthcareOrders() {
     if (searchRef.current) clearTimeout(searchRef.current);
     searchRef.current = setTimeout(() => load(1), 420);
     return () => clearTimeout(searchRef.current);
-  }, [search, status, fromDate, toDate, includeFuture]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, status, assignedToMe, fromDate, toDate, includeFuture]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => {
@@ -491,8 +495,28 @@ export default function HomeHealthcareOrders() {
           isShowingToday={isShowingToday}
           isAllTime={isAllTime}
           rowCount={rows.length}
-          total={total}
-        />
+          total={total}>
+          {/* Assigned to Me Filter */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Filter
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer group px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl hover:bg-slate-100/80 transition-all">
+              <input
+                type="checkbox"
+                checked={assignedToMe}
+                onChange={(e) => {
+                  setAssignedToMe(e.target.checked);
+                  load(1);
+                }}
+                className="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+              />
+              <span className="text-sm text-slate-700 group-hover:text-slate-900 font-medium">
+                Assigned to me
+              </span>
+            </label>
+          </div>
+        </OrderFilterCard>
 
         {/* Table */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 overflow-hidden">

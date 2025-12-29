@@ -19,7 +19,11 @@ import {
   X,
   UserPlus,
   MapPin,
-  UserX
+  UserX,
+  CheckCircle2,
+  IndianRupee,
+  Hash,
+  XCircle
 } from "lucide-react";
 import { Pagination, SearchableDropdown } from "../components/shared";
 import { toast } from "react-toastify";
@@ -82,7 +86,15 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
     addressLine1: primaryProfile?.addressLine1 || "",
     city: primaryProfile?.city || "",
     state: primaryProfile?.state || "",
-    pin: primaryProfile?.pin || ""
+    pin: primaryProfile?.pin || "",
+    uhid: primaryProfile?.uhid || "",
+    registrationFeeCollected: primaryProfile?.registrationFeeCollected || false,
+    registrationFeeCollectedAt: primaryProfile?.registrationFeeCollectedAt
+      ? new Date(primaryProfile.registrationFeeCollectedAt)
+          .toISOString()
+          .slice(0, 16)
+      : "",
+    registrationFeeAmount: primaryProfile?.registrationFeeAmount || 200
   });
   const [errors, setErrors] = useState({});
 
@@ -132,7 +144,15 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
       addressLine1: formData.addressLine1 || null,
       city: formData.city || null,
       state: formData.state || null,
-      pin: formData.pin || null
+      pin: formData.pin || null,
+      uhid: formData.uhid || null,
+      registrationFeeCollected: formData.registrationFeeCollected || false,
+      registrationFeeCollectedAt: formData.registrationFeeCollectedAt
+        ? new Date(formData.registrationFeeCollectedAt).toISOString()
+        : null,
+      registrationFeeAmount: formData.registrationFeeCollected
+        ? parseFloat(formData.registrationFeeAmount) || 200
+        : null
     };
 
     if (isEdit) {
@@ -350,6 +370,85 @@ const PatientModal = ({ patient, onClose, onSuccess }) => {
                   placeholder="PIN"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  UHID
+                </label>
+                <input
+                  type="text"
+                  name="uhid"
+                  value={formData.uhid}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Unique Health ID"
+                />
+              </div>
+            </div>
+
+            {/* Registration Fee Section */}
+            <div className="space-y-4 pt-4 border-t border-slate-200">
+              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                Registration Fee
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="registrationFeeCollected"
+                      checked={formData.registrationFeeCollected}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          registrationFeeCollected: e.target.checked,
+                          registrationFeeCollectedAt: e.target.checked
+                            ? new Date().toISOString().slice(0, 16)
+                            : ""
+                        }));
+                      }}
+                      className="w-4 h-4 text-green-600 border-slate-300 rounded focus:ring-green-500"
+                    />
+                    <span className="text-sm font-medium text-slate-700">
+                      Registration Fee Collected
+                    </span>
+                  </label>
+                </div>
+
+                {formData.registrationFeeCollected && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Collection Date & Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="registrationFeeCollectedAt"
+                        value={formData.registrationFeeCollectedAt}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        name="registrationFeeAmount"
+                        value={formData.registrationFeeAmount}
+                        onChange={handleChange}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="200"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -394,7 +493,13 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
     addressLine2: profile?.addressLine2 || "",
     city: profile?.city || "",
     state: profile?.state || "",
-    pin: profile?.pin || ""
+    pin: profile?.pin || "",
+    uhid: profile?.uhid || "",
+    registrationFeeCollected: profile?.registrationFeeCollected || false,
+    registrationFeeCollectedAt: profile?.registrationFeeCollectedAt
+      ? new Date(profile.registrationFeeCollectedAt).toISOString().slice(0, 16)
+      : "",
+    registrationFeeAmount: profile?.registrationFeeAmount || 200
   });
   const [errors, setErrors] = useState({});
 
@@ -448,7 +553,15 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
       addressLine2: formData.addressLine2 || null,
       city: formData.city || null,
       state: formData.state || null,
-      pin: formData.pin || null
+      pin: formData.pin || null,
+      uhid: formData.uhid || null,
+      registrationFeeCollected: formData.registrationFeeCollected || false,
+      registrationFeeCollectedAt: formData.registrationFeeCollectedAt
+        ? new Date(formData.registrationFeeCollectedAt).toISOString()
+        : null,
+      registrationFeeAmount: formData.registrationFeeCollected
+        ? parseFloat(formData.registrationFeeAmount) || 200
+        : null
     };
 
     if (isEdit) {
@@ -569,9 +682,6 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Blood Group
-              </label>
               <SearchableDropdown
                 label="Blood Group"
                 value={formData.bloodGroup || ""}
@@ -634,6 +744,85 @@ const ProfileModal = ({ patient, profile, onClose, onSuccess }) => {
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 placeholder="PIN"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                UHID
+              </label>
+              <input
+                type="text"
+                name="uhid"
+                value={formData.uhid}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                placeholder="Unique Health ID"
+              />
+            </div>
+          </div>
+
+          {/* Registration Fee Section */}
+          <div className="space-y-4 pt-4 border-t border-slate-200">
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+              Registration Fee
+            </h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="registrationFeeCollected"
+                    checked={formData.registrationFeeCollected}
+                    onChange={(e) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        registrationFeeCollected: e.target.checked,
+                        registrationFeeCollectedAt: e.target.checked
+                          ? new Date().toISOString().slice(0, 16)
+                          : ""
+                      }));
+                    }}
+                    className="w-4 h-4 text-pink-600 border-slate-300 rounded focus:ring-pink-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">
+                    Registration Fee Collected
+                  </span>
+                </label>
+              </div>
+
+              {formData.registrationFeeCollected && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Collection Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="registrationFeeCollectedAt"
+                      value={formData.registrationFeeCollectedAt}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Amount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      name="registrationFeeAmount"
+                      value={formData.registrationFeeAmount}
+                      onChange={handleChange}
+                      min="0"
+                      step="0.01"
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      placeholder="200"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -722,10 +911,61 @@ const PatientRow = ({
           </span>
         </td>
         <td className="px-4 py-3">
-          {primaryProfile?.bloodGroup && (
-            <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
-              {primaryProfile.bloodGroup}
-            </span>
+          <div className="space-y-1.5">
+            {primaryProfile?.bloodGroup && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-500 font-medium">
+                  Blood:
+                </span>
+                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
+                  {primaryProfile.bloodGroup}
+                </span>
+              </div>
+            )}
+            {primaryProfile?.uhid && (
+              <div className="flex items-center gap-1.5 text-xs">
+                <Hash size={12} className="text-slate-400" />
+                <span className="text-slate-500 font-medium">UHID:</span>
+                <span className="text-slate-700 font-medium">
+                  {primaryProfile.uhid}
+                </span>
+              </div>
+            )}
+            {!primaryProfile?.bloodGroup && !primaryProfile?.uhid && (
+              <span className="text-xs text-slate-400">-</span>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          {primaryProfile?.registrationFeeCollected ? (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 text-xs">
+                <CheckCircle2 size={14} className="text-green-600" />
+                <span className="font-medium text-green-700">Paid</span>
+              </div>
+              {primaryProfile.registrationFeeAmount && (
+                <div className="flex items-center gap-1 text-xs text-slate-700 font-medium">
+                  <IndianRupee size={12} />
+                  {primaryProfile.registrationFeeAmount}
+                </div>
+              )}
+              {primaryProfile.registrationFeeCollectedAt && (
+                <div className="text-xs text-slate-500">
+                  {new Date(
+                    primaryProfile.registrationFeeCollectedAt
+                  ).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric"
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <XCircle size={14} className="text-red-500" />
+              <span className="text-xs font-medium text-red-600">Not Paid</span>
+            </div>
           )}
         </td>
         <td className="px-4 py-3 text-right">
@@ -766,7 +1006,7 @@ const PatientRow = ({
       {/* Expanded Profiles */}
       {expanded && (
         <tr>
-          <td colSpan="6" className="bg-slate-50 px-4 py-3">
+          <td colSpan="7" className="bg-slate-50 px-4 py-3">
             <div className="ml-8 space-y-2">
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Patient Profiles ({profiles.length})
@@ -796,7 +1036,7 @@ const PatientRow = ({
                           isPrimary={profile.isPrimary}
                         />
                       </div>
-                      <div className="text-xs text-slate-500 flex items-center gap-3 mt-0.5">
+                      <div className="text-xs text-slate-500 flex items-center gap-3 mt-0.5 flex-wrap">
                         {profile.gender && <span>{profile.gender}</span>}
                         {profile.dob && (
                           <span className="flex items-center gap-1">
@@ -808,16 +1048,75 @@ const PatientRow = ({
                             })}
                           </span>
                         )}
-                        {profile.bloodGroup && (
-                          <span className="px-1 py-0.5 bg-red-100 text-red-700 text-xs rounded">
-                            {profile.bloodGroup}
-                          </span>
-                        )}
                         {profile.city && (
                           <span className="flex items-center gap-1">
                             <MapPin size={10} />
                             {profile.city}
                           </span>
+                        )}
+                      </div>
+                      {/* Blood Group and UHID */}
+                      {(profile.bloodGroup || profile.uhid) && (
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                          {profile.bloodGroup && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-slate-500 font-medium">
+                                Blood:
+                              </span>
+                              <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
+                                {profile.bloodGroup}
+                              </span>
+                            </div>
+                          )}
+                          {profile.uhid && (
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <Hash size={12} className="text-slate-400" />
+                              <span className="text-slate-500 font-medium">
+                                UHID:
+                              </span>
+                              <span className="text-slate-700 font-medium">
+                                {profile.uhid}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {/* Registration Fee Status */}
+                      <div className="mt-1.5">
+                        {profile.registrationFeeCollected ? (
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className="flex items-center gap-1 text-green-700">
+                              <CheckCircle2
+                                size={12}
+                                className="text-green-600"
+                              />
+                              <span className="font-medium">Fee Paid</span>
+                            </div>
+                            {profile.registrationFeeAmount && (
+                              <div className="flex items-center gap-0.5 text-slate-700 font-medium">
+                                <IndianRupee size={10} />
+                                {profile.registrationFeeAmount}
+                              </div>
+                            )}
+                            {profile.registrationFeeCollectedAt && (
+                              <div className="text-slate-500">
+                                {new Date(
+                                  profile.registrationFeeCollectedAt
+                                ).toLocaleDateString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric"
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <XCircle size={12} className="text-red-500" />
+                            <span className="font-medium text-red-600">
+                              Fee Not Paid
+                            </span>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1021,7 +1320,10 @@ This action cannot be undone.`,
                   Profiles
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Blood
+                  Blood / UHID
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Registration Fee
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Actions

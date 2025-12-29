@@ -62,6 +62,13 @@ const NavItem = ({ to, icon: Icon, label, onClick }) => {
 // Default navigation structure
 const DEFAULT_NAV_ITEMS = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard, category: "Main" },
+  {
+    path: "/homecare-specialist-dashboard",
+    label: "My Orders",
+    icon: Home,
+    category: "Main",
+    role: "HOME_HEALTHCARE_SPECIALIST"
+  },
   { path: "/orders", label: "Orders", icon: ListChecks, category: "Main" },
   {
     path: "/doctors",
@@ -227,6 +234,10 @@ const SidebarNav = ({
     if (!isSuperAdmin) {
       // Filter based on permissions
       items = DEFAULT_NAV_ITEMS.filter((item) => {
+        // Role-specific items - show only for specific role
+        if (item.role && item.role !== user?.role) {
+          return false;
+        }
         // Check if user has permission for this path
         return canAccess(item.path);
       });
@@ -241,6 +252,10 @@ const SidebarNav = ({
         item.path === "/add-refund-policy"
       ) {
         return isSuperAdmin || isAdmin;
+      }
+      // Role-specific items
+      if (item.role && item.role !== user?.role) {
+        return false;
       }
       return true;
     });
@@ -336,6 +351,13 @@ export default function AppLayout() {
       ) {
         return;
       }
+      // Allow access to home healthcare specialist dashboard
+      if (
+        currentPath === "/homecare-specialist-dashboard" &&
+        user?.role === "HOME_HEALTHCARE_SPECIALIST"
+      ) {
+        return;
+      }
       // Check if user can access this path
       if (!canAccess(currentPath) && currentPath !== "/") {
         // Redirect to dashboard or first accessible page
@@ -358,7 +380,8 @@ export default function AppLayout() {
       DOCTOR: "bg-blue-100 text-blue-700",
       RECEPTIONIST: "bg-yellow-100 text-yellow-700",
       DEPARTMENT_HEAD: "bg-orange-100 text-orange-700",
-      NURSE: "bg-pink-100 text-pink-700"
+      NURSE: "bg-pink-100 text-pink-700",
+      HOME_HEALTHCARE_SPECIALIST: "bg-green-100 text-green-700"
     };
     return colors[role] || "bg-slate-100 text-slate-700";
   };

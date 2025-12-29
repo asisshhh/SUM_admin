@@ -35,7 +35,8 @@ const RoleBadge = ({ role }) => {
     DOCTOR: "bg-blue-100 text-blue-700 border-blue-200",
     RECEPTIONIST: "bg-yellow-100 text-yellow-700 border-yellow-200",
     DEPARTMENT_HEAD: "bg-orange-100 text-orange-700 border-orange-200",
-    NURSE: "bg-pink-100 text-pink-700 border-pink-200"
+    NURSE: "bg-pink-100 text-pink-700 border-pink-200",
+    HOME_HEALTHCARE_SPECIALIST: "bg-green-100 text-green-700 border-green-200"
   };
 
   return (
@@ -536,7 +537,11 @@ const UserModal = ({ user, onClose, onSuccess }) => {
                   { value: "DOCTOR", label: "Doctor" },
                   { value: "RECEPTIONIST", label: "Receptionist" },
                   { value: "DEPARTMENT_HEAD", label: "Department Head" },
-                  { value: "NURSE", label: "Nurse" }
+                  { value: "NURSE", label: "Nurse" },
+                  {
+                    value: "HOME_HEALTHCARE_SPECIALIST",
+                    label: "Home Healthcare Specialist"
+                  }
                 ]}
                 onChange={(value) =>
                   handleChange({ target: { name: "role", value } })

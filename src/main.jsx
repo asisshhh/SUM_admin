@@ -24,6 +24,7 @@ import AmbulanceOrders from "./pages/AmbulanceOrders.jsx";
 import PackageOrders from "./pages/PackageOrders.jsx";
 import LabOrders from "./pages/LabOrders.jsx";
 import HomeHealthcareOrders from "./pages/HomeHealthcareOrders.jsx";
+import HomeHealthcareSpecialistDashboard from "./pages/HomeHealthcareSpecialistDashboard.jsx";
 import DoctorQueue from "./pages/DoctorQueue.jsx";
 import DoctorQueueMonitor from "./pages/DoctorQueueMonitor.jsx";
 import DoctorActionPanel from "./pages/DoctorActionPanel.jsx";
@@ -115,6 +116,10 @@ createRoot(document.getElementById("root")).render(
                 }>
                 <Route index element={<Dashboard />} />
                 <Route path="doctor-dashboard" element={<DoctorDashboard />} />
+                <Route
+                  path="homecare-specialist-dashboard"
+                  element={<HomeHealthcareSpecialistDashboard />}
+                />
                 {/* <Route path="orders" element={<OrdersPage />} /> */}
                 <Route path="orders" element={<OrderLayout />}>
                   <Route

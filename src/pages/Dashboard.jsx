@@ -23,6 +23,11 @@ const Dashboard = () => {
     return <Navigate to="/doctor-dashboard" replace />;
   }
 
+  // Redirect home healthcare specialists to their dashboard
+  if (user?.role === "HOME_HEALTHCARE_SPECIALIST") {
+    return <Navigate to="/homecare-specialist-dashboard" replace />;
+  }
+
   useEffect(() => {
     loadSummary();
     loadGraph();

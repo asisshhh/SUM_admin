@@ -21,13 +21,79 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 
-const ROLES = ["ADMIN", "DOCTOR", "RECEPTIONIST", "DEPARTMENT_HEAD", "NURSE"];
+const ROLES = [
+  "ADMIN",
+  "DOCTOR",
+  "RECEPTIONIST",
+  "DEPARTMENT_HEAD",
+  "NURSE",
+  "HOME_HEALTHCARE_SPECIALIST"
+];
 const ROLE_LABELS = {
   ADMIN: "Admin",
   DOCTOR: "Doctor",
   RECEPTIONIST: "Receptionist",
   DEPARTMENT_HEAD: "Department Head",
-  NURSE: "Nurse"
+  NURSE: "Nurse",
+  HOME_HEALTHCARE_SPECIALIST: "Home Healthcare Specialist"
+};
+
+// Role-specific colors and styling
+const ROLE_STYLES = {
+  ADMIN: {
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+    text: "text-purple-700",
+    badge: "bg-purple-100 text-purple-700 border-purple-200",
+    icon: "text-purple-600",
+    hoverBg: "hover:bg-purple-50",
+    button: "text-purple-600 hover:bg-purple-50 border-purple-200"
+  },
+  DOCTOR: {
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    text: "text-blue-700",
+    badge: "bg-blue-100 text-blue-700 border-blue-200",
+    icon: "text-blue-600",
+    hoverBg: "hover:bg-blue-50",
+    button: "text-blue-600 hover:bg-blue-50 border-blue-200"
+  },
+  RECEPTIONIST: {
+    bg: "bg-yellow-50",
+    border: "border-yellow-200",
+    text: "text-yellow-700",
+    badge: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    icon: "text-yellow-600",
+    hoverBg: "hover:bg-yellow-50",
+    button: "text-yellow-600 hover:bg-yellow-50 border-yellow-200"
+  },
+  DEPARTMENT_HEAD: {
+    bg: "bg-orange-50",
+    border: "border-orange-200",
+    text: "text-orange-700",
+    badge: "bg-orange-100 text-orange-700 border-orange-200",
+    icon: "text-orange-600",
+    hoverBg: "hover:bg-orange-50",
+    button: "text-orange-600 hover:bg-orange-50 border-orange-200"
+  },
+  NURSE: {
+    bg: "bg-pink-50",
+    border: "border-pink-200",
+    text: "text-pink-700",
+    badge: "bg-pink-100 text-pink-700 border-pink-200",
+    icon: "text-pink-600",
+    hoverBg: "hover:bg-pink-50",
+    button: "text-pink-600 hover:bg-pink-50 border-pink-200"
+  },
+  HOME_HEALTHCARE_SPECIALIST: {
+    bg: "bg-green-50",
+    border: "border-green-200",
+    text: "text-green-700",
+    badge: "bg-green-100 text-green-700 border-green-200",
+    icon: "text-green-600",
+    hoverBg: "hover:bg-green-50",
+    button: "text-green-600 hover:bg-green-50 border-green-200"
+  }
 };
 
 // Tab Component
@@ -219,8 +285,13 @@ const PageModal = ({ page, onClose, onSuccess }) => {
 };
 
 // Role Permissions Section
-const RolePermissionsSection = ({ pages, permissions, onRefresh }) => {
-  const [expandedRoles, setExpandedRoles] = useState(new Set(["ADMIN"]));
+const RolePermissionsSection = ({
+  pages,
+  permissions,
+  onRefresh,
+  expandedRoles,
+  setExpandedRoles
+}) => {
   const [editingRole, setEditingRole] = useState(null);
   const [editedPermissions, setEditedPermissions] = useState({});
 
@@ -280,34 +351,48 @@ const RolePermissionsSection = ({ pages, permissions, onRefresh }) => {
               (permissions.byRole?.[role] || []).map((p) => [p.pageId, p])
             );
 
+        const roleStyle = ROLE_STYLES[role] || ROLE_STYLES.ADMIN;
+
         return (
           <div
             key={role}
-            className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            className={`bg-white rounded-xl border-2 ${roleStyle.border} overflow-hidden shadow-sm hover:shadow-md transition-shadow`}>
             <div
-              className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-50"
+              className={`px-4 py-3 flex items-center justify-between cursor-pointer ${roleStyle.bg} hover:opacity-90 transition-opacity`}
               onClick={() => !isEditing && toggleRole(role)}>
               <div className="flex items-center gap-3">
                 <button
-                  className={`p-1 rounded ${
-                    isExpanded ? "bg-purple-100" : ""
+                  className={`p-1 rounded transition-colors ${
+                    isExpanded ? roleStyle.bg : "hover:bg-white/50"
                   }`}>
                   {isExpanded ? (
-                    <ChevronDown size={18} className="text-purple-600" />
+                    <ChevronDown size={18} className={roleStyle.icon} />
                   ) : (
                     <ChevronRight size={18} className="text-slate-400" />
                   )}
                 </button>
-                <Shield size={18} className="text-purple-600" />
-                <span className="font-medium text-slate-900">
-                  {ROLE_LABELS[role]}
-                </span>
-                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                <div
+                  className={`p-1.5 rounded-lg ${roleStyle.bg} border ${roleStyle.border}`}>
+                  <Shield size={18} className={roleStyle.icon} />
+                </div>
+                <div className="flex flex-col">
+                  <span className={`font-semibold ${roleStyle.text}`}>
+                    {ROLE_LABELS[role]}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {role.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <span
+                  className={`text-xs px-2.5 py-1 rounded-full border font-medium ${roleStyle.badge}`}>
                   {
                     (permissions.byRole?.[role] || []).filter((p) => p.canView)
                       .length
                   }{" "}
-                  pages
+                  {(permissions.byRole?.[role] || []).filter((p) => p.canView)
+                    .length === 1
+                    ? "page"
+                    : "pages"}
                 </span>
               </div>
               <div
@@ -338,7 +423,7 @@ const RolePermissionsSection = ({ pages, permissions, onRefresh }) => {
                 ) : (
                   <button
                     onClick={() => startEditing(role)}
-                    className="px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg flex items-center gap-1">
+                    className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-1 border transition-colors ${roleStyle.button}`}>
                     <Edit size={14} /> Edit
                   </button>
                 )}
@@ -346,9 +431,10 @@ const RolePermissionsSection = ({ pages, permissions, onRefresh }) => {
             </div>
 
             {isExpanded && (
-              <div className="border-t border-slate-200">
+              <div className={`border-t-2 ${roleStyle.border}`}>
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead
+                    className={`${roleStyle.bg} border-b ${roleStyle.border}`}>
                     <tr>
                       <th className="px-4 py-2 text-left font-medium text-slate-600">
                         Page
@@ -381,10 +467,11 @@ const RolePermissionsSection = ({ pages, permissions, onRefresh }) => {
                       if (!catPages.length) return null;
                       return (
                         <React.Fragment key={cat}>
-                          <tr className="bg-slate-100">
+                          <tr
+                            className={`${roleStyle.bg} border-b ${roleStyle.border}`}>
                             <td
                               colSpan={5}
-                              className="px-4 py-1.5 text-xs font-semibold text-slate-500 uppercase">
+                              className={`px-4 py-2 text-xs font-semibold ${roleStyle.text} uppercase tracking-wider`}>
                               {cat}
                             </td>
                           </tr>
@@ -393,7 +480,7 @@ const RolePermissionsSection = ({ pages, permissions, onRefresh }) => {
                             return (
                               <tr
                                 key={page.id}
-                                className="border-t border-slate-100 hover:bg-slate-50">
+                                className={`border-t border-slate-100 ${roleStyle.hoverBg} transition-colors`}>
                                 <td className="px-4 py-2">
                                   <span className="text-slate-700">
                                     {page.name}
@@ -468,6 +555,7 @@ export default function RoleManagementPage() {
   const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState("permissions");
   const [pageModal, setPageModal] = useState({ open: false, page: null });
+  const [expandedRoles, setExpandedRoles] = useState(new Set(["ADMIN"]));
 
   const {
     data: pagesData,
@@ -560,6 +648,71 @@ export default function RoleManagementPage() {
         </div> */}
       </div>
 
+      {/* Role Summary Cards */}
+      {activeTab === "permissions" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {ROLES.map((role) => {
+            const roleStyle = ROLE_STYLES[role] || ROLE_STYLES.ADMIN;
+            const rolePerms = permissions.byRole?.[role] || [];
+            const viewablePages = rolePerms.filter((p) => p.canView).length;
+            const editablePages = rolePerms.filter((p) => p.canEdit).length;
+            const creatablePages = rolePerms.filter((p) => p.canCreate).length;
+
+            return (
+              <div
+                key={role}
+                className={`bg-white rounded-xl border-2 ${roleStyle.border} p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${roleStyle.bg}`}
+                onClick={() => {
+                  setActiveTab("permissions");
+                  if (!expandedRoles.has(role)) {
+                    setExpandedRoles((prev) => new Set([...prev, role]));
+                  }
+                }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`p-2 rounded-lg ${roleStyle.bg} border ${roleStyle.border}`}>
+                      <Shield size={16} className={roleStyle.icon} />
+                    </div>
+                    <div>
+                      <h3 className={`font-semibold ${roleStyle.text}`}>
+                        {ROLE_LABELS[role]}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {role.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div
+                    className={`${roleStyle.bg} rounded-lg p-2 border ${roleStyle.border}`}>
+                    <div className={`text-lg font-bold ${roleStyle.text}`}>
+                      {viewablePages}
+                    </div>
+                    <div className="text-xs text-slate-600">View</div>
+                  </div>
+                  <div
+                    className={`${roleStyle.bg} rounded-lg p-2 border ${roleStyle.border}`}>
+                    <div className={`text-lg font-bold ${roleStyle.text}`}>
+                      {editablePages}
+                    </div>
+                    <div className="text-xs text-slate-600">Edit</div>
+                  </div>
+                  <div
+                    className={`${roleStyle.bg} rounded-lg p-2 border ${roleStyle.border}`}>
+                    <div className={`text-lg font-bold ${roleStyle.text}`}>
+                      {creatablePages}
+                    </div>
+                    <div className="text-xs text-slate-600">Create</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
         <Tab
@@ -582,6 +735,8 @@ export default function RoleManagementPage() {
           pages={pages}
           permissions={permissions}
           onRefresh={handleRefresh}
+          expandedRoles={expandedRoles}
+          setExpandedRoles={setExpandedRoles}
         />
       )}
 

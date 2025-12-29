@@ -20,6 +20,8 @@ export default function LoginPage() {
       hasNavigated.current = true;
       if (user.role === "DOCTOR") {
         navigate("/doctor-dashboard", { replace: true });
+      } else if (user.role === "HOME_HEALTHCARE_SPECIALIST") {
+        navigate("/homecare-specialist-dashboard", { replace: true });
       } else {
         navigate("/", { replace: true });
       }
@@ -72,6 +74,8 @@ export default function LoginPage() {
       // Redirect based on role
       if (result.user.role === "DOCTOR") {
         navigate("/doctor-dashboard");
+      } else if (result.user.role === "HOME_HEALTHCARE_SPECIALIST") {
+        navigate("/homecare-specialist-dashboard");
       } else {
         navigate("/");
       }

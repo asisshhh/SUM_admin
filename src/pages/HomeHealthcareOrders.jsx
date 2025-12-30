@@ -847,18 +847,22 @@ function HomeHealthcareOrderRow({
             title="View Details">
             <Eye size={16} />
           </button>
-          {/* Assign button - keep this feature */}
-          <button
-            type="button"
-            className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onAssign();
-            }}
-            title="Assign">
-            <UserPlus size={16} />
-          </button>
+          {/* Assign button - only show for CONFIRMED orders (not PENDING/REQUESTED, COMPLETED, or CANCELLED) */}
+          {r.status === "CONFIRMED" &&
+            displayStatus !== "COMPLETED" &&
+            displayStatus !== "CANCELLED" && (
+              <button
+                type="button"
+                className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onAssign();
+                }}
+                title="Assign">
+                <UserPlus size={16} />
+              </button>
+            )}
           {/* Mark as Paid button - only show for orders that can be marked as paid and not cancelled */}
           {r.paymentStatus !== "SUCCESS" && displayStatus !== "CANCELLED" && (
             <button

@@ -119,6 +119,12 @@ export default function HomeHealthcareSpecialistDashboard() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
   const [paymentOrder, setPaymentOrder] = useState(null);
+  const dropdownRef = useRef(null);
+  const buttonRef = useRef(null);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    position: "below" // "below" or "above"
+  });
 
   const currentController = useRef(null);
   const confirm = useConfirm();
@@ -148,7 +154,8 @@ export default function HomeHealthcareSpecialistDashboard() {
           limit,
           search: search || undefined,
           status: status || undefined,
-          assignedToMe: true, // Always filter by assigned to me for specialists
+          // Note: Backend automatically filters by assignedTo for HOME_HEALTHCARE_SPECIALIST role
+          // No need to send assignedToMe - backend enforces this automatically
           ...buildDateParams()
         };
 
@@ -512,17 +519,31 @@ export default function HomeHealthcareSpecialistDashboard() {
                           {canChangeStatus && (
                             <div className="relative inline-block ml-2">
                               <button
-                                onClick={() =>
-                                  setStatusDropdownOpen(
-                                    statusDropdownOpen === row.id
-                                      ? null
-                                      : row.id
-                                  )
-                                }
-                                className="p-1 hover:bg-slate-200 rounded transition">
+                                ref={buttonRef}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const isOpen = statusDropdownOpen === row.id;
+                                  if (isOpen) {
+                                    setStatusDropdownOpen(null);
+                                  } else {
+                                    setStatusDropdownOpen(row.id);
+                                    // Calculate initial position
+                                    if (buttonRef.current) {
+                                      const rect =
+                                        buttonRef.current.getBoundingClientRect();
+                                      setDropdownPosition({
+                                        top: rect.bottom + 4,
+                                        position: "below"
+                                      });
+                                    }
+                                  }
+                                }}
+                                className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors flex items-center gap-1"
+                                title="Change Status">
+                                <Settings size={16} />
                                 <ChevronDown
-                                  size={14}
-                                  className={`text-slate-400 transition-transform ${
+                                  size={12}
+                                  className={`transition-transform ${
                                     statusDropdownOpen === row.id
                                       ? "rotate-180"
                                       : ""
@@ -530,25 +551,121 @@ export default function HomeHealthcareSpecialistDashboard() {
                                 />
                               </button>
                               {statusDropdownOpen === row.id && (
-                                <div className="absolute left-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
-                                  {STATUS_TRANSITIONS[displayStatus].map(
-                                    (nextStatus) => (
-                                      <button
-                                        key={nextStatus}
-                                        onClick={async () => {
-                                          setStatusDropdownOpen(null);
-                                          await handleStatusChange(
-                                            row.id,
-                                            nextStatus
-                                          );
-                                        }}
-                                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 first:rounded-t-lg last:rounded-b-lg">
-                                        {STATUS_LABELS[nextStatus] ||
-                                          nextStatus}
-                                      </button>
-                                    )
-                                  )}
-                                </div>
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-[9999]"
+                                    onClick={() => setStatusDropdownOpen(null)}
+                                  />
+                                  <div
+                                    ref={(el) => {
+                                      dropdownRef.current = el;
+                                      // Fine-tune position after render
+                                      if (
+                                        el &&
+                                        buttonRef.current &&
+                                        statusDropdownOpen === row.id
+                                      ) {
+                                        requestAnimationFrame(() => {
+                                          const dropdownRect =
+                                            el.getBoundingClientRect();
+                                          const buttonRect =
+                                            buttonRef.current?.getBoundingClientRect();
+
+                                          if (!buttonRect) return;
+
+                                          // Check if dropdown is positioned correctly
+                                          const expectedTopBelow =
+                                            buttonRect.bottom + 4;
+                                          const expectedTopAbove =
+                                            buttonRect.top -
+                                            dropdownRect.height -
+                                            4;
+
+                                          // If positioned below but overflowing, move above
+                                          if (
+                                            dropdownPosition.position ===
+                                              "below" &&
+                                            dropdownRect.bottom >
+                                              window.innerHeight - 10
+                                          ) {
+                                            const newTop = Math.max(
+                                              10,
+                                              expectedTopAbove
+                                            );
+                                            setDropdownPosition((prev) => ({
+                                              ...prev,
+                                              top: newTop,
+                                              position: "above"
+                                            }));
+                                          }
+                                          // If positioned above but too far up, adjust
+                                          else if (
+                                            dropdownPosition.position ===
+                                              "above" &&
+                                            Math.abs(
+                                              dropdownRect.bottom -
+                                                buttonRect.top
+                                            ) > 20
+                                          ) {
+                                            const newTop = Math.max(
+                                              10,
+                                              expectedTopAbove
+                                            );
+                                            setDropdownPosition((prev) => ({
+                                              ...prev,
+                                              top: newTop
+                                            }));
+                                          }
+                                          // If positioned below but not adjacent, adjust
+                                          else if (
+                                            dropdownPosition.position ===
+                                              "below" &&
+                                            Math.abs(
+                                              dropdownRect.top -
+                                                buttonRect.bottom
+                                            ) > 20
+                                          ) {
+                                            const newTop = expectedTopBelow;
+                                            setDropdownPosition((prev) => ({
+                                              ...prev,
+                                              top: newTop
+                                            }));
+                                          }
+                                        });
+                                      }
+                                    }}
+                                    className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px] max-w-[200px]"
+                                    style={{
+                                      zIndex: 10000,
+                                      top: `${dropdownPosition.top}px`,
+                                      left: buttonRef.current
+                                        ? `${Math.max(
+                                            10,
+                                            buttonRef.current.getBoundingClientRect()
+                                              .right - 200
+                                          )}px`
+                                        : "auto"
+                                    }}>
+                                    {STATUS_TRANSITIONS[displayStatus].map(
+                                      (nextStatus) => (
+                                        <button
+                                          key={nextStatus}
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            setStatusDropdownOpen(null);
+                                            await handleStatusChange(
+                                              row.id,
+                                              nextStatus
+                                            );
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 first:rounded-t-lg last:rounded-b-lg transition-colors">
+                                          {STATUS_LABELS[nextStatus] ||
+                                            nextStatus}
+                                        </button>
+                                      )
+                                    )}
+                                  </div>
+                                </>
                               )}
                             </div>
                           )}

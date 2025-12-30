@@ -62,13 +62,7 @@ const NavItem = ({ to, icon: Icon, label, onClick }) => {
 // Default navigation structure
 const DEFAULT_NAV_ITEMS = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard, category: "Main" },
-  {
-    path: "/homecare-specialist-dashboard",
-    label: "My Orders",
-    icon: Home,
-    category: "Main",
-    role: "HOME_HEALTHCARE_SPECIALIST"
-  },
+
   { path: "/orders", label: "Orders", icon: ListChecks, category: "Main" },
   {
     path: "/doctors",
@@ -234,6 +228,12 @@ const SidebarNav = ({
     if (!isSuperAdmin) {
       // Filter based on permissions
       items = DEFAULT_NAV_ITEMS.filter((item) => {
+        // Home Healthcare Specialists can only see their dashboard
+        if (user?.role === "HOME_HEALTHCARE_SPECIALIST") {
+          return (
+            item.path === "/homecare-specialist-dashboard" || item.path === "/"
+          );
+        }
         // Role-specific items - show only for specific role
         if (item.role && item.role !== user?.role) {
           return false;
@@ -344,17 +344,23 @@ export default function AppLayout() {
   useEffect(() => {
     if (!loading && !isSuperAdmin && permissions.length > 0) {
       const currentPath = location.pathname;
+
+      // Home Healthcare Specialists can only access their dashboard
+      if (user?.role === "HOME_HEALTHCARE_SPECIALIST") {
+        if (
+          currentPath !== "/homecare-specialist-dashboard" &&
+          currentPath !== "/"
+        ) {
+          nav("/homecare-specialist-dashboard");
+          return;
+        }
+        return;
+      }
+
       // Allow access to doctor-specific routes
       if (
         currentPath.startsWith("/doctor/") ||
         currentPath === "/doctor-dashboard"
-      ) {
-        return;
-      }
-      // Allow access to home healthcare specialist dashboard
-      if (
-        currentPath === "/homecare-specialist-dashboard" &&
-        user?.role === "HOME_HEALTHCARE_SPECIALIST"
       ) {
         return;
       }
@@ -364,7 +370,15 @@ export default function AppLayout() {
         nav("/");
       }
     }
-  }, [location.pathname, permissions, isSuperAdmin, canAccess, nav, loading]);
+  }, [
+    location.pathname,
+    permissions,
+    isSuperAdmin,
+    canAccess,
+    nav,
+    loading,
+    user
+  ]);
 
   const handleLogout = () => {
     authLogout();

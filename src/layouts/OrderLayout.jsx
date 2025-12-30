@@ -1,5 +1,6 @@
 import React from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   CalendarCheck,
   Ambulance,
@@ -24,6 +25,13 @@ const SubTab = ({ to, icon: Icon, label }) => (
 );
 
 export default function OrderLayout() {
+  const { user } = useAuth();
+
+  // Home Healthcare Specialists can only access their dashboard
+  if (user?.role === "HOME_HEALTHCARE_SPECIALIST") {
+    return <Navigate to="/homecare-specialist-dashboard" replace />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

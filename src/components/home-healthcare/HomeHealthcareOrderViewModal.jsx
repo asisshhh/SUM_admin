@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Home,
   X,
@@ -78,8 +78,37 @@ function StatusBadge({ status }) {
 function HomeHealthcareOrderViewModal({ order, onClose, onUpdated }) {
   const confirm = useConfirm();
   const [loading, setLoading] = useState(false);
+  const [orderData, setOrderData] = useState(order);
 
-  if (!order) return null;
+  // Fetch fresh order data when modal opens or order.id changes
+  useEffect(() => {
+    if (order?.id) {
+      const fetchOrder = async () => {
+        try {
+          const res = await api.get(`/orders/${order.id}`, {
+            params: { type: "homecare", orderType: "packages" }
+          });
+          if (res.data?.data) {
+            setOrderData(res.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch order details:", err);
+          // Fallback to prop data if fetch fails
+          setOrderData(order);
+        }
+      };
+      fetchOrder();
+    } else {
+      setOrderData(order);
+    }
+  }, [order?.id]);
+
+  // Update orderData when order prop changes
+  useEffect(() => {
+    setOrderData(order);
+  }, [order]);
+
+  if (!orderData) return null;
 
   // Get customer info
   const customerName = order.user?.name || "Unknown";
@@ -173,7 +202,7 @@ function HomeHealthcareOrderViewModal({ order, onClose, onUpdated }) {
     return statusMap[status] || status;
   };
 
-  const displayStatus = mapStatusForDisplay(order.status);
+  const displayStatus = mapStatusForDisplay(orderData.status);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -195,7 +224,7 @@ function HomeHealthcareOrderViewModal({ order, onClose, onUpdated }) {
             <div>
               <h2 className="text-xl font-bold text-white">{packageName}</h2>
               <span className="text-white/80 text-sm">
-                {order.orderNumber || `#${order.id}`}
+                {orderData.orderNumber || `#${orderData.id}`}
               </span>
             </div>
           </div>
@@ -213,14 +242,14 @@ function HomeHealthcareOrderViewModal({ order, onClose, onUpdated }) {
             <StatusBadge status={displayStatus} />
             <div className="ml-auto text-sm text-slate-500 flex items-center gap-2">
               <Calendar size={14} />
-              {order.scheduledDate?.split("T")[0] ||
-                order.createdAt?.split("T")[0] ||
+              {orderData.scheduledDate?.split("T")[0] ||
+                orderData.createdAt?.split("T")[0] ||
                 "-"}
-              {order.scheduledTime && (
+              {orderData.scheduledTime && (
                 <>
                   <span className="mx-1">•</span>
                   <Clock size={14} />
-                  {order.scheduledTime}
+                  {orderData.scheduledTime}
                 </>
               )}
             </div>
@@ -276,23 +305,25 @@ function HomeHealthcareOrderViewModal({ order, onClose, onUpdated }) {
           </div>
 
           {/* Collection Address */}
-          {(order.collectionAddress ||
-            order.collectionCity ||
-            order.collectionPin) && (
+          {(orderData.collectionAddress ||
+            orderData.collectionCity ||
+            orderData.collectionPin) && (
             <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
               <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
                 <MapPin size={16} /> Collection Address
               </h3>
               <div className="space-y-1 text-slate-700">
-                {order.collectionAddress && (
-                  <p className="font-medium">{order.collectionAddress}</p>
+                {orderData.collectionAddress && (
+                  <p className="font-medium">{orderData.collectionAddress}</p>
                 )}
                 <div className="flex items-center gap-2 text-sm">
-                  {order.collectionCity && <span>{order.collectionCity}</span>}
-                  {order.collectionPin && (
+                  {orderData.collectionCity && (
+                    <span>{orderData.collectionCity}</span>
+                  )}
+                  {orderData.collectionPin && (
                     <>
-                      {order.collectionCity && <span>•</span>}
-                      <span>{order.collectionPin}</span>
+                      {orderData.collectionCity && <span>•</span>}
+                      <span>{orderData.collectionPin}</span>
                     </>
                   )}
                 </div>
@@ -322,8 +353,10 @@ function HomeHealthcareOrderViewModal({ order, onClose, onUpdated }) {
                 <p className="text-xs text-slate-500 mb-1">Payment Status</p>
                 <div className="mt-1">
                   <PaymentBadge
-                    status={order.paymentStatus || "PENDING"}
-                    amount={order.paymentAmount || order.totalAmount || 0}
+                    status={orderData.paymentStatus || "PENDING"}
+                    amount={
+                      orderData.paymentAmount || orderData.totalAmount || 0
+                    }
                   />
                 </div>
               </div>
@@ -448,36 +481,75 @@ function HomeHealthcareOrderViewModal({ order, onClose, onUpdated }) {
 
           {/* Additional Info */}
           <div className="grid grid-cols-2 gap-4">
-            {order.assignedTo && order.assignee && (
+            {orderData.assignedTo && orderData.assignee && (
               <div className="bg-slate-50 rounded-lg p-4">
                 <p className="text-xs text-slate-500 mb-1">Assigned To</p>
                 <p className="font-medium text-slate-700">
-                  {order.assignee.name}
+                  {orderData.assignee.name}
                 </p>
-                {order.assignee.role && (
+                {orderData.assignee.role && (
                   <p className="text-xs text-slate-500 mt-1">
-                    {order.assignee.role}
+                    {orderData.assignee.role}
                   </p>
                 )}
               </div>
             )}
-            {order.assignedAt && (
+            {orderData.assignedAt && (
               <div className="bg-slate-50 rounded-lg p-4">
                 <p className="text-xs text-slate-500 mb-1">Assigned At</p>
                 <p className="font-medium text-slate-700">
-                  {new Date(order.assignedAt).toLocaleString("en-IN")}
+                  {new Date(orderData.assignedAt).toLocaleString("en-IN")}
+                </p>
+              </div>
+            )}
+            {orderData.completedAt && (
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <p className="text-xs text-green-700 mb-1 font-medium flex items-center gap-1">
+                  <CheckCircle2 size={12} /> Completed At
+                </p>
+                <p className="font-medium text-green-800">
+                  {new Date(orderData.completedAt).toLocaleString("en-IN")}
                 </p>
               </div>
             )}
           </div>
 
           {/* Notes */}
-          {order.notes && (
+          {orderData.notes && (
             <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
               <p className="text-xs text-amber-700 mb-2 font-medium flex items-center gap-2">
                 <FileText size={14} /> Notes
               </p>
-              <p className="text-amber-800">{order.notes}</p>
+              <p className="text-amber-800">{orderData.notes}</p>
+            </div>
+          )}
+
+          {/* Completion Comment - Show for completed orders */}
+          {(orderData.completionComment || displayStatus === "COMPLETED") && (
+            <div className="bg-green-50 rounded-lg p-4 border-2 border-green-300">
+              <p className="text-sm text-green-800 mb-3 font-semibold flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-600" />
+                Completion Details
+              </p>
+              {orderData.completionComment ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-green-700 font-medium">Comment:</p>
+                  <p className="text-green-900 bg-white/60 rounded-lg p-3 border border-green-200 whitespace-pre-wrap">
+                    {orderData.completionComment}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-green-700 italic">
+                  No completion comment provided
+                </p>
+              )}
+              {orderData.completedAt && (
+                <p className="text-xs text-green-600 mt-3 pt-3 border-t border-green-200">
+                  <Clock size={12} className="inline mr-1" />
+                  Completed on:{" "}
+                  {new Date(orderData.completedAt).toLocaleString("en-IN")}
+                </p>
+              )}
             </div>
           )}
         </div>

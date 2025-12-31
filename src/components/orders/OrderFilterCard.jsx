@@ -30,9 +30,11 @@ export default function OrderFilterCard({
   children
 }) {
   return (
-    <div className="relative">
+    <div className="relative" style={{ zIndex: 1 }}>
       <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 rounded-3xl" />
-      <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl shadow-slate-200/50 p-6">
+      <div
+        className="relative bg-white/80 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl shadow-slate-200/50 p-6"
+        style={{ overflow: "visible" }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -91,14 +93,17 @@ export default function OrderFilterCard({
 
           {/* Status */}
           {statusOptions.length > 0 && (
-            <SearchableDropdown
-              label="Status"
-              value={status || ""}
-              options={statusOptions}
-              onChange={onStatusChange}
-              placeholder="All Status"
-              className=""
-            />
+            <div className="relative" style={{ zIndex: 10 }}>
+              <SearchableDropdown
+                label="Status"
+                value={status || ""}
+                options={statusOptions}
+                onChange={onStatusChange}
+                placeholder="All Status"
+                className=""
+                maxHeight={300}
+              />
+            </div>
           )}
 
           {/* Custom filters */}

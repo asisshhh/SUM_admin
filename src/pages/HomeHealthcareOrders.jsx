@@ -34,6 +34,7 @@ import {
 import PaymentModal from "../components/health-package/PaymentModal";
 import { SearchableDropdown } from "../components/shared";
 import HomeHealthcareOrderViewModal from "../components/home-healthcare/HomeHealthcareOrderViewModal";
+import CompletionModal from "../components/home-healthcare/CompletionModal";
 
 const DEFAULT_LIMIT = 20;
 
@@ -59,7 +60,7 @@ const STATUS_TRANSITIONS = {
   CONFIRMED: ["ASSIGNED", "CANCELLED"],
   ASSIGNED: ["IN_TRANSIT", "CANCELLED"],
   IN_TRANSIT: ["ARRIVED", "CANCELLED"],
-  ARRIVED: ["SAMPLE_COLLECTED", "CANCELLED"],
+  ARRIVED: ["SAMPLE_COLLECTED", "COMPLETED", "CANCELLED"],
   SAMPLE_COLLECTED: ["ARRIVED_AT_HOSPITAL", "PROCESSING", "COMPLETED"],
   ARRIVED_AT_HOSPITAL: ["PROCESSING", "COMPLETED"],
   PROCESSING: ["COMPLETED"],
@@ -238,6 +239,7 @@ export default function HomeHealthcareOrders() {
   const [viewingOrder, setViewingOrder] = useState(null);
   const [assigningOrder, setAssigningOrder] = useState(null);
   const [paymentOrder, setPaymentOrder] = useState(null);
+  const [completingOrder, setCompletingOrder] = useState(null);
 
   const currentController = useRef(null);
   const confirm = useConfirm();
@@ -385,6 +387,15 @@ export default function HomeHealthcareOrders() {
   };
 
   const handleStatusChange = async (orderId, newStatus) => {
+    // If completing, show completion modal
+    if (newStatus === "COMPLETED") {
+      const order = rows.find((r) => r.id === orderId);
+      if (order) {
+        setCompletingOrder(order);
+        return;
+      }
+    }
+
     try {
       await api.post(
         `/orders/${orderId}/update-status?type=homecare&orderType=packages`,
@@ -398,6 +409,23 @@ export default function HomeHealthcareOrders() {
       load(page);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to update status");
+    }
+  };
+
+  const handleComplete = async (orderId, comment) => {
+    try {
+      await api.post(
+        `/orders/${orderId}/update-status?type=homecare&orderType=packages`,
+        {
+          status: "COMPLETED",
+          completionComment: comment
+        }
+      );
+      toast.success("Order marked as completed");
+      load(page);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to complete order");
+      throw err;
     }
   };
 
@@ -637,6 +665,15 @@ export default function HomeHealthcareOrders() {
             setPaymentOrder(null);
             load(page);
           }}
+        />
+      )}
+
+      {/* Completion Modal */}
+      {completingOrder && (
+        <CompletionModal
+          order={completingOrder}
+          onClose={() => setCompletingOrder(null)}
+          onComplete={handleComplete}
         />
       )}
 
@@ -1060,16 +1097,22 @@ function HomeHealthcareOrderRow({
                           onClick={async (e) => {
                             e.stopPropagation();
                             setStatusDropdownOpen(null);
-                            const ok = await confirm({
-                              title: "Change Status",
-                              message: `Change status from ${
-                                STATUS_LABELS[r.status] ||
-                                STATUS_LABELS[displayStatus] ||
-                                r.status
-                              } to ${STATUS_LABELS[status] || status}?`
-                            });
-                            if (ok) {
+                            // For COMPLETED status, skip confirmation and go directly to completion modal
+                            if (status === "COMPLETED") {
                               onStatusChange(r.id, status);
+                            } else {
+                              // For other statuses, show confirmation
+                              const ok = await confirm({
+                                title: "Change Status",
+                                message: `Change status from ${
+                                  STATUS_LABELS[r.status] ||
+                                  STATUS_LABELS[displayStatus] ||
+                                  r.status
+                                } to ${STATUS_LABELS[status] || status}?`
+                              });
+                              if (ok) {
+                                onStatusChange(r.id, status);
+                              }
                             }
                           }}
                           className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-slate-100 last:border-0">

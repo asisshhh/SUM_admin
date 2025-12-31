@@ -82,7 +82,10 @@ export default function SearchableDropdown({
   };
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div
+      className={`relative ${className}`}
+      ref={dropdownRef}
+      style={{ zIndex: isOpen ? 10000 : "auto" }}>
       {label && (
         <div className="text-sm text-slate-600 mb-1 block">{label}</div>
       )}
@@ -109,54 +112,63 @@ export default function SearchableDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg">
-          {/* Search Input */}
-          <div className="p-2 border-b border-slate-200">
-            <div className="relative">
-              <Search
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
-                size={16}
-              />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search..."
-                className="w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                onClick={(e) => e.stopPropagation()}
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSearchTerm("");
-                    searchInputRef.current?.focus();
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded">
-                  <X size={14} className="text-slate-400" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Options List */}
+        <>
+          {/* Backdrop to prevent interaction with elements behind */}
           <div
-            className="overflow-y-auto"
-            style={{ maxHeight: `${maxHeight}px` }}>
-            {filteredOptions.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-slate-500 text-center">
-                {searchTerm ? "No results found" : "No options available"}
+            className="fixed inset-0 z-[9998]"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute z-[9999] w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-xl">
+            {/* Search Input */}
+            <div className="p-2 border-b border-slate-200">
+              <div className="relative">
+                <Search
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={16}
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchTerm("");
+                      searchInputRef.current?.focus();
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded">
+                    <X size={14} className="text-slate-400" />
+                  </button>
+                )}
               </div>
-            ) : (
-              <ul className="py-1">
-                {filteredOptions.map((option) => (
-                  <li key={option.value}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(option.value)}
-                      className={`
+            </div>
+
+            {/* Options List */}
+            <div
+              className="overflow-y-auto overscroll-contain"
+              style={{
+                maxHeight: `${maxHeight}px`,
+                minHeight: "100px"
+              }}>
+              {filteredOptions.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-slate-500 text-center">
+                  {searchTerm ? "No results found" : "No options available"}
+                </div>
+              ) : (
+                <ul className="py-1">
+                  {filteredOptions.map((option) => (
+                    <li key={option.value}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelect(option.value)}
+                        className={`
                         w-full px-4 py-2 text-left text-sm hover:bg-blue-50
                         transition-colors
                         ${
@@ -165,14 +177,15 @@ export default function SearchableDropdown({
                             : "text-slate-700"
                         }
                       `}>
-                      {option.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+                        {option.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

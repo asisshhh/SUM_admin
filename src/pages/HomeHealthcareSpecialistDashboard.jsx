@@ -34,6 +34,7 @@ import {
 } from "../components/orders";
 import PaymentModal from "../components/health-package/PaymentModal";
 import HomeHealthcareOrderViewModal from "../components/home-healthcare/HomeHealthcareOrderViewModal";
+import CompletionModal from "../components/home-healthcare/CompletionModal";
 
 const DEFAULT_LIMIT = 20;
 
@@ -52,7 +53,7 @@ const STATUS_OPTIONS = [
 const STATUS_TRANSITIONS = {
   ASSIGNED: ["IN_TRANSIT"],
   IN_TRANSIT: ["ARRIVED"],
-  ARRIVED: ["SAMPLE_COLLECTED"],
+  ARRIVED: ["SAMPLE_COLLECTED", "COMPLETED"],
   SAMPLE_COLLECTED: ["ARRIVED_AT_HOSPITAL", "PROCESSING", "COMPLETED"],
   ARRIVED_AT_HOSPITAL: ["PROCESSING", "COMPLETED"],
   PROCESSING: ["COMPLETED"],
@@ -119,6 +120,7 @@ export default function HomeHealthcareSpecialistDashboard() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
   const [paymentOrder, setPaymentOrder] = useState(null);
+  const [completingOrder, setCompletingOrder] = useState(null);
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
   const [dropdownPosition, setDropdownPosition] = useState({
@@ -230,6 +232,15 @@ export default function HomeHealthcareSpecialistDashboard() {
     setTimeout(() => load(1), 100);
   };
 
+  const handleToday = () => {
+    resetDates();
+    setTimeout(() => load(1), 100);
+  };
+
+  // Calculate if showing today or all time
+  const isShowingToday = fromDate === today && toDate === today;
+  const isAllTime = !fromDate && !toDate;
+
   const handleViewOrder = async (row) => {
     try {
       const res = await api.get(`/orders/${row.id}`, {
@@ -242,6 +253,15 @@ export default function HomeHealthcareSpecialistDashboard() {
   };
 
   const handleStatusChange = async (orderId, newStatus) => {
+    // If completing, show completion modal
+    if (newStatus === "COMPLETED") {
+      const order = rows.find((r) => r.id === orderId);
+      if (order) {
+        setCompletingOrder(order);
+        return;
+      }
+    }
+
     try {
       await api.post(
         `/orders/${orderId}/update-status?type=homecare&orderType=packages`,
@@ -255,6 +275,23 @@ export default function HomeHealthcareSpecialistDashboard() {
       load(page);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to update status");
+    }
+  };
+
+  const handleComplete = async (orderId, comment) => {
+    try {
+      await api.post(
+        `/orders/${orderId}/update-status?type=homecare&orderType=packages`,
+        {
+          status: "COMPLETED",
+          completionComment: comment
+        }
+      );
+      toast.success("Order marked as completed");
+      load(page);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to complete order");
+      throw err;
     }
   };
 
@@ -405,7 +442,11 @@ export default function HomeHealthcareSpecialistDashboard() {
         onIncludeFutureChange={setIncludeFuture}
         onReset={handleResetFilters}
         onAllTime={handleAllTime}
-        today={today}
+        onToday={handleToday}
+        isShowingToday={isShowingToday}
+        isAllTime={isAllTime}
+        rowCount={rows.length}
+        total={total}
       />
 
       {/* Orders Table */}
@@ -739,6 +780,14 @@ export default function HomeHealthcareSpecialistDashboard() {
             setPaymentOrder(null);
             load(page);
           }}
+        />
+      )}
+
+      {completingOrder && (
+        <CompletionModal
+          order={completingOrder}
+          onClose={() => setCompletingOrder(null)}
+          onComplete={handleComplete}
         />
       )}
     </div>

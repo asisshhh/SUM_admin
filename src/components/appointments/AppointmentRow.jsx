@@ -6,7 +6,8 @@ import {
   Printer,
   Users,
   CreditCard,
-  RotateCcw
+  RotateCcw,
+  Edit
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
@@ -14,7 +15,8 @@ export default function AppointmentRow({
   appointment,
   onView,
   onPrint,
-  onRefund
+  onRefund,
+  onReschedule
 }) {
   const r = appointment;
 
@@ -85,6 +87,7 @@ export default function AppointmentRow({
           onView={onView}
           onPrint={onPrint}
           onRefund={onRefund}
+          onReschedule={onReschedule}
           doctorId={r.doctorId}
           appointment={r}
         />
@@ -172,7 +175,7 @@ function PaymentStatusCell({ status }) {
   );
 }
 
-function ActionButtons({ onView, onPrint, onRefund, doctorId, appointment }) {
+function ActionButtons({ onView, onPrint, onRefund, onReschedule, doctorId, appointment }) {
   // Check if refund is available
   // Find the first successful online payment with gatewayPaymentId
   const refundablePayment = appointment?.payments?.find(
@@ -204,6 +207,15 @@ function ActionButtons({ onView, onPrint, onRefund, doctorId, appointment }) {
         title="Print Receipt">
         <Printer size={16} />
       </button>
+      {/* Reschedule button - show for appointments that are not completed or cancelled */}
+      {appointment?.status !== "COMPLETED" && appointment?.status !== "CANCELLED" && (
+        <button
+          className="p-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
+          onClick={() => onReschedule?.(appointment)}
+          title="Reschedule Appointment">
+          <Edit size={16} />
+        </button>
+      )}
       {canRefund && (
         <button
           className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"

@@ -29,7 +29,8 @@ import {
   Crown,
   FileText,
   Scale,
-  RotateCcw
+  RotateCcw,
+  Calendar
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -188,6 +189,12 @@ const DEFAULT_NAV_ITEMS = [
   },
   { path: "/patients", label: "Patients", icon: HeartPulse, category: "Admin" },
   {
+    path: "/patients-booking",
+    label: "Patients Booking",
+    icon: Calendar,
+    category: "Admin"
+  },
+  {
     path: "/role-management",
     label: "Role Management",
     icon: Shield,
@@ -227,12 +234,23 @@ const SidebarNav = ({
 
     if (!isSuperAdmin) {
       // Filter based on permissions
+      const isAdmin = user?.role === "ADMIN";
       items = DEFAULT_NAV_ITEMS.filter((item) => {
         // Home Healthcare Specialists can only see their dashboard
         if (user?.role === "HOME_HEALTHCARE_SPECIALIST") {
           return (
             item.path === "/homecare-specialist-dashboard" || item.path === "/"
           );
+        }
+        // Allow ADMIN-only routes for ADMIN users (before permission check)
+        if (
+          (item.path === "/add-privacy-policy" ||
+            item.path === "/add-terms-of-use" ||
+            item.path === "/add-refund-policy" ||
+            item.path === "/patients-booking") &&
+          isAdmin
+        ) {
+          return true;
         }
         // Role-specific items - show only for specific role
         if (item.role && item.role !== user?.role) {
@@ -243,13 +261,14 @@ const SidebarNav = ({
       });
     }
 
-    // Filter Privacy Policy, Terms of Use, and Refund Policy - only for ADMIN and SUPER_ADMIN
+    // Filter Privacy Policy, Terms of Use, Refund Policy, and Patients Booking - only for ADMIN and SUPER_ADMIN
     const isAdmin = user?.role === "ADMIN";
     items = items.filter((item) => {
       if (
         item.path === "/add-privacy-policy" ||
         item.path === "/add-terms-of-use" ||
-        item.path === "/add-refund-policy"
+        item.path === "/add-refund-policy" ||
+        item.path === "/patients-booking"
       ) {
         return isSuperAdmin || isAdmin;
       }
@@ -363,6 +382,17 @@ export default function AppLayout() {
         currentPath === "/doctor-dashboard"
       ) {
         return;
+      }
+      // Allow ADMIN-only routes for ADMIN users
+      const isAdmin = user?.role === "ADMIN";
+      if (
+        isAdmin &&
+        (currentPath === "/patients-booking" ||
+          currentPath === "/add-privacy-policy" ||
+          currentPath === "/add-terms-of-use" ||
+          currentPath === "/add-refund-policy")
+      ) {
+        return; // Allow access
       }
       // Check if user can access this path
       if (!canAccess(currentPath) && currentPath !== "/") {

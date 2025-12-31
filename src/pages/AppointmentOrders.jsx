@@ -8,6 +8,9 @@ import { printReceipt } from "../components/ReceiptPrint";
 import Socket from "../utils/SocketManager";
 import { useConfirm } from "../contexts/ConfirmContext";
 import { toast } from "react-toastify";
+import { useMutation } from "@tanstack/react-query";
+import { X, Loader2, Calendar, Clock, Stethoscope, Building2 } from "lucide-react";
+import { SearchableDropdown } from "../components/shared";
 
 // Import modular components
 import {
@@ -58,6 +61,8 @@ export default function AppointmentOrders() {
   // Modal state
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   // Loading states
   const [genLoading, setGenLoading] = useState(false);
@@ -222,6 +227,11 @@ export default function AppointmentOrders() {
     setDoctor("");
   };
 
+  const handleReschedule = useCallback((appointment) => {
+    setSelectedAppointment(appointment);
+    setRescheduleModalOpen(true);
+  }, []);
+
   const handleRefund = useCallback(
     async (appointment) => {
       // Find the payment with SUCCESS status and isOnline
@@ -351,6 +361,7 @@ export default function AppointmentOrders() {
           onViewDetails={handleViewDetails}
           onPrintReceipt={printReceipt}
           onRefund={handleRefund}
+          onReschedule={handleReschedule}
         />
 
         {/* Pagination */}
@@ -372,6 +383,295 @@ export default function AppointmentOrders() {
         socket={socketInstance}
         onUpdated={handleModalUpdate}
       />
+
+      {/* Reschedule Modal */}
+      {rescheduleModalOpen && selectedAppointment && (
+        <RescheduleAppointmentModal
+          appointment={selectedAppointment}
+          onClose={() => {
+            setRescheduleModalOpen(false);
+            setSelectedAppointment(null);
+          }}
+          onSuccess={() => {
+            load(page);
+            setRescheduleModalOpen(false);
+            setSelectedAppointment(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Reschedule Appointment Modal Component
+function RescheduleAppointmentModal({ appointment, onClose, onSuccess }) {
+  const [formData, setFormData] = useState({
+    date: "",
+    timeSlot: "",
+    notes: ""
+  });
+  const [errors, setErrors] = useState({});
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // Reset form when appointment changes
+  useEffect(() => {
+    if (appointment?.id) {
+      setFormData({
+        date: "",
+        timeSlot: "",
+        notes: ""
+      });
+      setErrors({});
+      setAvailableSlots([]);
+    }
+  }, [appointment?.id]);
+
+  // Fetch available slots when date is selected (using original appointment's doctor)
+  useEffect(() => {
+    if (!appointment?.doctorId || !formData.date) {
+      setAvailableSlots([]);
+      setFormData((prev) => ({ ...prev, timeSlot: "" }));
+      return;
+    }
+
+    setLoadingSlots(true);
+    const doctorId = appointment.doctorId;
+    console.log("Fetching slots for doctor:", doctorId, "date:", formData.date);
+    api
+      .get(`/schedule/${doctorId}/slots`, {
+        params: { date: formData.date }
+      })
+      .then((res) => {
+        console.log("Slots API response:", res.data);
+        const slots = res.data?.slots || res.data?.items || (Array.isArray(res.data) ? res.data : []);
+        // Filter only AVAILABLE slots from the database
+        const available = Array.isArray(slots) 
+          ? slots.filter((slot) => slot.status === "AVAILABLE" || slot.available === true)
+          : [];
+        console.log("Available slots:", available);
+        setAvailableSlots(available);
+      })
+      .catch((err) => {
+        console.error("Failed to load slots:", err);
+        console.error("Error details:", {
+          doctorId: appointment?.doctorId,
+          date: formData.date,
+          error: err.response?.data || err.message
+        });
+        toast.error("Failed to load available slots. Please check doctor's schedule.");
+        setAvailableSlots([]);
+      })
+      .finally(() => setLoadingSlots(false));
+  }, [appointment?.doctorId, formData.date]);
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.date) newErrors.date = "Date is required";
+    if (!formData.timeSlot) newErrors.timeSlot = "Time slot is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const rescheduleMutation = useMutation({
+    mutationFn: async () => {
+      if (!appointment?.id) {
+        throw new Error("Appointment ID is missing");
+      }
+      
+      // Build payload - API doesn't accept doctorId in reschedule endpoint
+      // Only date, timeSlot, and notes are allowed
+      const payload = {
+        date: formData.date,
+        timeSlot: formData.timeSlot,
+        notes: formData.notes || undefined
+      };
+      
+      const url = `/appointments/${appointment.id}/reschedule`;
+      console.log("Rescheduling appointment:", { 
+        url, 
+        payload, 
+        appointmentId: appointment.id,
+        appointment: appointment
+      });
+      try {
+        const response = await api.put(url, payload);
+        console.log("Reschedule success:", response.data);
+        return response.data;
+      } catch (error) {
+        const errorDetails = {
+          url,
+          payload,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          error: error.message
+        };
+        console.error("Reschedule error:", errorDetails);
+        // Show detailed error to user
+        const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to reschedule appointment";
+        console.error("Error message:", errorMsg);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Appointment rescheduled successfully");
+      onSuccess();
+    },
+    onError: (err) => {
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to reschedule appointment";
+      toast.error(errorMsg);
+    }
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    rescheduleMutation.mutate();
+  };
+
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const currentDate = appointment?.date ? new Date(appointment.date).toLocaleDateString("en-IN") : "N/A";
+  const currentTime = appointment?.timeSlot || "N/A";
+  const currentDoctor = appointment?.doctor?.user?.name || "N/A";
+  const currentDepartment = appointment?.department?.name || "N/A";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-orange-600 to-amber-600">
+          <h2 className="text-lg font-semibold text-white">Reschedule Appointment</h2>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-white/20 rounded-lg transition">
+            <X size={20} className="text-white" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* Current Appointment Info */}
+          {appointment && (
+            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+              <div className="text-sm font-medium text-slate-700 mb-2">
+                Current Appointment
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm text-slate-600">
+                <div className="flex items-center gap-2">
+                  <Calendar size={14} className="text-slate-400" />
+                  <span>Date: {currentDate}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-slate-400" />
+                  <span>Time: {currentTime}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building2 size={14} className="text-slate-400" />
+                  <span>Dept: {currentDepartment}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Stethoscope size={14} className="text-slate-400" />
+                  <span>Doctor: {currentDoctor}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* New Date */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              New Date *
+            </label>
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => handleChange("date", e.target.value)}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                errors.date ? "border-red-500" : "border-slate-300"
+              }`}
+            />
+            {errors.date && (
+              <p className="text-red-500 text-xs mt-1">{errors.date}</p>
+            )}
+          </div>
+
+          {/* New Time Slot */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              New Time Slot *
+            </label>
+            {loadingSlots ? (
+              <div className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg">
+                <Loader2 className="animate-spin text-orange-600" size={16} />
+                <span className="text-sm text-slate-600">Loading available slots...</span>
+              </div>
+            ) : availableSlots.length === 0 && formData.date ? (
+              <div className="px-4 py-2 border border-yellow-300 bg-yellow-50 rounded-lg text-sm text-yellow-700">
+                No available slots for this date. Please select another date.
+              </div>
+            ) : (
+              <SearchableDropdown
+                value={formData.timeSlot || ""}
+                options={[
+                  { value: "", label: "Select Time Slot" },
+                  ...availableSlots.map((slot) => ({
+                    value: slot.time,
+                    label: slot.time
+                  }))
+                ]}
+                onChange={(value) => handleChange("timeSlot", value)}
+                placeholder="Select Time Slot"
+                disabled={!formData.date || availableSlots.length === 0}
+              />
+            )}
+            {errors.timeSlot && (
+              <p className="text-red-500 text-xs mt-1">{errors.timeSlot}</p>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Notes (Optional)
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => handleChange("notes", e.target.value)}
+              rows={3}
+              placeholder="Add any additional notes (e.g., doctor unavailability, patient request)..."
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={rescheduleMutation.isPending}
+              className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition disabled:opacity-50 flex items-center justify-center gap-2">
+              {rescheduleMutation.isPending ? (
+                <>
+                  <Loader2 className="animate-spin" size={16} />
+                  Rescheduling...
+                </>
+              ) : (
+                "Reschedule"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

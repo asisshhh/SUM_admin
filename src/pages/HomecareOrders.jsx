@@ -82,8 +82,7 @@ export default function HomecareOrders() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(null);
   const [completingOrder, setCompletingOrder] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
-  const dropdownRef = useRef(null);
-  const buttonRef = useRef(null);
+  const [dropdownButtonElement, setDropdownButtonElement] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     left: 0,
@@ -413,25 +412,25 @@ export default function HomecareOrders() {
                           {canChangeStatus && (
                             <div className="relative inline-block">
                               <button
-                                ref={buttonRef}
                                 className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors flex items-center gap-1"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  const buttonElement = e.currentTarget;
                                   const isOpen = statusDropdownOpen === r.id;
                                   if (isOpen) {
                                     setStatusDropdownOpen(null);
+                                    setDropdownButtonElement(null);
                                   } else {
                                     setStatusDropdownOpen(r.id);
+                                    setDropdownButtonElement(buttonElement);
                                     // Calculate initial position
-                                    if (buttonRef.current) {
-                                      const rect =
-                                        buttonRef.current.getBoundingClientRect();
-                                      setDropdownPosition({
-                                        top: rect.bottom + 4,
-                                        left: rect.left,
-                                        position: "below"
-                                      });
-                                    }
+                                    const rect =
+                                      buttonElement.getBoundingClientRect();
+                                    setDropdownPosition({
+                                      top: rect.bottom + 4,
+                                      left: rect.left,
+                                      position: "below"
+                                    });
                                   }
                                 }}
                                 title="Change Status">
@@ -445,169 +444,148 @@ export default function HomecareOrders() {
                                   }`}
                                 />
                               </button>
-                              {statusDropdownOpen === r.id && (
-                                <>
-                                  <div
-                                    className="fixed inset-0 z-[9999]"
-                                    onClick={() => setStatusDropdownOpen(null)}
-                                  />
-                                  <div
-                                    ref={(el) => {
-                                      dropdownRef.current = el;
-                                      // Fine-tune position after render
-                                      if (
-                                        el &&
-                                        buttonRef.current &&
-                                        statusDropdownOpen === r.id
-                                      ) {
-                                        requestAnimationFrame(() => {
-                                          const dropdownRect =
-                                            el.getBoundingClientRect();
-                                          const buttonRect =
-                                            buttonRef.current?.getBoundingClientRect();
+                              {statusDropdownOpen === r.id &&
+                                dropdownButtonElement && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-[9999]"
+                                      onClick={() => {
+                                        setStatusDropdownOpen(null);
+                                        setDropdownButtonElement(null);
+                                      }}
+                                    />
+                                    <div
+                                      ref={(el) => {
+                                        // Fine-tune position after render
+                                        if (el && dropdownButtonElement) {
+                                          requestAnimationFrame(() => {
+                                            const dropdownRect =
+                                              el.getBoundingClientRect();
+                                            const buttonRect =
+                                              dropdownButtonElement.getBoundingClientRect();
 
-                                          if (!buttonRect) return;
+                                            // Calculate left position
+                                            const dropdownWidth = 200;
+                                            let left = buttonRect.left;
+                                            if (
+                                              left + dropdownWidth >
+                                              window.innerWidth - 10
+                                            ) {
+                                              left =
+                                                buttonRect.right -
+                                                dropdownWidth;
+                                            }
+                                            if (left < 10) left = 10;
 
-                                          // Check if dropdown is positioned correctly
-                                          const expectedTopBelow =
-                                            buttonRect.bottom + 4;
-                                          const expectedTopAbove =
-                                            buttonRect.top -
-                                            dropdownRect.height -
-                                            4;
+                                            // Calculate top position
+                                            const spaceBelow =
+                                              window.innerHeight -
+                                              buttonRect.bottom;
+                                            const spaceAbove = buttonRect.top;
+                                            const dropdownHeight =
+                                              dropdownRect.height || 200;
 
-                                          // Calculate left position
-                                          const dropdownWidth = 200;
-                                          let left = buttonRect.left;
-                                          if (
-                                            left + dropdownWidth >
-                                            window.innerWidth - 10
-                                          ) {
-                                            left =
-                                              buttonRect.right - dropdownWidth;
-                                          }
-                                          if (left < 10) left = 10;
+                                            let top;
+                                            let position;
 
-                                          // If positioned below but overflowing, move above
-                                          if (
-                                            dropdownPosition.position ===
-                                              "below" &&
-                                            dropdownRect.bottom >
+                                            if (
+                                              spaceBelow >=
+                                                dropdownHeight + 10 ||
+                                              spaceBelow >= spaceAbove
+                                            ) {
+                                              // Position below
+                                              top = buttonRect.bottom + 4;
+                                              position = "below";
+                                            } else {
+                                              // Position above
+                                              top =
+                                                buttonRect.top -
+                                                dropdownHeight -
+                                                4;
+                                              position = "above";
+                                            }
+
+                                            // Ensure dropdown stays within viewport
+                                            if (top < 10) top = 10;
+                                            if (
+                                              top + dropdownHeight >
                                               window.innerHeight - 10
-                                          ) {
-                                            const newTop = Math.max(
-                                              10,
-                                              expectedTopAbove
-                                            );
-                                            setDropdownPosition((prev) => ({
-                                              ...prev,
-                                              top: newTop,
-                                              left: left,
-                                              position: "above"
-                                            }));
-                                          }
-                                          // If positioned above but too far up, adjust
-                                          else if (
-                                            dropdownPosition.position ===
-                                              "above" &&
-                                            Math.abs(
-                                              dropdownRect.bottom -
-                                                buttonRect.top
-                                            ) > 20
-                                          ) {
-                                            const newTop = Math.max(
-                                              10,
-                                              expectedTopAbove
-                                            );
-                                            setDropdownPosition((prev) => ({
-                                              ...prev,
-                                              top: newTop,
-                                              left: left
-                                            }));
-                                          }
-                                          // If positioned below but not adjacent, adjust
-                                          else if (
-                                            dropdownPosition.position ===
-                                              "below" &&
-                                            Math.abs(
-                                              dropdownRect.top -
-                                                buttonRect.bottom
-                                            ) > 20
-                                          ) {
-                                            const newTop = expectedTopBelow;
-                                            setDropdownPosition((prev) => ({
-                                              ...prev,
-                                              top: newTop,
-                                              left: left
-                                            }));
-                                          } else {
-                                            // Update left position
-                                            setDropdownPosition((prev) => ({
-                                              ...prev,
-                                              left: left
-                                            }));
-                                          }
-                                        });
-                                      }
-                                    }}
-                                    className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px] max-w-[200px]"
-                                    style={{
-                                      zIndex: 10000,
-                                      top: `${dropdownPosition.top}px`,
-                                      left: `${dropdownPosition.left}px`
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}>
-                                    {(() => {
-                                      const allowedStatuses =
-                                        STATUS_TRANSITIONS[currentStatus] || [];
+                                            ) {
+                                              top =
+                                                window.innerHeight -
+                                                dropdownHeight -
+                                                10;
+                                            }
 
-                                      // ✅ Payment validation: Filter out CONFIRMED if payment is not completed
-                                      // For all payment options (including PAY_AT_HOSPITAL), payment must be done before confirming
-                                      const hasSuccessfulPayment =
-                                        r.payments?.some(
-                                          (p) => p.status === "SUCCESS"
-                                        );
-                                      let filteredStatuses = [
-                                        ...allowedStatuses
-                                      ];
-
-                                      if (
-                                        filteredStatuses.includes("CONFIRMED")
-                                      ) {
-                                        if (!hasSuccessfulPayment) {
-                                          filteredStatuses =
-                                            filteredStatuses.filter(
-                                              (s) => s !== "CONFIRMED"
-                                            );
+                                            setDropdownPosition({
+                                              top,
+                                              left,
+                                              position
+                                            });
+                                          });
                                         }
-                                      }
+                                      }}
+                                      className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px] max-w-[200px] z-[10000]"
+                                      style={{
+                                        top: `${dropdownPosition.top}px`,
+                                        left: `${dropdownPosition.left}px`
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}>
+                                      {(() => {
+                                        const allowedStatuses =
+                                          STATUS_TRANSITIONS[currentStatus] ||
+                                          [];
 
-                                      return filteredStatuses.map(
-                                        (nextStatus) => (
-                                          <button
-                                            key={nextStatus}
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              setStatusDropdownOpen(null);
-                                              if (nextStatus === "COMPLETED") {
-                                                setCompletingOrder(r);
-                                              } else {
-                                                await handleStatusChange(
-                                                  r.id,
-                                                  nextStatus
-                                                );
-                                              }
-                                            }}
-                                            className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-slate-100 last:border-0">
-                                            {STATUS_LABELS[nextStatus] ||
-                                              nextStatus}
-                                          </button>
-                                        )
-                                      );
-                                    })()}
-                                  </div>
-                                </>
-                              )}
+                                        // ✅ Payment validation: Filter out CONFIRMED if payment is not completed
+                                        // For all payment options (including PAY_AT_HOSPITAL), payment must be done before confirming
+                                        const hasSuccessfulPayment =
+                                          r.payments?.some(
+                                            (p) => p.status === "SUCCESS"
+                                          );
+                                        let filteredStatuses = [
+                                          ...allowedStatuses
+                                        ];
+
+                                        if (
+                                          filteredStatuses.includes("CONFIRMED")
+                                        ) {
+                                          if (!hasSuccessfulPayment) {
+                                            filteredStatuses =
+                                              filteredStatuses.filter(
+                                                (s) => s !== "CONFIRMED"
+                                              );
+                                          }
+                                        }
+
+                                        return filteredStatuses.map(
+                                          (nextStatus) => (
+                                            <button
+                                              key={nextStatus}
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                setStatusDropdownOpen(null);
+                                                setDropdownButtonElement(null);
+                                                if (
+                                                  nextStatus === "COMPLETED"
+                                                ) {
+                                                  setCompletingOrder(r);
+                                                } else {
+                                                  await handleStatusChange(
+                                                    r.id,
+                                                    nextStatus
+                                                  );
+                                                }
+                                              }}
+                                              className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-slate-100 last:border-0">
+                                              {STATUS_LABELS[nextStatus] ||
+                                                nextStatus}
+                                            </button>
+                                          )
+                                        );
+                                      })()}
+                                    </div>
+                                  </>
+                                )}
                             </div>
                           )}
                         </div>

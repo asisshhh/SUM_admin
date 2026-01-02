@@ -106,8 +106,7 @@ export default function AmbulanceOrders() {
   const [viewingBooking, setViewingBooking] = useState(null);
   const [assigningAmbulance, setAssigningAmbulance] = useState(null);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(null);
-  const dropdownRef = useRef(null);
-  const buttonRef = useRef(null);
+  const [dropdownButtonElement, setDropdownButtonElement] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     left: 0,
@@ -1007,25 +1006,29 @@ export default function AmbulanceOrders() {
                                       return (
                                         <div className="relative">
                                           <button
-                                            ref={buttonRef}
+                                            ref={(el) => {
+                                              if (isOpen && el) {
+                                                setDropdownButtonElement(el);
+                                              }
+                                            }}
                                             className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors flex items-center gap-1"
                                             onClick={(e) => {
                                               e.stopPropagation();
+                                              const buttonElement = e.currentTarget;
                                               const willBeOpen = !isOpen;
                                               if (willBeOpen) {
                                                 setStatusDropdownOpen(item.id);
+                                                setDropdownButtonElement(buttonElement);
                                                 // Calculate initial position
-                                                if (buttonRef.current) {
-                                                  const rect =
-                                                    buttonRef.current.getBoundingClientRect();
-                                                  setDropdownPosition({
-                                                    top: rect.bottom + 4,
-                                                    left: rect.left,
-                                                    position: "below"
-                                                  });
-                                                }
+                                                const rect = buttonElement.getBoundingClientRect();
+                                                setDropdownPosition({
+                                                  top: rect.bottom + 4,
+                                                  left: rect.left,
+                                                  position: "below"
+                                                });
                                               } else {
                                                 setStatusDropdownOpen(null);
+                                                setDropdownButtonElement(null);
                                               }
                                             }}
                                             title="Change Status">
@@ -1037,134 +1040,90 @@ export default function AmbulanceOrders() {
                                               }`}
                                             />
                                           </button>
-                                          {isOpen && (
+                                          {isOpen && dropdownButtonElement && (
                                             <>
                                               <div
                                                 className="fixed inset-0 z-[9999]"
-                                                onClick={() =>
-                                                  setStatusDropdownOpen(null)
-                                                }
+                                                onClick={() => {
+                                                  setStatusDropdownOpen(null);
+                                                  setDropdownButtonElement(null);
+                                                }}
                                               />
                                               <div
                                                 ref={(el) => {
-                                                  dropdownRef.current = el;
                                                   // Fine-tune position after render
-                                                  if (
-                                                    el &&
-                                                    buttonRef.current &&
-                                                    statusDropdownOpen ===
-                                                      item.id
-                                                  ) {
-                                                    requestAnimationFrame(
-                                                      () => {
-                                                        const dropdownRect =
-                                                          el.getBoundingClientRect();
-                                                        const buttonRect =
-                                                          buttonRef.current?.getBoundingClientRect();
+                                                  if (el && dropdownButtonElement) {
+                                                    requestAnimationFrame(() => {
+                                                      const dropdownRect =
+                                                        el.getBoundingClientRect();
+                                                      const buttonRect =
+                                                        dropdownButtonElement.getBoundingClientRect();
 
-                                                        if (!buttonRect) return;
-
-                                                        // Check if dropdown is positioned correctly
-                                                        const expectedTopBelow =
-                                                          buttonRect.bottom + 4;
-                                                        const expectedTopAbove =
-                                                          buttonRect.top -
-                                                          dropdownRect.height -
-                                                          4;
-
-                                                        // Calculate left position
-                                                        const dropdownWidth = 200;
-                                                        let left =
-                                                          buttonRect.left;
-                                                        if (
-                                                          left + dropdownWidth >
-                                                          window.innerWidth - 10
-                                                        ) {
-                                                          left =
-                                                            buttonRect.right -
-                                                            dropdownWidth;
-                                                        }
-                                                        if (left < 10)
-                                                          left = 10;
-
-                                                        // If positioned below but overflowing, move above
-                                                        if (
-                                                          dropdownPosition.position ===
-                                                            "below" &&
-                                                          dropdownRect.bottom >
-                                                            window.innerHeight -
-                                                              10
-                                                        ) {
-                                                          const newTop =
-                                                            Math.max(
-                                                              10,
-                                                              expectedTopAbove
-                                                            );
-                                                          setDropdownPosition(
-                                                            (prev) => ({
-                                                              ...prev,
-                                                              top: newTop,
-                                                              left: left,
-                                                              position: "above"
-                                                            })
-                                                          );
-                                                        }
-                                                        // If positioned above but too far up, adjust
-                                                        else if (
-                                                          dropdownPosition.position ===
-                                                            "above" &&
-                                                          Math.abs(
-                                                            dropdownRect.bottom -
-                                                              buttonRect.top
-                                                          ) > 20
-                                                        ) {
-                                                          const newTop =
-                                                            Math.max(
-                                                              10,
-                                                              expectedTopAbove
-                                                            );
-                                                          setDropdownPosition(
-                                                            (prev) => ({
-                                                              ...prev,
-                                                              top: newTop,
-                                                              left: left
-                                                            })
-                                                          );
-                                                        }
-                                                        // If positioned below but not adjacent, adjust
-                                                        else if (
-                                                          dropdownPosition.position ===
-                                                            "below" &&
-                                                          Math.abs(
-                                                            dropdownRect.top -
-                                                              buttonRect.bottom
-                                                          ) > 20
-                                                        ) {
-                                                          const newTop =
-                                                            expectedTopBelow;
-                                                          setDropdownPosition(
-                                                            (prev) => ({
-                                                              ...prev,
-                                                              top: newTop,
-                                                              left: left
-                                                            })
-                                                          );
-                                                        } else {
-                                                          // Update left position
-                                                          setDropdownPosition(
-                                                            (prev) => ({
-                                                              ...prev,
-                                                              left: left
-                                                            })
-                                                          );
-                                                        }
+                                                      // Calculate left position
+                                                      const dropdownWidth = 200;
+                                                      let left = buttonRect.left;
+                                                      if (
+                                                        left + dropdownWidth >
+                                                        window.innerWidth - 10
+                                                      ) {
+                                                        left =
+                                                          buttonRect.right -
+                                                          dropdownWidth;
                                                       }
-                                                    );
+                                                      if (left < 10) left = 10;
+
+                                                      // Calculate top position
+                                                      const spaceBelow =
+                                                        window.innerHeight -
+                                                        buttonRect.bottom;
+                                                      const spaceAbove =
+                                                        buttonRect.top;
+                                                      const dropdownHeight =
+                                                        dropdownRect.height || 200;
+
+                                                      let top;
+                                                      let position;
+
+                                                      if (
+                                                        spaceBelow >=
+                                                          dropdownHeight + 10 ||
+                                                        spaceBelow >= spaceAbove
+                                                      ) {
+                                                        // Position below
+                                                        top =
+                                                          buttonRect.bottom + 4;
+                                                        position = "below";
+                                                      } else {
+                                                        // Position above
+                                                        top =
+                                                          buttonRect.top -
+                                                          dropdownHeight -
+                                                          4;
+                                                        position = "above";
+                                                      }
+
+                                                      // Ensure dropdown stays within viewport
+                                                      if (top < 10) top = 10;
+                                                      if (
+                                                        top + dropdownHeight >
+                                                        window.innerHeight - 10
+                                                      ) {
+                                                        top =
+                                                          window.innerHeight -
+                                                          dropdownHeight -
+                                                          10;
+                                                      }
+
+                                                      setDropdownPosition({
+                                                        top,
+                                                        left,
+                                                        position
+                                                      });
+                                                    });
                                                   }
                                                 }}
-                                                className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px] max-w-[200px]"
+                                                className="fixed bg-white rounded-lg shadow-2xl border-2 border-slate-200 py-1 min-w-[180px] max-w-[200px] z-[10000]"
                                                 style={{
-                                                  zIndex: 10000,
                                                   top: `${dropdownPosition.top}px`,
                                                   left: `${dropdownPosition.left}px`
                                                 }}
@@ -1179,6 +1138,9 @@ export default function AmbulanceOrders() {
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         setStatusDropdownOpen(
+                                                          null
+                                                        );
+                                                        setDropdownButtonElement(
                                                           null
                                                         );
                                                         handleStatusChange(

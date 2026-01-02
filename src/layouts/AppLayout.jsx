@@ -150,6 +150,12 @@ const DEFAULT_NAV_ITEMS = [
     category: "Lab"
   },
   {
+    path: "/home-healthcare-service-categories",
+    label: "Service Categories",
+    icon: FolderTree,
+    category: "Home Healthcare"
+  },
+  {
     path: "/home-healthcare-services",
     label: "Services",
     icon: Home,

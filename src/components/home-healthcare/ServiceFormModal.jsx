@@ -10,10 +10,12 @@ function ServiceFormModal({ service, onClose }) {
 
   // Fetch categories
   const { data: categoriesData } = useQuery({
-    queryKey: ["home-healthcare-service-categories"],
+    queryKey: ["home-healthcare-service-categories-all"],
     queryFn: async () => {
-      // We'll need to create this endpoint, for now return empty
-      return { items: [] };
+      const response = await api.get("/home-healthcare-service-categories", {
+        params: { pageSize: 100, active: "true" }
+      });
+      return { items: response.data.items || [] };
     },
     staleTime: 5 * 60 * 1000
   });

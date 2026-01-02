@@ -36,6 +36,7 @@ import HealthPackagesPage from "./pages/HealthPackagesPage.jsx";
 // Home Healthcare Management
 import HomeHealthcareServicesPage from "./pages/HomeHealthcareServicesPage.jsx";
 import HomeHealthcarePackagesPage from "./pages/HomeHealthcarePackagesPage.jsx";
+import HomeHealthcareServiceCategoriesPage from "./pages/HomeHealthcareServiceCategoriesPage.jsx";
 // Ambulance Management
 import AmbulanceTypesPage from "./pages/AmbulanceTypesPage.jsx";
 import AmbulanceChargesPage from "./pages/AmbulanceChargesPage.jsx";
@@ -173,6 +174,10 @@ createRoot(document.getElementById("root")).render(
                   element={<HealthPackagesPage />}
                 />
                 {/* Home Healthcare Management */}
+                <Route
+                  path="home-healthcare-service-categories"
+                  element={<HomeHealthcareServiceCategoriesPage />}
+                />
                 <Route
                   path="home-healthcare-services"
                   element={<HomeHealthcareServicesPage />}

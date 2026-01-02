@@ -315,10 +315,10 @@ export default function OrderDetailsModal({
   // ✅ Sequential status transitions for appointments (like ambulance orders)
   // Workflow: PENDING → CONFIRMED → IN_QUEUE (CHECKED_IN) → IN_PROGRESS → COMPLETED
   // Cannot go backwards (e.g., CONFIRMED → PENDING)
-  // Admin cannot directly set IN_QUEUE - must go through CONFIRMED first
+  // Admin cannot directly set IN_QUEUE from order page - must use queue management system
   const STATUS_TRANSITIONS = {
     PENDING: ["CONFIRMED", "CANCELLED"],
-    CONFIRMED: ["IN_QUEUE", "CANCELLED", "SKIPPED"], // Cannot go back to PENDING
+    CONFIRMED: ["CANCELLED", "SKIPPED"], // IN_QUEUE removed - can only be set via queue management
     CHECKED_IN: ["IN_PROGRESS", "COMPLETED", "CANCELLED", "SKIPPED"], // Backend uses CHECKED_IN, UI shows IN_QUEUE
     IN_QUEUE: ["IN_PROGRESS", "COMPLETED", "CANCELLED", "SKIPPED"], // UI label for CHECKED_IN
     IN_PROGRESS: ["COMPLETED", "CANCELLED"], // Cannot go back
@@ -339,6 +339,12 @@ export default function OrderDetailsModal({
     "SKIPPED" // UI label for NO_SHOW
   ];
 
+  // Check if payment is successful
+  const hasSuccessfulPayment = localData?.payments?.some(
+    (p) => p.status === "SUCCESS"
+  );
+  const paymentOption = localData?.paymentOption;
+
   // Get allowed status transitions based on current status
   const getAllowedStatuses = () => {
     const currentStatus = localData.status;
@@ -354,7 +360,20 @@ export default function OrderDetailsModal({
     });
 
     // Filter to only include valid UI status options
-    return mappedAllowed.filter((s) => ALL_STATUS_OPTIONS.includes(s));
+    let filtered = mappedAllowed.filter((s) => ALL_STATUS_OPTIONS.includes(s));
+
+    // ✅ Payment validation: Remove CONFIRMED if payment is not completed
+    // For all payment options (including PAY_AT_HOSPITAL), payment must be done before confirming
+    if (filtered.includes("CONFIRMED")) {
+      if (!hasSuccessfulPayment) {
+        filtered = filtered.filter((s) => s !== "CONFIRMED");
+      }
+    }
+
+    // ✅ Remove IN_QUEUE from order page (can only be set via queue management)
+    filtered = filtered.filter((s) => s !== "IN_QUEUE");
+
+    return filtered;
   };
 
   const statusOptions = getAllowedStatuses();

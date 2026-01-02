@@ -557,28 +557,54 @@ export default function HomecareOrders() {
                                       left: `${dropdownPosition.left}px`
                                     }}
                                     onClick={(e) => e.stopPropagation()}>
-                                    {STATUS_TRANSITIONS[currentStatus].map(
-                                      (nextStatus) => (
-                                        <button
-                                          key={nextStatus}
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            setStatusDropdownOpen(null);
-                                            if (nextStatus === "COMPLETED") {
-                                              setCompletingOrder(r);
-                                            } else {
-                                              await handleStatusChange(
-                                                r.id,
-                                                nextStatus
-                                              );
-                                            }
-                                          }}
-                                          className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-slate-100 last:border-0">
-                                          {STATUS_LABELS[nextStatus] ||
-                                            nextStatus}
-                                        </button>
-                                      )
-                                    )}
+                                    {(() => {
+                                      const allowedStatuses =
+                                        STATUS_TRANSITIONS[currentStatus] || [];
+
+                                      // ✅ Payment validation: Filter out CONFIRMED if payment is not completed
+                                      // For all payment options (including PAY_AT_HOSPITAL), payment must be done before confirming
+                                      const hasSuccessfulPayment =
+                                        r.payments?.some(
+                                          (p) => p.status === "SUCCESS"
+                                        );
+                                      let filteredStatuses = [
+                                        ...allowedStatuses
+                                      ];
+
+                                      if (
+                                        filteredStatuses.includes("CONFIRMED")
+                                      ) {
+                                        if (!hasSuccessfulPayment) {
+                                          filteredStatuses =
+                                            filteredStatuses.filter(
+                                              (s) => s !== "CONFIRMED"
+                                            );
+                                        }
+                                      }
+
+                                      return filteredStatuses.map(
+                                        (nextStatus) => (
+                                          <button
+                                            key={nextStatus}
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              setStatusDropdownOpen(null);
+                                              if (nextStatus === "COMPLETED") {
+                                                setCompletingOrder(r);
+                                              } else {
+                                                await handleStatusChange(
+                                                  r.id,
+                                                  nextStatus
+                                                );
+                                              }
+                                            }}
+                                            className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-slate-100 last:border-0">
+                                            {STATUS_LABELS[nextStatus] ||
+                                              nextStatus}
+                                          </button>
+                                        )
+                                      );
+                                    })()}
                                   </div>
                                 </>
                               )}

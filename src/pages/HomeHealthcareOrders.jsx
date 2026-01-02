@@ -967,6 +967,22 @@ function HomeHealthcareOrderRow({
           {(() => {
             // Use the already mapped displayStatus
             const allowedStatuses = STATUS_TRANSITIONS[displayStatus] || [];
+
+            // ✅ Payment validation: Filter out CONFIRMED if payment is not completed
+            // For all payment options (including PAY_AT_HOSPITAL), payment must be done before confirming
+            const hasSuccessfulPayment = r.payments?.some(
+              (p) => p.status === "SUCCESS"
+            );
+            let filteredStatuses = [...allowedStatuses];
+
+            if (filteredStatuses.includes("CONFIRMED")) {
+              if (!hasSuccessfulPayment) {
+                filteredStatuses = filteredStatuses.filter(
+                  (s) => s !== "CONFIRMED"
+                );
+              }
+            }
+
             // CANCELLED can only be done from PENDING, CONFIRMED, ASSIGNED, IN_TRANSIT, or ARRIVED (before SAMPLE_COLLECTED)
             const canCancel =
               (displayStatus === "PENDING" ||
@@ -976,11 +992,11 @@ function HomeHealthcareOrderRow({
                 displayStatus === "ARRIVED") &&
               r.status !== "CANCELLED" &&
               displayStatus !== "SAMPLE_COLLECTED";
-            const hasOptions = allowedStatuses.length > 0 || canCancel;
+            const hasOptions = filteredStatuses.length > 0 || canCancel;
             // Don't show dropdown if status is CANCELLED and has no other transitions
             if (
               !hasOptions ||
-              (r.status === "CANCELLED" && allowedStatuses.length === 0)
+              (r.status === "CANCELLED" && filteredStatuses.length === 0)
             )
               return null;
 
@@ -1091,7 +1107,7 @@ function HomeHealthcareOrderRow({
                         overflowY: "auto"
                       }}
                       onClick={(e) => e.stopPropagation()}>
-                      {allowedStatuses.map((status) => (
+                      {filteredStatuses.map((status) => (
                         <button
                           key={status}
                           onClick={async (e) => {

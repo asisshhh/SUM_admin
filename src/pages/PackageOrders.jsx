@@ -702,11 +702,27 @@ function PackageOrderRow({
             const canCancel =
               (r.status === "PENDING" || r.status === "CONFIRMED") &&
               r.status !== "CANCELLED";
-            const hasOptions = allowedStatuses.length > 0 || canCancel;
+
+            // ✅ Payment validation: Filter out CONFIRMED if payment is not completed
+            // For all payment options (including PAY_AT_HOSPITAL), payment must be done before confirming
+            const hasSuccessfulPayment = r.payments?.some(
+              (p) => p.status === "SUCCESS"
+            );
+            let filteredStatuses = [...allowedStatuses];
+
+            if (filteredStatuses.includes("CONFIRMED")) {
+              if (!hasSuccessfulPayment) {
+                filteredStatuses = filteredStatuses.filter(
+                  (s) => s !== "CONFIRMED"
+                );
+              }
+            }
+
+            const hasOptions = filteredStatuses.length > 0 || canCancel;
             // Don't show dropdown if status is CANCELLED and has no other transitions
             if (
               !hasOptions ||
-              (r.status === "CANCELLED" && allowedStatuses.length === 0)
+              (r.status === "CANCELLED" && filteredStatuses.length === 0)
             )
               return null;
 
@@ -817,7 +833,7 @@ function PackageOrderRow({
                         overflowY: "auto"
                       }}
                       onClick={(e) => e.stopPropagation()}>
-                      {allowedStatuses.map((status) => (
+                      {filteredStatuses.map((status) => (
                         <button
                           key={status}
                           onClick={async (e) => {

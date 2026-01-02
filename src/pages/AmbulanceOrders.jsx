@@ -975,8 +975,30 @@ export default function AmbulanceOrders() {
                                     {(() => {
                                       const allowedStatuses =
                                         STATUS_TRANSITIONS[item.status] || [];
+
+                                      // ✅ Payment validation: Filter out CONFIRMED if payment is not completed
+                                      // For all payment options (including PAY_AT_HOSPITAL), payment must be done before confirming
+                                      const hasSuccessfulPayment =
+                                        item.payments?.some(
+                                          (p) => p.status === "SUCCESS"
+                                        );
+                                      let filteredStatuses = [
+                                        ...allowedStatuses
+                                      ];
+
+                                      if (
+                                        filteredStatuses.includes("CONFIRMED")
+                                      ) {
+                                        if (!hasSuccessfulPayment) {
+                                          filteredStatuses =
+                                            filteredStatuses.filter(
+                                              (s) => s !== "CONFIRMED"
+                                            );
+                                        }
+                                      }
+
                                       // Don't show dropdown if no options available
-                                      if (allowedStatuses.length === 0)
+                                      if (filteredStatuses.length === 0)
                                         return null;
 
                                       const isOpen =
@@ -1149,7 +1171,7 @@ export default function AmbulanceOrders() {
                                                 onClick={(e) =>
                                                   e.stopPropagation()
                                                 }>
-                                                {allowedStatuses.map(
+                                                {filteredStatuses.map(
                                                   (status) => (
                                                     <button
                                                       key={status}

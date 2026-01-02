@@ -50,6 +50,7 @@ import AdminActivityLogsPage from "./pages/AdminActivityLogsPage.jsx";
 import AdminUsersPage from "./pages/AdminUsersPage.jsx";
 // Patients Management
 import PatientsPage from "./pages/PatientsPage.jsx";
+import PatientsBookingPage from "./pages/PatientsBookingPage.jsx";
 // Role Management
 import RoleManagementPage from "./pages/RoleManagementPage.jsx";
 // Doctor Dashboard
@@ -206,6 +207,10 @@ createRoot(document.getElementById("root")).render(
                 />
                 <Route path="admin-users" element={<AdminUsersPage />} />
                 <Route path="patients" element={<PatientsPage />} />
+                <Route
+                  path="patients-booking"
+                  element={<PatientsBookingPage />}
+                />
                 <Route
                   path="role-management"
                   element={<RoleManagementPage />}

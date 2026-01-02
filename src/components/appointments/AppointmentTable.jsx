@@ -20,7 +20,8 @@ export default function AppointmentTable({
   limit,
   onViewDetails,
   onPrintReceipt,
-  onRefund
+  onRefund,
+  onReschedule
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 overflow-hidden">
@@ -50,6 +51,7 @@ export default function AppointmentTable({
                 onView={() => onViewDetails(appointment)}
                 onPrint={() => onPrintReceipt(appointment)}
                 onRefund={onRefund}
+                onReschedule={onReschedule}
               />
             ))}
           </tbody>

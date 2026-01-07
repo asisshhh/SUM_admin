@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useConfirm } from "../contexts/ConfirmContext";
 import { usePagePermissions } from "../hooks/usePagePermissions";
-import { Package, Search, Plus } from "lucide-react";
+import { Package, Plus } from "lucide-react";
 
 // Components
 import { Pagination } from "../components/shared";
@@ -63,9 +63,22 @@ export default function HealthPackagesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["health-packages", filters],
     queryFn: async () => {
-      const params = Object.fromEntries(
-        Object.entries(filters).filter(([_, v]) => v !== "" && v !== "all")
-      );
+      const params = {};
+      
+      // Build params, handling "all" values appropriately
+      Object.entries(filters).forEach(([k, v]) => {
+        if (k === "active") {
+          // For active filter, send the value as-is
+          // API accepts "all", "true", or "false" as string values
+          if (v !== "") {
+            params[k] = v;
+          }
+        } else if (v !== "" && v !== "all") {
+          // For other filters, exclude empty and "all" values
+          params[k] = v;
+        }
+      });
+      
       return (await api.get("/health-packages", { params })).data;
     }
   });
@@ -150,12 +163,8 @@ export default function HealthPackagesPage() {
           <div className="flex-1 min-w-[200px]">
             <label className="text-sm text-slate-600 mb-1 block">Search</label>
             <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={18}
-              />
               <input
-                className="input pl-10 pr-8"
+                className="input pr-8"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Package name..."
@@ -284,3 +293,5 @@ export default function HealthPackagesPage() {
     </div>
   );
 }
+
+

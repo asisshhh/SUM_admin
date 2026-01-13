@@ -14,6 +14,7 @@ export default function OrderPageHeader({
 }) {
   const colorMap = {
     violet: "from-violet-500 to-purple-600 shadow-violet-200",
+    purple: "from-purple-500 to-purple-600 shadow-purple-200",
     emerald: "from-emerald-500 to-teal-600 shadow-emerald-200",
     blue: "from-blue-500 to-indigo-600 shadow-blue-200",
     amber: "from-amber-500 to-orange-600 shadow-amber-200"
@@ -24,8 +25,10 @@ export default function OrderPageHeader({
       <div>
         <div className="flex items-center gap-3">
           <div
-            className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colorMap[iconColor]} flex items-center justify-center shadow-lg`}>
-            <Icon className="text-white" size={24} />
+            className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${
+              colorMap[iconColor] || colorMap.violet
+            } flex items-center justify-center shadow-lg`}>
+            {Icon && <Icon color="white" size={24} strokeWidth={2} />}
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
@@ -55,4 +58,3 @@ export default function OrderPageHeader({
     </div>
   );
 }
-

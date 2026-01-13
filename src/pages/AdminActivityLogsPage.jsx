@@ -199,7 +199,7 @@ export default function AdminActivityLogsPage() {
                 placeholder="Search path..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="input pl-8"
+                className="input !pl-11"
               />
             </div>
           </div>

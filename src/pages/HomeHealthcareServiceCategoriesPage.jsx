@@ -355,7 +355,7 @@ export default function HomeHealthcareServiceCategoriesPage() {
                 size={18}
               />
               <input
-                className="input pl-10 pr-8"
+                className="input !pl-12 pr-8"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search categories..."

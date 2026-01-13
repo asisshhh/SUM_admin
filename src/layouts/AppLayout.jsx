@@ -598,25 +598,23 @@ export default function AppLayout() {
 
       {/* ---------------- MAIN CONTENT ---------------- */}
       <main className="lg:ml-[260px] pt-16 lg:pt-0 min-h-screen">
-        <div className="p-4 sm:p-6 lg:p-8">
-          {/* TOP HEADER BAR (Desktop) */}
-          <div className="hidden lg:flex items-center justify-between mb-8">
-            <h1 className="text-xl font-semibold text-slate-800">
-              Admin Dashboard
-            </h1>
-            <div className="flex items-center gap-4">
-              {user && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border rounded-full shadow-sm text-sm">
-                  <User size={16} className="text-slate-400" />
-                  <span className="text-slate-600">{user.name}</span>
-                  {isSuperAdmin && (
-                    <Crown size={14} className="text-amber-500" />
-                  )}
-                </div>
-              )}
-            </div>
+        {/* TOP HEADER BAR (Desktop) - Fixed */}
+        <div className="hidden lg:flex fixed top-0 left-[260px] right-0 z-20 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-4 items-center justify-between">
+          <h1 className="text-xl font-semibold text-slate-800">
+            Admin Dashboard
+          </h1>
+          <div className="flex items-center gap-4">
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border rounded-full shadow-sm text-sm">
+                <User size={16} className="text-slate-400" />
+                <span className="text-slate-600">{user.name}</span>
+                {isSuperAdmin && <Crown size={14} className="text-amber-500" />}
+              </div>
+            )}
           </div>
+        </div>
 
+        <div className="p-4 sm:p-6 lg:p-8 pt-20 lg:pt-24">
           {/* PAGE CONTENT */}
           <div className="space-y-6 lg:space-y-8">
             <Outlet />

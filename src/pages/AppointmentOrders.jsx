@@ -435,6 +435,19 @@ function RescheduleAppointmentModal({ appointment, onClose, onSuccess }) {
       return;
     }
 
+    // Check if selected date is in the past
+    const selectedDate = new Date(formData.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      setAvailableSlots([]);
+      setFormData((prev) => ({ ...prev, timeSlot: "" }));
+      toast.error("Cannot select past dates");
+      return;
+    }
+
     setLoadingSlots(true);
     const doctorId = appointment.doctorId;
     console.log("Fetching slots for doctor:", doctorId, "date:", formData.date);
@@ -446,11 +459,38 @@ function RescheduleAppointmentModal({ appointment, onClose, onSuccess }) {
         console.log("Slots API response:", res.data);
         const slots = res.data?.slots || res.data?.items || (Array.isArray(res.data) ? res.data : []);
         // Filter only AVAILABLE slots from the database
-        const available = Array.isArray(slots) 
+        const available = Array.isArray(slots)
           ? slots.filter((slot) => slot.status === "AVAILABLE" || slot.available === true)
           : [];
-        console.log("Available slots:", available);
-        setAvailableSlots(available);
+        console.log("Available slots (before time filter):", available);
+
+        // Filter out past time slots (especially important for today's date)
+        const now = new Date();
+        const selectedDateObj = new Date(formData.date);
+        const isToday = selectedDateObj.toDateString() === today.toDateString();
+
+        const filteredSlots = available.filter((slot) => {
+          if (!slot.time) return false;
+
+          // If the selected date is today, filter out past time slots
+          if (isToday) {
+            const [hours, minutes] = slot.time.split(':').map(Number);
+            const slotTime = new Date();
+            slotTime.setHours(hours, minutes || 0, 0, 0);
+
+            // Only include slots that are in the future (with 15 minute buffer)
+            const bufferMinutes = 15;
+            slotTime.setMinutes(slotTime.getMinutes() - bufferMinutes);
+
+            return slotTime > now;
+          }
+
+          // For future dates, include all available slots
+          return true;
+        });
+
+        console.log("Available slots (after time filter):", filteredSlots);
+        setAvailableSlots(filteredSlots);
       })
       .catch((err) => {
         console.error("Failed to load slots:", err);
@@ -478,7 +518,7 @@ function RescheduleAppointmentModal({ appointment, onClose, onSuccess }) {
       if (!appointment?.id) {
         throw new Error("Appointment ID is missing");
       }
-      
+
       // Build payload - API doesn't accept doctorId in reschedule endpoint
       // Only date, timeSlot, and notes are allowed
       const payload = {
@@ -486,11 +526,11 @@ function RescheduleAppointmentModal({ appointment, onClose, onSuccess }) {
         timeSlot: formData.timeSlot,
         notes: formData.notes || undefined
       };
-      
+
       const url = `/appointments/${appointment.id}/reschedule`;
-      console.log("Rescheduling appointment:", { 
-        url, 
-        payload, 
+      console.log("Rescheduling appointment:", {
+        url,
+        payload,
         appointmentId: appointment.id,
         appointment: appointment
       });
@@ -591,6 +631,7 @@ function RescheduleAppointmentModal({ appointment, onClose, onSuccess }) {
               type="date"
               value={formData.date}
               onChange={(e) => handleChange("date", e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
                 errors.date ? "border-red-500" : "border-slate-300"
               }`}

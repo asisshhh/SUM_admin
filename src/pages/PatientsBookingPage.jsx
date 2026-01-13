@@ -161,6 +161,19 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
       return;
     }
 
+    // Check if selected date is in the past
+    const selectedDate = new Date(formData.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      setAvailableSlots([]);
+      setFormData((prev) => ({ ...prev, timeSlot: "" }));
+      toast.error("Cannot select past dates");
+      return;
+    }
+
     setLoadingSlots(true);
     api
       .get(`/schedule/${formData.doctorId}/slots`, {
@@ -169,7 +182,33 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
       .then((res) => {
         const slots = res.data?.slots || res.data || [];
         const available = Array.isArray(slots) ? slots.filter((slot) => slot.status === "AVAILABLE") : [];
-        setAvailableSlots(available);
+
+        // Filter out past time slots (especially important for today's date)
+        const now = new Date();
+        const selectedDateObj = new Date(formData.date);
+        const isToday = selectedDateObj.toDateString() === today.toDateString();
+
+        const filteredSlots = available.filter((slot) => {
+          if (!slot.time) return false;
+
+          // If the selected date is today, filter out past time slots
+          if (isToday) {
+            const [hours, minutes] = slot.time.split(':').map(Number);
+            const slotTime = new Date();
+            slotTime.setHours(hours, minutes || 0, 0, 0);
+
+            // Only include slots that are in the future (with 15 minute buffer)
+            const bufferMinutes = 15;
+            slotTime.setMinutes(slotTime.getMinutes() - bufferMinutes);
+
+            return slotTime > now;
+          }
+
+          // For future dates, include all available slots
+          return true;
+        });
+
+        setAvailableSlots(filteredSlots);
       })
       .catch((err) => {
         console.error("Failed to load slots:", err);
@@ -186,7 +225,7 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
     if (!formData.doctorId) newErrors.doctorId = "Doctor is required";
     if (!formData.date) newErrors.date = "Date is required";
     if (!formData.timeSlot) newErrors.timeSlot = "Time slot is required";
-    if (!formData.paymentOption) newErrors.paymentOption = "Payment option is required";
+    // Payment option is optional - removed validation
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -200,7 +239,7 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
         departmentId: Number(formData.departmentId),
         date: formData.date,
         timeSlot: formData.timeSlot,
-        paymentOption: formData.paymentOption,
+        paymentOption: formData.paymentOption || undefined,
         status: formData.status,
         notes: formData.notes || undefined
       };
@@ -233,8 +272,8 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600">
+        {/* Header - Static */}
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 flex-shrink-0">
           <h2 className="text-lg font-semibold text-white">Book Appointment</h2>
           <button
             onClick={onClose}
@@ -243,8 +282,9 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+        {/* Form Content - Scrollable */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {/* Patient Info */}
           {patient && (
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -396,17 +436,18 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
           {/* Payment Option */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Payment Option *
+              Payment Option
             </label>
             <SearchableDropdown
               value={formData.paymentOption || ""}
               options={[
+                { value: "", label: "Select Payment Option (Optional)" },
                 { value: "PAY_AT_HOSPITAL", label: "Pay at Hospital" },
                 { value: "ONLINE", label: "Online Payment" },
                 { value: "FREE", label: "Free" }
               ]}
               onChange={(value) => handleChange("paymentOption", value)}
-              placeholder="Select Payment Option"
+              placeholder="Select Payment Option (Optional)"
             />
             {errors.paymentOption && (
               <p className="text-red-500 text-xs mt-1">{errors.paymentOption}</p>
@@ -422,11 +463,7 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
               value={formData.status || ""}
               options={[
                 { value: "PENDING", label: "Pending" },
-                { value: "CONFIRMED", label: "Confirmed" },
-                { value: "CHECKED_IN", label: "Checked In" },
-                { value: "IN_PROGRESS", label: "In Progress" },
-                { value: "COMPLETED", label: "Completed" },
-                { value: "CANCELLED", label: "Cancelled" }
+                { value: "CONFIRMED", label: "Confirmed" }
               ]}
               onChange={(value) => handleChange("status", value)}
               placeholder="Select Status"
@@ -449,9 +486,10 @@ const BookSlotModal = ({ patient, onClose, onSuccess }) => {
               placeholder="Additional notes..."
             />
           </div>
+          </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-slate-200">
+          {/* Footer - Static */}
+          <div className="px-6 py-4 border-t border-slate-200 bg-white flex gap-3 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
@@ -511,6 +549,19 @@ const RescheduleModal = ({ appointment, onClose, onSuccess }) => {
       return;
     }
 
+    // Check if selected date is in the past
+    const selectedDate = new Date(formData.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      setAvailableSlots([]);
+      setFormData((prev) => ({ ...prev, timeSlot: "" }));
+      toast.error("Cannot select past dates");
+      return;
+    }
+
     setLoadingSlots(true);
     api
       .get(`/schedule/${appointment.doctorId}/slots`, {
@@ -519,7 +570,33 @@ const RescheduleModal = ({ appointment, onClose, onSuccess }) => {
       .then((res) => {
         const slots = res.data?.slots || res.data || [];
         const available = Array.isArray(slots) ? slots.filter((slot) => slot.status === "AVAILABLE") : [];
-        setAvailableSlots(available);
+
+        // Filter out past time slots (especially important for today's date)
+        const now = new Date();
+        const selectedDateObj = new Date(formData.date);
+        const isToday = selectedDateObj.toDateString() === today.toDateString();
+
+        const filteredSlots = available.filter((slot) => {
+          if (!slot.time) return false;
+
+          // If the selected date is today, filter out past time slots
+          if (isToday) {
+            const [hours, minutes] = slot.time.split(':').map(Number);
+            const slotTime = new Date();
+            slotTime.setHours(hours, minutes || 0, 0, 0);
+
+            // Only include slots that are in the future (with 15 minute buffer)
+            const bufferMinutes = 15;
+            slotTime.setMinutes(slotTime.getMinutes() - bufferMinutes);
+
+            return slotTime > now;
+          }
+
+          // For future dates, include all available slots
+          return true;
+        });
+
+        setAvailableSlots(filteredSlots);
       })
       .catch((err) => {
         console.error("Failed to load slots:", err);
@@ -550,13 +627,13 @@ const RescheduleModal = ({ appointment, onClose, onSuccess }) => {
       const url = `/appointments/${appointment.id}/reschedule`;
       const baseURL = api.defaults.baseURL || import.meta.env.VITE_API_URL || "http://localhost:4000/api/admin";
       const fullURL = `${baseURL}${url}`;
-      console.log("Rescheduling appointment:", { 
-        url, 
+      console.log("Rescheduling appointment:", {
+        url,
         fullURL,
         baseURL,
-        appointmentId: appointment.id, 
+        appointmentId: appointment.id,
         appointment,
-        payload 
+        payload
       });
       try {
         const response = await api.put(url, payload);
@@ -678,6 +755,7 @@ const RescheduleModal = ({ appointment, onClose, onSuccess }) => {
               type="date"
               value={formData.date}
               onChange={(e) => handleChange("date", e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
                 errors.date ? "border-red-500" : "border-slate-300"
               }`}
@@ -821,18 +899,18 @@ export default function PatientsBookingPage() {
     queryKey: ["patient-appointments-list", patientIds],
     queryFn: async () => {
       if (patients.length === 0) return { appointments: [] };
-      
+
       // Fetch appointments from orders endpoint (same as AppointmentOrders page)
       // Appointments are stored as orders with type "appointments"
       try {
         const res = await api.get("/orders", {
-          params: { 
+          params: {
             type: "appointments",
             pageSize: 1000 // Get a large batch to filter client-side
           }
         });
         const orders = Array.isArray(res.data) ? res.data : res.data?.data || res.data?.items || [];
-        
+
         // Filter appointments that belong to any of the visible patients
         // Match by userId or patient.id or patient?.id
         const patientIdSet = new Set(patients.map(p => p.id));
@@ -844,7 +922,7 @@ export default function PatientsBookingPage() {
             (order.patient?.id && patientIdSet.has(order.patient?.id))
           );
         });
-        
+
         return { appointments: allAppointments };
       } catch (err) {
         console.error("Failed to fetch appointments from orders:", err);
@@ -985,8 +1063,8 @@ export default function PatientsBookingPage() {
               ) : (
                 patients.map((patient) => {
                   const patientAppointments = allAppointments.filter(
-                    (apt) => 
-                      apt.patientId === patient.id || 
+                    (apt) =>
+                      apt.patientId === patient.id ||
                       apt.patient?.id === patient.id ||
                       apt.userId === patient.id ||
                       apt.user?.id === patient.id

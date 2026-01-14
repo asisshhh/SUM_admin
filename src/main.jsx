@@ -12,6 +12,7 @@ import DepartmentsPage from "./pages/DepartmentsPage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import AmbulancePage from "./pages/AmbulancePage.jsx";
 import FeedbackPage from "./pages/FeedbackPage.jsx";
+import FeedbackQuestionsPage from "./pages/FeedbackQuestionsPage.jsx";
 import BannersPage from "./pages/BannersPage.jsx";
 import ReportsPage from "./pages/ReportsPage.jsx";
 import AppLayout from "./layouts/AppLayout.jsx";
@@ -62,6 +63,8 @@ import GlobalSchedulePage from "./pages/GlobalSchedulePage.jsx";
 import DoctorSchedulePage from "./pages/DoctorSchedulePage.jsx";
 // Time Slot Templates Management
 import TimeSlotTemplatesPage from "./pages/TimeSlotTemplatesPage.jsx";
+// Slot Configurations Management
+import SlotConfigurationsPage from "./pages/SlotConfigurationsPage.jsx";
 // Privacy Policy Management
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import PublicPrivacyPolicyPage from "./pages/PublicPrivacyPolicyPage.jsx";
@@ -187,6 +190,10 @@ createRoot(document.getElementById("root")).render(
                   element={<HomeHealthcarePackagesPage />}
                 />
                 <Route path="feedback" element={<FeedbackPage />} />
+                <Route
+                  path="feedback-questions"
+                  element={<FeedbackQuestionsPage />}
+                />
                 <Route path="grievances" element={<GrievancesPage />} />
                 <Route path="banners" element={<BannersPage />} />
                 <Route path="reports" element={<ReportsPage />} />
@@ -205,6 +212,10 @@ createRoot(document.getElementById("root")).render(
                 <Route
                   path="time-slot-templates"
                   element={<TimeSlotTemplatesPage />}
+                />
+                <Route
+                  path="slot-configurations"
+                  element={<SlotConfigurationsPage />}
                 />
                 <Route
                   path="activity-logs"

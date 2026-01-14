@@ -174,6 +174,12 @@ const DEFAULT_NAV_ITEMS = [
     category: "Home Healthcare"
   },
   {
+    path: "/settings",
+    label: "Settings",
+    icon: Settings,
+    category: "Admin"
+  },
+  {
     path: "/feedback",
     label: "Feedback",
     icon: MessageSquare,

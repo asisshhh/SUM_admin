@@ -74,6 +74,7 @@ import PublicTermsOfUsePage from "./pages/PublicTermsOfUsePage.jsx";
 // Refund Policy Management
 import RefundPolicyPage from "./pages/RefundPolicyPage.jsx";
 import PublicRefundPolicyPage from "./pages/PublicRefundPolicyPage.jsx";
+import SettingsPage from "./pages/SettingsPage.jsx";
 
 const qc = new QueryClient();
 
@@ -240,6 +241,7 @@ createRoot(document.getElementById("root")).render(
                   path="add-refund-policy"
                   element={<RefundPolicyPage />}
                 />
+                <Route path="settings" element={<SettingsPage />} />
               </Route>
             </Routes>
           </BrowserRouter>

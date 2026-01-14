@@ -96,6 +96,12 @@ const DEFAULT_NAV_ITEMS = [
     category: "Clinical"
   },
   {
+    path: "/slot-configurations",
+    label: "Slot Configurations",
+    icon: Clock,
+    category: "Clinical"
+  },
+  {
     path: "/departments",
     label: "Departments",
     icon: Building2,
@@ -171,6 +177,12 @@ const DEFAULT_NAV_ITEMS = [
     path: "/feedback",
     label: "Feedback",
     icon: MessageSquare,
+    category: "Content"
+  },
+  {
+    path: "/feedback-questions",
+    label: "Feedback Questions",
+    icon: FileText,
     category: "Content"
   },
   {

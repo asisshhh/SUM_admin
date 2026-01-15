@@ -1,7 +1,7 @@
 // PublicDeleteAccountPage.jsx — Public page to view delete account policy (no login required)
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trash2, Loader2 } from "lucide-react";
+import { FileText, Loader2, Scale } from "lucide-react";
 import api from "../api/client";
 import logo from "../assets/logo.webp";
 
@@ -36,7 +36,7 @@ export default function PublicDeleteAccountPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <img
             src={logo}
@@ -44,7 +44,7 @@ export default function PublicDeleteAccountPage() {
             className="h-16 w-auto object-contain opacity-50"
           />
           <div className="flex flex-col items-center gap-3">
-            <Loader2 className="animate-spin text-red-600" size={32} />
+            <Loader2 className="animate-spin text-purple-600" size={32} />
             <p className="text-slate-600">Loading delete account policy...</p>
           </div>
         </div>
@@ -54,22 +54,30 @@ export default function PublicDeleteAccountPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg border border-red-200 p-8 max-w-md text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Trash2 className="text-red-600" size={32} />
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+          <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <img
+                src={logo}
+                alt="SUM Ultimate Medicare"
+                className="h-16 w-auto object-contain opacity-50"
+              />
+            </div>
+            <Scale className="mx-auto text-slate-400 mb-4" size={48} />
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">
+              Unable to Load Delete Account Policy
+            </h2>
+            <p className="text-slate-600 mb-4">
+              We're sorry, but we couldn't load the delete account policy at this time.
+              Please try again later.
+            </p>
+            <a
+              href="/login"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition inline-block">
+              Go to Login
+            </a>
           </div>
-          <h2 className="text-xl font-semibold text-slate-800 mb-2">
-            Error Loading Policy
-          </h2>
-          <p className="text-slate-600 mb-4">
-            Failed to load delete account policy. Please try again later.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-            Retry
-          </button>
         </div>
       </div>
     );
@@ -79,29 +87,24 @@ export default function PublicDeleteAccountPage() {
   const lastUpdated = data?.lastUpdated;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                <Trash2 className="text-red-600" size={24} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-800">
-                  Delete Account Policy
-                </h1>
-                <p className="text-sm text-slate-500 mt-1">
-                  Information about account deletion
-                </p>
-              </div>
+          {/* Logo Section */}
+          <div className="flex justify-center mb-6">
+            <img
+              src={logo}
+              alt="SUM Ultimate Medicare"
+              className="h-16 sm:h-20 w-auto object-contain"
+            />
+          </div>
+
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-2">
+              <Scale className="text-purple-600" size={24} />
+              <h1 className="text-xl font-bold text-slate-800">Delete Account Policy</h1>
             </div>
-            <a
-              href="/login"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-              Back to Login
-            </a>
           </div>
         </div>
       </div>
@@ -111,13 +114,13 @@ export default function PublicDeleteAccountPage() {
         <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
           {!content ? (
             <div className="p-12 text-center">
-              <Trash2 className="mx-auto text-slate-300 mb-4" size={64} />
+              <Scale className="mx-auto text-slate-300 mb-4" size={64} />
               <h2 className="text-xl font-semibold text-slate-600 mb-2">
                 Delete Account Policy Not Available
               </h2>
               <p className="text-slate-500">
-                The delete account policy content has not been set up yet. Please
-                check back later.
+                The delete account policy content has not been set up yet. Please check
+                back later.
               </p>
             </div>
           ) : (

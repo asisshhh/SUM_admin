@@ -6,7 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
-import { Trash2, Save, Loader2, AlertCircle } from "lucide-react";
+import { FileText, Save, Loader2, Scale, AlertCircle } from "lucide-react";
 
 export default function DeleteAccountPage() {
   const qc = useQueryClient();
@@ -139,13 +139,11 @@ export default function DeleteAccountPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-            <Trash2 className="text-red-600" size={24} />
+          <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+            <Scale className="text-purple-600" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">
-              Delete Account Policy
-            </h1>
+            <h1 className="text-2xl font-bold text-slate-800">Delete Account Policy</h1>
             <p className="text-sm text-slate-500 mt-1">
               Manage and update the delete account policy content
             </p>
@@ -154,7 +152,7 @@ export default function DeleteAccountPage() {
         <button
           onClick={handleSave}
           disabled={updateMutation.isPending}
-          className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
           {updateMutation.isPending ? (
             <>
               <Loader2 className="animate-spin" size={18} />
@@ -170,20 +168,20 @@ export default function DeleteAccountPage() {
       </div>
 
       {/* Info Card */}
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+      <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
         <div className="flex items-start gap-3">
-          <Trash2 className="text-red-600 mt-0.5" size={20} />
+          <FileText className="text-purple-600 mt-0.5" size={20} />
           <div className="flex-1">
-            <h3 className="font-semibold text-red-900 mb-1">
+            <h3 className="font-semibold text-purple-900 mb-1">
               Delete Account Policy Management
             </h3>
-            <p className="text-sm text-red-700">
+            <p className="text-sm text-purple-700">
               This content will be displayed on the public delete account page.
               Users can view this page without logging in. You can use HTML
               formatting for better presentation.
             </p>
             {data?.lastUpdated && (
-              <p className="text-xs text-red-600 mt-2">
+              <p className="text-xs text-purple-600 mt-2">
                 Last updated:{" "}
                 {new Date(data.lastUpdated).toLocaleString("en-IN", {
                   dateStyle: "long",
@@ -205,7 +203,7 @@ export default function DeleteAccountPage() {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Enter delete account policy content here. You can use HTML formatting..."
-            className="w-full min-h-[500px] px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-800 font-mono text-sm resize-y"
+            className="w-full min-h-[500px] px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-slate-800 font-mono text-sm resize-y"
             style={{ fontFamily: "inherit" }}
           />
           <p className="text-xs text-slate-500 mt-2">

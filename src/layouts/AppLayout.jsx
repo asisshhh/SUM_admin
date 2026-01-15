@@ -278,7 +278,7 @@ const SidebarNav = ({
           (item.path === "/add-privacy-policy" ||
             item.path === "/add-terms-of-use" ||
             item.path === "/add-refund-policy" ||
-            item.path === "/delete-account" ||
+            item.path === "/add-delete-account" ||
             item.path === "/patients-booking") &&
           isAdmin
         ) {
@@ -424,7 +424,7 @@ export default function AppLayout() {
           currentPath === "/add-privacy-policy" ||
           currentPath === "/add-terms-of-use" ||
           currentPath === "/add-refund-policy" ||
-          currentPath === "/delete-account")
+          currentPath === "/add-delete-account")
       ) {
         return; // Allow access
       }

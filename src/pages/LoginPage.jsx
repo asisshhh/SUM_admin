@@ -220,6 +220,14 @@ export default function LoginPage() {
                 className="text-orange-600 hover:text-orange-700 hover:underline transition-colors">
                 Refund Policy
               </a>
+              <span className="text-slate-300">|</span>
+              <a
+                href="/delete-account"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-red-600 hover:text-red-700 hover:underline transition-colors">
+                Delete Account
+              </a>
             </div>
           </div>
         </div>

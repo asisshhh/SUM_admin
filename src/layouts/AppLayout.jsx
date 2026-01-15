@@ -30,7 +30,8 @@ import {
   FileText,
   Scale,
   RotateCcw,
-  Calendar
+  Calendar,
+  Trash2
 } from "lucide-react";
 import logo from "../assets/logo.webp";
 
@@ -241,6 +242,12 @@ const DEFAULT_NAV_ITEMS = [
     label: "Refund Policy",
     icon: RotateCcw,
     category: "Admin"
+  },
+  {
+    path: "/add-delete-account",
+    label: "Delete Account",
+    icon: Trash2,
+    category: "Admin"
   }
 ];
 
@@ -271,6 +278,7 @@ const SidebarNav = ({
           (item.path === "/add-privacy-policy" ||
             item.path === "/add-terms-of-use" ||
             item.path === "/add-refund-policy" ||
+            item.path === "/delete-account" ||
             item.path === "/patients-booking") &&
           isAdmin
         ) {
@@ -285,13 +293,14 @@ const SidebarNav = ({
       });
     }
 
-    // Filter Privacy Policy, Terms of Use, Refund Policy, and Patients Booking - only for ADMIN and SUPER_ADMIN
+    // Filter Privacy Policy, Terms of Use, Refund Policy, Delete Account, and Patients Booking - only for ADMIN and SUPER_ADMIN
     const isAdmin = user?.role === "ADMIN";
     items = items.filter((item) => {
       if (
         item.path === "/add-privacy-policy" ||
         item.path === "/add-terms-of-use" ||
         item.path === "/add-refund-policy" ||
+        item.path === "/delete-account" ||
         item.path === "/patients-booking"
       ) {
         return isSuperAdmin || isAdmin;
@@ -414,7 +423,8 @@ export default function AppLayout() {
         (currentPath === "/patients-booking" ||
           currentPath === "/add-privacy-policy" ||
           currentPath === "/add-terms-of-use" ||
-          currentPath === "/add-refund-policy")
+          currentPath === "/add-refund-policy" ||
+          currentPath === "/delete-account")
       ) {
         return; // Allow access
       }

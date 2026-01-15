@@ -76,6 +76,7 @@ import RefundPolicyPage from "./pages/RefundPolicyPage.jsx";
 import PublicRefundPolicyPage from "./pages/PublicRefundPolicyPage.jsx";
 // Delete Account Policy Management
 import DeleteAccountPage from "./pages/DeleteAccountPage.jsx";
+import PublicDeleteAccountPage from "./pages/PublicDeleteAccountPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 
 const qc = new QueryClient();
@@ -114,6 +115,10 @@ createRoot(document.getElementById("root")).render(
               <Route
                 path="/refund-policy"
                 element={<PublicRefundPolicyPage />}
+              />
+              <Route
+                path="/delete-account"
+                element={<PublicDeleteAccountPage />}
               />
               <Route
                 path="/"
@@ -244,7 +249,7 @@ createRoot(document.getElementById("root")).render(
                   element={<RefundPolicyPage />}
                 />
                 <Route
-                  path="delete-account"
+                  path="add-delete-account"
                   element={<DeleteAccountPage />}
                 />
                 <Route path="settings" element={<SettingsPage />} />
